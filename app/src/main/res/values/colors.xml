@@ -38,6 +38,5 @@
     <color name="btn_confirm">#39C5BB</color>
     <color name="btn_cancel">#80393939</color>
     <color name="icon">#0089A7</color>
-    <color name="inner_shadow">#80FFFFFF</color>
-    <color name="sheet_drag_handle">#D9D9D9</color>
+    <color name="sheet_drag_handle">#80D9D9D9</color>
 </resources>

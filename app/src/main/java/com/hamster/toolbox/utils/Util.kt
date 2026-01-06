@@ -23,8 +23,7 @@ import androidx.core.content.edit
 import androidx.core.graphics.ColorUtils
 import androidx.fragment.app.Fragment
 import androidx.preference.PreferenceManager
-import com.example.toolbox.R
-import com.example.toolbox.ui.curriculum.Course
+import com.hamster.toolbox.R
 import com.hamster.toolbox.utils.prompt.PromptLoader
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -101,24 +100,24 @@ fun AppCompatActivity.runWithPermission(
 }
 
 // 获取课程表
-fun getCurriculum(context: Context): List<Course> {
-    val prefs = PreferenceManager.getDefaultSharedPreferences(context)
-    val jsonString = prefs.getString("curriculum_json", null)
-
-    if (jsonString == null) {
-        Toast.makeText(context, "未导入课程表", Toast.LENGTH_LONG).show()
-        return emptyList()
-    }
-
-    try {
-        val courseListType = object : TypeToken<List<Course>>() {}.type
-        val gson = Gson()
-        return gson.fromJson(jsonString, courseListType)
-    } catch (e: Exception) {
-        e.printStackTrace()
-        return emptyList()
-    }
-}
+//fun getCurriculum(context: Context): List<Course> {
+//    val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+//    val jsonString = prefs.getString("curriculum_json", null)
+//
+//    if (jsonString == null) {
+//        Toast.makeText(context, "未导入课程表", Toast.LENGTH_LONG).show()
+//        return emptyList()
+//    }
+//
+//    try {
+//        val courseListType = object : TypeToken<List<Course>>() {}.type
+//        val gson = Gson()
+//        return gson.fromJson(jsonString, courseListType)
+//    } catch (e: Exception) {
+//        e.printStackTrace()
+//        return emptyList()
+//    }
+//}
 
 // 将毫秒数转为"yyyy-MM-dd"
 fun convertMillisToDate(millis: Long): String {
@@ -150,34 +149,34 @@ fun copyCurriculumJSONPrompt(context: Context) {
 }
 
 //判断json是否合法并保存
-fun validateAndSaveJson(jsonString: String?, context: Context): Boolean {
-    if (jsonString.isNullOrBlank()) {
-        Toast.makeText(context, "输入内容无效", Toast.LENGTH_SHORT).show()
-        return false
-    }
-
-    try {
-        //转化成数组时Gson会类型擦除，必须使用
-        //json格式错误时会抛出异常
-        val courseListType = object : TypeToken<List<Course>>() {}.type
-        val gson = Gson()
-        val courses: List<Course> = gson.fromJson(jsonString, courseListType)
-
-        val validJsonString = gson.toJson(courses)
-
-        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
-        prefs?.edit { putString("curriculum_json", validJsonString) }
-
-//            (requireActivity() as? MainActivity)?.showAssistantBubble("课程表导入成功！")
-
-        return true
-
-    } catch (e: Exception) {
-        e.printStackTrace()
-//            (requireActivity() as? MainActivity)?.showAssistantBubble("导入失败")
-        return false
-    }
-}
+//fun validateAndSaveJson(jsonString: String?, context: Context): Boolean {
+//    if (jsonString.isNullOrBlank()) {
+//        Toast.makeText(context, "输入内容无效", Toast.LENGTH_SHORT).show()
+//        return false
+//    }
+//
+//    try {
+//        //转化成数组时Gson会类型擦除，必须使用
+//        //json格式错误时会抛出异常
+//        val courseListType = object : TypeToken<List<Course>>() {}.type
+//        val gson = Gson()
+//        val courses: List<Course> = gson.fromJson(jsonString, courseListType)
+//
+//        val validJsonString = gson.toJson(courses)
+//
+//        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+//        prefs?.edit { putString("curriculum_json", validJsonString) }
+//
+////            (requireActivity() as? MainActivity)?.showAssistantBubble("课程表导入成功！")
+//
+//        return true
+//
+//    } catch (e: Exception) {
+//        e.printStackTrace()
+////            (requireActivity() as? MainActivity)?.showAssistantBubble("导入失败")
+//        return false
+//    }
+//}
 
 fun cropBitmapToSquare(bitmap: Bitmap): Bitmap {
     val size = minOf(bitmap.width, bitmap.height)

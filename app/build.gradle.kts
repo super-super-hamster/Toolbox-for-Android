@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.toolbox"
+    namespace = "com.hamster.toolbox"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.toolbox"
+        applicationId = "com.hamster.toolbox"
         minSdk = 24
         targetSdk = 36
         versionCode = 10101

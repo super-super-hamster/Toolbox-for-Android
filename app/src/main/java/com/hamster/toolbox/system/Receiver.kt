@@ -13,7 +13,6 @@ import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.preference.PreferenceManager
-import com.hamster.toolbox.utils.getCurriculum
 import com.hamster.toolbox.utils.timeToMillis
 import java.time.LocalDate
 import java.time.LocalDateTime

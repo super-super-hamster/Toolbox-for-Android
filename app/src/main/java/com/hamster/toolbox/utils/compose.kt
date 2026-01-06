@@ -80,7 +80,7 @@ import androidx.preference.PreferenceManager
 import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.rememberLottieComposition
-import com.example.toolbox.R
+import com.hamster.toolbox.R
 import kotlinx.coroutines.launch
 import sv.lib.squircleshape.CornerSmoothing
 import sv.lib.squircleshape.SquircleShape
@@ -116,7 +116,7 @@ fun ItemGroup(
                 .padding(start = 8.dp, end = 8.dp, top = 1.dp, bottom = 1.dp)
                 .applySharedTilt(titleState)
                 .shadow(
-                    elevation = 4.dp,
+                    elevation = 2.dp,
                     shape = squircleShape,
                     clip = false, // 防止内容被裁掉
                     spotColor = colorResource(id = R.color.item_group_card_shadow),  // 主阴影
@@ -641,14 +641,6 @@ fun ButtonPro(
                     spotColor = Color.Black,
                     ambientColor = Color.Black,
                 )
-                .innerShadow(
-                    shape = squircleShape,
-                    color = colorResource(R.color.inner_shadow),
-                    blur = 2.5.dp,
-                    offsetX = 0.dp,
-                    offsetY = 1.dp,
-                    spread = 3.dp
-                )
                 .background(
                     color = colorResource(R.color.mikuGreen),
                     shape = squircleShape
@@ -919,44 +911,4 @@ fun Modifier.applySharedTilt(
             rotationY = rotY.value
             cameraDistance = 12f * density
         }
-}
-
-fun Modifier.innerShadow(
-    shape: Shape,
-    color: Color = Color.Black.copy(alpha = 0.2f),
-    blur: Dp = 4.dp,
-    offsetY: Dp = 2.dp, // 向下偏移
-    offsetX: Dp = 2.dp, // 向右偏移
-    spread: Dp = 0.dp
-) = this.drawWithContent {
-    drawContent()
-
-    drawIntoCanvas { canvas ->
-        val shadowSize = size
-        val shadowOutline = shape.createOutline(shadowSize, layoutDirection, this)
-
-        val paint = Paint().apply {
-            this.color = color
-            asFrameworkPaint().apply {
-                maskFilter = BlurMaskFilter(blur.toPx(), BlurMaskFilter.Blur.NORMAL)
-            }
-        }
-
-        canvas.save()
-
-        canvas.clipPath(Path().apply { addOutline(shadowOutline) })
-
-        canvas.translate(offsetX.toPx(), offsetY.toPx())
-
-        val strokeWidth = blur.toPx() * 2
-        paint.asFrameworkPaint().style = android.graphics.Paint.Style.STROKE
-        paint.asFrameworkPaint().strokeWidth = strokeWidth
-
-        canvas.drawOutline(
-            shape.createOutline(size, layoutDirection, this),
-            paint
-        )
-
-        canvas.restore()
-    }
 }
