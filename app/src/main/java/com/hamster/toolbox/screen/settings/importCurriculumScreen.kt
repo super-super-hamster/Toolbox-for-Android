@@ -1,4 +1,4 @@
-package com.example.toolbox.ui.settings
+package com.hamster.toolbox.screen.settings
 
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -38,7 +38,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun CurriculumImportScreen(
+fun ImportCurriculumScreen(
     onShowLoading: (Boolean) -> Unit,
     onNavigateToSettings: (String) -> Unit
 ) {
@@ -61,8 +61,9 @@ fun CurriculumImportScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            ItemGroup(titleState = sharedTiltState) {
+            Spacer(modifier = Modifier.height(96.dp))
 
+            ItemGroup(titleState = sharedTiltState) {
                 EditTextItem(
                     title = "通过自然语言导入",
                     summary = "将自然语言转换为课程表",
@@ -116,6 +117,8 @@ fun CurriculumImportScreen(
             ItemGroup(titleState = sharedTiltState) {
                 ExplanationItem("JSON 是一种通用的数据文本格式,通过“标签 : 内容”的形式来准确描述数据。\n“复制课程表提示词中包含对需求格式的描述，若无API建议使用外部AI生成。”")
             }
+
+            Spacer(modifier = Modifier.height(108.dp))
         }
     }
 }

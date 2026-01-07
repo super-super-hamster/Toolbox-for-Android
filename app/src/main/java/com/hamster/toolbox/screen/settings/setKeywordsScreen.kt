@@ -4,7 +4,9 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalOverscrollFactory
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -35,7 +37,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SetKeywordsScreen(
-    viewModel: MainViewModel
+    mainViewModel: MainViewModel
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -78,6 +80,8 @@ fun SetKeywordsScreen(
                     .verticalScroll(rememberScrollState())
                     .padding(16.dp)
             ) {
+                Spacer(modifier = Modifier.height(96.dp))
+
                 ItemGroup(titleState = sharedTiltState) {
                     keywordsList.forEachIndexed { index, keyword ->
                         InquiryItem(
@@ -104,13 +108,13 @@ fun SetKeywordsScreen(
                 }
 
                 // 添加热词的 Dialog
-                if (viewModel.isShowAddKeywordDialog) {
+                if (mainViewModel.isShowAddKeywordDialog) {
                     EditTextDialog(
                         title = "添加热词",
                         initialValue = "",
                         hint = "热词",
                         singleLine = true,
-                        onDismissRequest = { viewModel.isShowAddKeywordDialog = false },
+                        onDismissRequest = { mainViewModel.isShowAddKeywordDialog = false },
                         onConfirm = { input ->
                             return@EditTextDialog try {
                                 val newData = KeywordsData(input, 5f)
@@ -128,6 +132,8 @@ fun SetKeywordsScreen(
                         }
                     )
                 }
+
+                Spacer(modifier = Modifier.height(108.dp))
             }
         }
     }

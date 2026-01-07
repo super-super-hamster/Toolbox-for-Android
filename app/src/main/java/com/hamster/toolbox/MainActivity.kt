@@ -27,12 +27,18 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SheetValue
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberBottomSheetScaffoldState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -71,6 +77,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import sv.lib.squircleshape.CornerSmoothing
 import sv.lib.squircleshape.SquircleShape
+import com.hamster.toolbox.screen.settings.settingsGraph
+import com.hamster.toolbox.utils.AnimationButton
+import com.hamster.toolbox.utils.topSquircleShape
 
 //TODO:天气
 //TODO:切换界面动画
@@ -113,12 +122,11 @@ class MainActivity : ComponentActivity() {
             val mainViewModel: MainViewModel = viewModel()
 
             val navController = rememberNavController()
-
             val scaffoldState = rememberBottomSheetScaffoldState()
-
             val scope = rememberCoroutineScope()
-
             val hazeState = remember { HazeState() }
+
+            var isSheetExpanded by remember { mutableStateOf(false) }
 
             val navBackStackEntry by navController.currentBackStackEntryAsState()
             val currentDestination = navBackStackEntry?.destination
@@ -139,68 +147,84 @@ class MainActivity : ComponentActivity() {
 
             val isSetKeyWordsScreen = currentDestination?.hierarchy?.any { it.hasRoute<SetKeywords>() } == true
 
-            val topSquircleShape = SquircleShape(
-                topStart = 16.dp,
-                topEnd = 16.dp,
-                smoothing = CornerSmoothing.Medium
-            )
+            LaunchedEffect(scaffoldState.bottomSheetState) {
+                // 监听底部抽屉状态，目标状态是展开/收起
+                snapshotFlow { scaffoldState.bottomSheetState.targetValue }
+                    .collect { target ->
+                        if (target == SheetValue.Expanded) {
+                            isSheetExpanded = true
+                        } else {
+                            isSheetExpanded = false
+                        }
+                    }
+            }
 
             MaterialTheme {
-                BottomSheetScaffold(
-                    scaffoldState = scaffoldState,
-                    sheetPeekHeight = 108.dp,
-                    sheetShape = topSquircleShape,
-                    sheetContainerColor = colorResource(R.color.bg_dialog),
-                    containerColor = Color.Transparent,
-                    topBar = { },
+                Surface(modifier = Modifier.fillMaxSize(), color = colorResource(R.color.background)) { // 覆盖原有的主题色背景
+                    BottomSheetScaffold(
+                        scaffoldState = scaffoldState,
+                        sheetPeekHeight = 108.dp,
+                        sheetShape = topSquircleShape,
+                        sheetContainerColor = colorResource(R.color.bg_dialog),
+                        containerColor = Color.Transparent,
+                        topBar = { },
 
-                    sheetDragHandle = null,
+                        sheetDragHandle = null,
 
-                    sheetContent = {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(sheetHeight)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth().height(88.dp).padding(horizontal = 48.dp, vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
+                        sheetContent = {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(sheetHeight)
                             ) {
-                                IconButton(onClick = {}) { Icon(painterResource(R.drawable.ic_search), null, tint = Color.Gray) }
+                                // 底部窗口内容
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().height(88.dp).padding(horizontal = 48.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    // 搜索按钮
+                                    IconButton(onClick = {}) { Icon(painterResource(R.drawable.ic_search), null, tint = Color.Gray) }
 
-                                Box(modifier = Modifier.size(72.dp), contentAlignment = Alignment.Center) {
-                                    ButtonPro(
-                                        icon = R.drawable.ic_microphone,
-                                        onTap = {
-                                            if (isSetKeyWordsScreen) {
-                                                mainViewModel.isShowAddKeywordDialog = true
+                                    // 通用按钮
+                                    Box(modifier = Modifier.size(72.dp), contentAlignment = Alignment.Center) {
+                                        ButtonPro(
+                                            icon = R.drawable.ic_microphone,
+                                            onTap = {
+                                                if (isSetKeyWordsScreen) {
+                                                    mainViewModel.isShowAddKeywordDialog = true
+                                                }
+                                            },
+                                            onLongPressStart = {
+                                                runWithPermission(Manifest.permission.RECORD_AUDIO, requestAudioPermissionLauncher) {
+                                                    speechManager.startListening()
+                                                }
+                                            },
+                                            onLongPressEnd = {
+                                                speechManager.stopListening()
                                             }
-                                        },
-                                        onLongPressStart = {
-                                            runWithPermission(Manifest.permission.RECORD_AUDIO, requestAudioPermissionLauncher) {
-                                                speechManager.startListening()
+                                        )
+                                    }
+
+                                    // 展开按钮
+                                    AnimationButton(
+                                        animation = R.raw.ic_arrow_anim,
+                                        changed = isSheetExpanded,
+                                        onClick = { changed ->
+                                            if (changed) {
+                                                scope.launch { scaffoldState.bottomSheetState.partialExpand() }
+                                            } else {
+                                                scope.launch { scaffoldState.bottomSheetState.expand() }
                                             }
-                                        },
-                                        onLongPressEnd = {
-                                            speechManager.stopListening()
                                         }
                                     )
                                 }
 
-                                IconButton(
-                                    // 展开底部抽屉
-                                    onClick = { scope.launch { scaffoldState.bottomSheetState.expand() } }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().height(96.dp).padding(horizontal = 24.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Icon(painterResource(R.drawable.ic_arrow_up), null, tint = Color.Gray)
-                                }
-                            }
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth().height(96.dp).padding(horizontal = 24.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
 //                        IconButton(onClick = { onNavigate() }) {
 //                            Icon(painterResource(R.drawable.ic_calendar), null, tint = Color.Gray)
 //                        }
@@ -210,60 +234,50 @@ class MainActivity : ComponentActivity() {
 //                        IconButton(onClick = { onNavigate(Destination.Random) }) {
 //                            Icon(painterResource(R.drawable.ic_numbers), null, tint = Color.Gray)
 //                        }
-                                IconButton(onClick = { navController.navigate(Settings) }) {
-                                    Icon(painterResource(R.drawable.ic_settings), null, tint = Color.Gray)
+                                    IconButton(onClick = { navController.navigate(Settings) }) {
+                                        Icon(painterResource(R.drawable.ic_settings), null, tint = Color.Gray)
+                                    }
                                 }
                             }
                         }
-                    }
-                ) { innerPadding ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                    ) {
-                        NavHost(
-                            navController = navController,
-                            startDestination = Settings(),
-                            modifier = Modifier
-                                .hazeSource(state = hazeState)
-                                .fillMaxSize()
-                        ) {
-                            composable<Settings> { backStackEntry ->
-                                val trigger = backStackEntry.arguments?.getLong("trigger")
-                                val jump = backStackEntry.arguments?.getString("jump")
-
-                                SettingsScreen(
-                                    triggerTime = trigger,
-                                    jumpTargetId = jump,
-                                    onNavigate = { route ->
-                                        navController.navigate(route)
-                                    }
+                    ) { innerPadding ->
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            NavHost(
+                                navController = navController,
+                                startDestination = SettingsGraph,
+                                modifier = Modifier
+                                    .hazeSource(state = hazeState)
+                                    .fillMaxSize()
+                            ) {
+                                settingsGraph(
+                                    navController = navController,
+                                    mainViewModel = mainViewModel
                                 )
                             }
-                        }
 
-                        // 显示顶部标题栏
-                        if (showTopBar) {
-                            CenterAlignedTopAppBar(
-                                title = { Text(currentTitle) },
-                                colors = TopAppBarDefaults.topAppBarColors(
-                                    containerColor = Color.Transparent,
-                                    scrolledContainerColor = Color.Transparent
-                                ),
-                                modifier = Modifier
-                                    .align(Alignment.TopCenter)
-                                    .height(96.dp)
-                                    .fillMaxWidth()
-                                    .hazeEffect(
-                                        state = hazeState,
-                                        style = HazeStyle(
-                                            blurRadius = 8.dp,
-                                            tint = HazeTint(Color.White.copy(alpha = 0.2f)),
-                                            noiseFactor = 0.05f
+                            // 显示顶部标题栏
+                            if (showTopBar) {
+                                CenterAlignedTopAppBar(
+                                    title = { Text(currentTitle) },
+                                    colors = TopAppBarDefaults.topAppBarColors(
+                                        containerColor = Color.Transparent,
+                                        scrolledContainerColor = Color.Transparent
+                                    ),
+                                    modifier = Modifier
+                                        .align(Alignment.TopCenter)
+                                        .height(96.dp)
+                                        .fillMaxWidth()
+                                        .hazeEffect(
+                                            state = hazeState,
+                                            style = HazeStyle(
+                                                blurRadius = 8.dp,
+                                                tint = HazeTint(Color.White.copy(alpha = 0.2f)),
+                                                noiseFactor = 0.05f
+                                            )
                                         )
-                                    )
-                                    .statusBarsPadding()
-                            )
+                                        .statusBarsPadding()
+                                )
+                            }
                         }
                     }
                 }

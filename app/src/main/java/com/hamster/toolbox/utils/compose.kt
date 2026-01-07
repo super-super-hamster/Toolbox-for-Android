@@ -85,11 +85,13 @@ import kotlinx.coroutines.launch
 import sv.lib.squircleshape.CornerSmoothing
 import sv.lib.squircleshape.SquircleShape
 import android.graphics.BlurMaskFilter
+import androidx.annotation.RawRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
@@ -98,9 +100,20 @@ import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.graphics.toArgb
+import com.airbnb.lottie.LottieProperty
+import com.airbnb.lottie.SimpleColorFilter
+import com.airbnb.lottie.compose.rememberLottieDynamicProperties
+import com.airbnb.lottie.compose.rememberLottieDynamicProperty
 
 val squircleShape = SquircleShape(
     radius = 16.dp,
+    smoothing = CornerSmoothing.Medium
+)
+
+val topSquircleShape = SquircleShape(
+    topStart = 16.dp,
+    topEnd = 16.dp,
     smoothing = CornerSmoothing.Medium
 )
 
@@ -234,9 +247,9 @@ fun SwitchItem(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(enabled = enabled) { onCheckedChange(!checked) }
             .padding(start = 16.dp, end = 0.dp, top = 16.dp, bottom = 16.dp)
             .clickable(
+                enabled = enabled,
                 interactionSource = interactionSource,
                 indication = null, // 去掉点击的视觉效果
                 onClick = { onCheckedChange(!checked) }
@@ -672,6 +685,51 @@ fun ButtonPro(
                 tint = colorResource(R.color.icon)
             )
         }
+    }
+}
+
+@Composable
+fun AnimationButton(
+    modifier: Modifier = Modifier,
+    changed: Boolean,
+    @RawRes animation: Int = 0,
+    onClick: (Boolean) -> Unit
+) {
+    val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(animation))
+
+    val progress by animateFloatAsState(
+        targetValue = if (!changed) 0.5f else 0f,
+        animationSpec = tween(durationMillis = 800),
+        label = "LottieProgress"
+    )
+
+    val interactionSource = remember { MutableInteractionSource() }
+
+    Row(
+        modifier = modifier
+            .size(64.dp)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = { onClick(changed) }
+            ),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        LottieAnimation(
+            composition = composition,
+            progress = { progress },
+            contentScale = ContentScale.Crop,
+            dynamicProperties = rememberLottieDynamicProperties( // 所有图层染色
+                rememberLottieDynamicProperty(
+                    property = LottieProperty.COLOR_FILTER,
+                    value = SimpleColorFilter(colorResource(R.color.sheet_button).toArgb()),
+                    keyPath = arrayOf("**")
+                )
+            ),
+            modifier = Modifier
+                .height(40.dp)
+                .width(80.dp)
+        )
     }
 }
 

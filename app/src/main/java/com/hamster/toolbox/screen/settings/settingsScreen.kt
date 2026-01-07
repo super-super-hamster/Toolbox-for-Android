@@ -315,9 +315,6 @@ fun SettingsScreen(
             }
         }
 
-        // --- 弹窗逻辑 ---
-
-        // 头像弹窗
         if (showUserAvatarOptionsDialog || showAssistantAvatarOptionsDialog) {
             InquiryDialog(
                 title = "修改头像",
