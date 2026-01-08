@@ -53,6 +53,7 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavOptions
 import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.preference.PreferenceManager
@@ -60,6 +61,7 @@ import com.hamster.toolbox.ai.AI
 import com.hamster.toolbox.ai.AiResponse
 import com.hamster.toolbox.ai.Message
 import com.hamster.toolbox.ai.SpeechRecognizerManager
+import com.hamster.toolbox.screen.ruler.RulerScreen
 import com.hamster.toolbox.screen.settings.settingsGraph
 import com.hamster.toolbox.system.Alarm
 import com.hamster.toolbox.utils.AnimationButton
@@ -83,19 +85,10 @@ import kotlinx.coroutines.withContext
 //TODO:导入课程表前先设置开学日期
 //TODO:tips页面
 //TODO:标题栏把日期选择器的顶部模糊了？
-
-fun NavController.navigateStandard(resId: Int, bundle: Bundle? = null) {
-    val navOptions = NavOptions.Builder()
-        //弹出到导航图的起始位置，避免回退栈无限堆积
-        .setPopUpTo(graph.findStartDestination().id, inclusive = false, saveState = true)
-        //避免重复创建同一个页面的实例
-        .setLaunchSingleTop(true)
-        //尝试恢复状态
-        .setRestoreState(true)
-        .build()
-
-    this.navigate(resId, bundle, navOptions)
-}
+//TODO:liquid glass？
+//TODO:通知栏字体颜色适配
+//TODO:测距
+//TODO:小游戏（单人棋，数独，数织，贪吃蛇,2048）
 
 class MainActivity : ComponentActivity() {
     private lateinit var speechManager: SpeechRecognizerManager
@@ -227,9 +220,9 @@ class MainActivity : ComponentActivity() {
 //                        IconButton(onClick = { onNavigate() }) {
 //                            Icon(painterResource(R.drawable.ic_calendar), null, tint = Color.Gray)
 //                        }
-//                        IconButton(onClick = { onNavigate(Destination.Ruler) }) {
-//                            Icon(painterResource(R.drawable.ic_ruler), null, tint = Color.Gray)
-//                        }
+                                    IconButton(onClick = { navController.navigate(Ruler) }) {
+                                        Icon(painterResource(R.drawable.ic_ruler), null, tint = Color.Gray)
+                                    }
 //                        IconButton(onClick = { onNavigate(Destination.Random) }) {
 //                            Icon(painterResource(R.drawable.ic_numbers), null, tint = Color.Gray)
 //                        }
@@ -248,6 +241,12 @@ class MainActivity : ComponentActivity() {
                                     .hazeSource(state = hazeState)
                                     .fillMaxSize()
                             ) {
+                                // 尺子
+                                composable<Ruler> {
+                                    RulerScreen()
+                                }
+
+                                // 设置
                                 settingsGraph(
                                     navController = navController,
                                     mainViewModel = mainViewModel

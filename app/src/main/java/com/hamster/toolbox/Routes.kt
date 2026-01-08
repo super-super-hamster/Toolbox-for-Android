@@ -18,3 +18,6 @@ object ImportCurriculum : Route
 
 @Serializable
 object SetKeywords : Route
+
+@Serializable
+object Ruler : Route

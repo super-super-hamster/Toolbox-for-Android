@@ -129,7 +129,6 @@ fun SettingsScreen(
         return targets.getOrPut(id) { ScrollTarget() }.modifier
     }
 
-    // --- 3. 副作用：自动跳转 ---
     LaunchedEffect(triggerTime) {
         if (!jumpTargetId.isNullOrEmpty()) {
             delay(1000)
@@ -137,7 +136,6 @@ fun SettingsScreen(
         }
     }
 
-    // --- 4. UI 状态 ---
     var nickname by rememberStringPreference("nickname", stringResource(R.string.anonymous))
     var signature by rememberStringPreference("signature", stringResource(R.string.user_signature))
     var assistantNickname by rememberStringPreference("assistant_nickname", stringResource(R.string.assistant))
@@ -210,7 +208,6 @@ fun SettingsScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // 第二组：课程与提醒
                 ItemGroup(titleState = sharedTiltState) {
                     ClickItem(
                         modifier = getModifier("semester_start_date"),
@@ -257,7 +254,6 @@ fun SettingsScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // 第三组：助手与 API
                 ItemGroup(titleState = sharedTiltState) {
                     ClickItem(
                         modifier = getModifier("assistant_avatar"),
@@ -338,7 +334,6 @@ fun SettingsScreen(
                     showAssistantAvatarOptionsDialog = false
                 },
                 onConfirm = {
-                    // 启动图片选择器
                     avatarPickMedia.launch(
                         PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                     )
@@ -347,9 +342,7 @@ fun SettingsScreen(
             )
         }
 
-        // 日期选择弹窗
         if (showDatePickerDialog) {
-            // 假设 DatePicker 和 convertDateToMillis 是你现有的工具
             DatePicker(
                 title = "选择开学日期",
                 initialSelectedDateMillis = convertDateToMillis(
@@ -375,9 +368,8 @@ fun SettingsScreen(
     }
 }
 
-
+// TODO:改
 object SettingsUtils {
-    // 模拟你原来的 resizeBitmap 和 cropBitmapToSquare
     fun cropBitmapToSquare(bitmap: Bitmap): Bitmap {
         val width = bitmap.width
         val height = bitmap.height

@@ -34,6 +34,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+//TODO:搜索
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SetKeywordsScreen(
@@ -42,15 +44,11 @@ fun SetKeywordsScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    // 状态初始化
-    // 建议：loadCustomKeywords 最好是挂起函数放在 LaunchedEffect 里，或者由 ViewModel 加载。
-    // 这里为了保持原逻辑，暂时放在 remember 中 (注意：如果数据量大，可能会卡顿一下)
     val initialList = remember { KeywordManager.loadCustomKeywords(context) }
     val keywordsList = remember {
         mutableStateListOf<KeywordsData>().apply { addAll(initialList) }
     }
 
-    // 滚动目标逻辑
     val targets = remember { mutableMapOf<String, ScrollTarget>() }
     val sharedTiltState = rememberSharedTiltState()
 
@@ -67,7 +65,6 @@ fun SetKeywordsScreen(
         }
     }
 
-    // UI 布局
     MaterialTheme {
         CompositionLocalProvider(
             LocalOverscrollFactory provides null

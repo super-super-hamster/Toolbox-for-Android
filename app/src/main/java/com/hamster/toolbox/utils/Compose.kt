@@ -89,8 +89,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.KeyboardType
 import com.airbnb.lottie.LottieProperty
 import com.airbnb.lottie.SimpleColorFilter
 import com.airbnb.lottie.compose.rememberLottieDynamicProperties
@@ -315,21 +320,39 @@ fun EditTextItem(
     }
 }
 
-// TODO:弹
 @Composable
 fun EditTextDialog(
     title: String,
     initialValue: String,
     hint: String = "",
     singleLine: Boolean = false,
+    type: String = "String",
     onCancel: () -> Unit = {},
     onDismissRequest: () -> Unit,
     onConfirm: (String) -> Boolean
 ) {
-    var tempText by remember { mutableStateOf(initialValue) }
+    var tempText by remember {
+        mutableStateOf(
+            androidx.compose.ui.text.input.TextFieldValue(
+                text = initialValue,
+                selection = TextRange(initialValue.length)
+            )
+        )
+    }
+
+    val focusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    // 在组件加载时触发请求焦点
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(100)
+        focusRequester.requestFocus()
+
+        keyboardController?.show()
+    }
 
     val submitAction = {
-        if (onConfirm(tempText)) {
+        if (onConfirm(tempText.text)) {
             onDismissRequest()
         }
     }
@@ -392,12 +415,27 @@ fun EditTextDialog(
 
                     OutlinedTextField(
                         value = tempText,
-                        onValueChange = { tempText = it },
+                        onValueChange = { input ->
+                            val inputText = input.text
+                            when (type) {
+                                "Int" -> {
+                                    if (inputText.all { it.isDigit() }) {
+                                        tempText = input
+                                    }
+                                }
+                                "Float" -> {
+                                    if (inputText.matches(Regex("^\\d*\\.?\\d*$"))) {
+                                        tempText = input
+                                    }
+                                }
+                                else -> tempText = input
+                            } },
                         placeholder = { Text(text = hint, color = Color.Gray) },
                         singleLine = singleLine,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
                         keyboardOptions = KeyboardOptions(
-                            imeAction = if (singleLine) ImeAction.Done else ImeAction.Default
+                            imeAction = if (singleLine) ImeAction.Done else ImeAction.Default,
+                            keyboardType = if (type == "String") KeyboardType.Text else KeyboardType.Number
                         ),
                         keyboardActions = KeyboardActions(
                             onDone = { if (singleLine) submitAction() }
