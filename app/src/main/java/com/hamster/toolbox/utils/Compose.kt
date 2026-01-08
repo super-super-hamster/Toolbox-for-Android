@@ -84,22 +84,12 @@ import com.hamster.toolbox.R
 import kotlinx.coroutines.launch
 import sv.lib.squircleshape.CornerSmoothing
 import sv.lib.squircleshape.SquircleShape
-import android.graphics.BlurMaskFilter
 import androidx.annotation.RawRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.Paint
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.addOutline
-import androidx.compose.ui.graphics.drawOutline
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.platform.LocalViewConfiguration
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.graphics.toArgb
 import com.airbnb.lottie.LottieProperty
 import com.airbnb.lottie.SimpleColorFilter
@@ -707,7 +697,7 @@ fun AnimationButton(
 
     Row(
         modifier = modifier
-            .size(64.dp)
+            .size(48.dp)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
@@ -772,7 +762,7 @@ fun DatePicker(
                 tonalElevation = 6.dp,
                 modifier = Modifier
                     .wrapContentWidth()
-                    .padding(24.dp)
+                    .padding(vertical = 24.dp)
             ) {
                 Column(
                     modifier = Modifier.padding(bottom = 12.dp)

@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -54,7 +53,6 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavOptions
 import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.preference.PreferenceManager
@@ -62,10 +60,12 @@ import com.hamster.toolbox.ai.AI
 import com.hamster.toolbox.ai.AiResponse
 import com.hamster.toolbox.ai.Message
 import com.hamster.toolbox.ai.SpeechRecognizerManager
-import com.hamster.toolbox.screen.settings.SettingsScreen
+import com.hamster.toolbox.screen.settings.settingsGraph
 import com.hamster.toolbox.system.Alarm
+import com.hamster.toolbox.utils.AnimationButton
 import com.hamster.toolbox.utils.ButtonPro
 import com.hamster.toolbox.utils.prompt.PromptLoader
+import com.hamster.toolbox.utils.topSquircleShape
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
@@ -75,15 +75,14 @@ import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import sv.lib.squircleshape.CornerSmoothing
-import sv.lib.squircleshape.SquircleShape
-import com.hamster.toolbox.screen.settings.settingsGraph
-import com.hamster.toolbox.utils.AnimationButton
-import com.hamster.toolbox.utils.topSquircleShape
 
-//TODO:天气
-//TODO:切换界面动画
+//TODO:磨砂玻璃边缘弯曲效果？
+//TODO:天气,向下滑动天气透明度逐渐降低
 //TODO:dialog从点击位置出现？
+//TODO:课程新增日期字段，可空，导入课程表时自动计算
+//TODO:导入课程表前先设置开学日期
+//TODO:tips页面
+//TODO:标题栏把日期选择器的顶部模糊了？
 
 fun NavController.navigateStandard(resId: Int, bundle: Bundle? = null) {
     val navOptions = NavOptions.Builder()
@@ -163,7 +162,7 @@ class MainActivity : ComponentActivity() {
                 Surface(modifier = Modifier.fillMaxSize(), color = colorResource(R.color.background)) { // 覆盖原有的主题色背景
                     BottomSheetScaffold(
                         scaffoldState = scaffoldState,
-                        sheetPeekHeight = 108.dp,
+                        sheetPeekHeight = 96.dp,
                         sheetShape = topSquircleShape,
                         sheetContainerColor = colorResource(R.color.bg_dialog),
                         containerColor = Color.Transparent,
