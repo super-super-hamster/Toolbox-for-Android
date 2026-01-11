@@ -130,7 +130,7 @@ fun SetKeywordsScreen(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(96.dp))
+                Spacer(modifier = Modifier.height(64.dp))
             }
         }
     }

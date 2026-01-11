@@ -21,3 +21,6 @@ object SetKeywords : Route
 
 @Serializable
 object Ruler : Route
+
+@Serializable
+object RandomNumber : Route

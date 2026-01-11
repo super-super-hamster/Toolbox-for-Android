@@ -7,9 +7,19 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,39 +29,32 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.material3.BottomSheetScaffold
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SheetValue
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberBottomSheetScaffoldState
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
-import androidx.navigation.NavOptions
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -61,13 +64,14 @@ import com.hamster.toolbox.ai.AI
 import com.hamster.toolbox.ai.AiResponse
 import com.hamster.toolbox.ai.Message
 import com.hamster.toolbox.ai.SpeechRecognizerManager
+import com.hamster.toolbox.screen.random.RandomNumberScreen
 import com.hamster.toolbox.screen.ruler.RulerScreen
 import com.hamster.toolbox.screen.settings.settingsGraph
 import com.hamster.toolbox.system.Alarm
 import com.hamster.toolbox.utils.AnimationButton
 import com.hamster.toolbox.utils.ButtonPro
 import com.hamster.toolbox.utils.prompt.PromptLoader
-import com.hamster.toolbox.utils.topSquircleShape
+import com.hamster.toolbox.utils.squircleShape
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
@@ -78,6 +82,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+//TODO:右上角显示温度/湿度，点击展开详情
 //TODO:磨砂玻璃边缘弯曲效果？
 //TODO:天气,向下滑动天气透明度逐渐降低
 //TODO:dialog从点击位置出现？
@@ -85,10 +90,9 @@ import kotlinx.coroutines.withContext
 //TODO:导入课程表前先设置开学日期
 //TODO:tips页面
 //TODO:标题栏把日期选择器的顶部模糊了？
-//TODO:liquid glass？
 //TODO:通知栏字体颜色适配
 //TODO:测距
-//TODO:小游戏（单人棋，数独，数织，贪吃蛇,2048）
+//TODO:小游戏（单人棋，数独，数织，贪吃蛇，2048，点灯游戏，俄罗斯方块）
 
 class MainActivity : ComponentActivity() {
     private lateinit var speechManager: SpeechRecognizerManager
@@ -110,137 +114,65 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         initSpeechManager()
 
+        enableEdgeToEdge()
+
         setContent {
             val mainViewModel: MainViewModel = viewModel()
 
+            var isMenuExpanded by remember { mutableStateOf(false) }
             val navController = rememberNavController()
-            val scaffoldState = rememberBottomSheetScaffoldState()
-            val scope = rememberCoroutineScope()
             val hazeState = remember { HazeState() }
-
-            var isSheetExpanded by remember { mutableStateOf(false) }
+            val blurRadius by animateDpAsState(
+                targetValue = if (isMenuExpanded) 8.dp else 0.dp,
+                animationSpec = tween(100),
+                label = "blur"
+            )
 
             val navBackStackEntry by navController.currentBackStackEntryAsState()
             val currentDestination = navBackStackEntry?.destination
 
             val currentTitle = when {
+                currentDestination?.hasRoute<RandomNumber>() == true ->"随机数"
                 currentDestination?.hasRoute<Settings>() == true -> "设置"
                 currentDestination?.hasRoute<SetKeywords>() == true -> "热词管理"
                 currentDestination?.hasRoute<ImportCurriculum>() == true -> "导入课程"
                 else -> "ToolBox"
             }
 
-            val configuration = LocalConfiguration.current
-            val screenHeight = configuration.screenHeightDp.dp
-
             val showTopBar = true
-            val topBarHeight = 96.dp
-            val sheetHeight = screenHeight - topBarHeight
+            val showBottomMenu = true
 
             val isSetKeyWordsScreen = currentDestination?.hierarchy?.any { it.hasRoute<SetKeywords>() } == true
 
-            LaunchedEffect(scaffoldState.bottomSheetState) {
-                // 监听底部抽屉状态，目标状态是展开/收起
-                snapshotFlow { scaffoldState.bottomSheetState.targetValue }
-                    .collect { target ->
-                        if (target == SheetValue.Expanded) {
-                            isSheetExpanded = true
-                        } else {
-                            isSheetExpanded = false
-                        }
+            // 展开菜单栏导航
+            fun NavHostController.expandMenuNavigate(route: Any) {
+                this.navigate(route) {
+                    popUpTo(this@expandMenuNavigate.graph.findStartDestination().id) {
+                        saveState = true // 保留滚动状态
                     }
+                    launchSingleTop = true // 同一个页面不会创建新的实例
+                    restoreState = true // 恢复之前的状态
+                }
+                isMenuExpanded = false
             }
 
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize(), color = colorResource(R.color.background)) { // 覆盖原有的主题色背景
-                    BottomSheetScaffold(
-                        scaffoldState = scaffoldState,
-                        sheetPeekHeight = 96.dp,
-                        sheetShape = topSquircleShape,
-                        sheetContainerColor = colorResource(R.color.bg_dialog),
-                        containerColor = Color.Transparent,
-                        topBar = { },
-
-                        sheetDragHandle = null,
-
-                        sheetContent = {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(sheetHeight)
-                            ) {
-                                // 底部窗口内容
-                                Row(
-                                    modifier = Modifier.fillMaxWidth().height(88.dp).padding(horizontal = 48.dp, vertical = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    // 搜索按钮
-                                    IconButton(onClick = {}) { Icon(painterResource(R.drawable.ic_search), null, tint = Color.Gray) }
-
-                                    // 通用按钮
-                                    Box(modifier = Modifier.size(72.dp), contentAlignment = Alignment.Center) {
-                                        ButtonPro(
-                                            icon = R.drawable.ic_microphone,
-                                            onTap = {
-                                                if (isSetKeyWordsScreen) {
-                                                    mainViewModel.isShowAddKeywordDialog = true
-                                                }
-                                            },
-                                            onLongPressStart = {
-                                                runWithPermission(Manifest.permission.RECORD_AUDIO, requestAudioPermissionLauncher) {
-                                                    speechManager.startListening()
-                                                }
-                                            },
-                                            onLongPressEnd = {
-                                                speechManager.stopListening()
-                                            }
-                                        )
-                                    }
-
-                                    // 展开按钮
-                                    AnimationButton(
-                                        animation = R.raw.ic_arrow_anim,
-                                        changed = isSheetExpanded,
-                                        onClick = { changed ->
-                                            if (changed) {
-                                                scope.launch { scaffoldState.bottomSheetState.partialExpand() }
-                                            } else {
-                                                scope.launch { scaffoldState.bottomSheetState.expand() }
-                                            }
-                                        }
-                                    )
-                                }
-
-                                Row(
-                                    modifier = Modifier.fillMaxWidth().height(96.dp).padding(horizontal = 24.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-//                        IconButton(onClick = { onNavigate() }) {
-//                            Icon(painterResource(R.drawable.ic_calendar), null, tint = Color.Gray)
-//                        }
-                                    IconButton(onClick = { navController.navigate(Ruler) }) {
-                                        Icon(painterResource(R.drawable.ic_ruler), null, tint = Color.Gray)
-                                    }
-//                        IconButton(onClick = { onNavigate(Destination.Random) }) {
-//                            Icon(painterResource(R.drawable.ic_numbers), null, tint = Color.Gray)
-//                        }
-                                    IconButton(onClick = { navController.navigate(Settings) }) {
-                                        Icon(painterResource(R.drawable.ic_settings), null, tint = Color.Gray)
-                                    }
-                                }
-                            }
-                        }
-                    ) { innerPadding ->
+                    Scaffold { innerPadding ->
                         Box(modifier = Modifier.fillMaxSize()) {
                             NavHost(
                                 navController = navController,
-                                startDestination = SettingsGraph,
+                                startDestination = RandomNumber,
                                 modifier = Modifier
                                     .hazeSource(state = hazeState)
+                                    .padding(bottom = innerPadding.calculateBottomPadding())
                                     .fillMaxSize()
                             ) {
+                                // 随机数
+                                composable<RandomNumber> {
+                                    RandomNumberScreen()
+                                }
+
                                 // 尺子
                                 composable<Ruler> {
                                     RulerScreen()
@@ -251,6 +183,129 @@ class MainActivity : ComponentActivity() {
                                     navController = navController,
                                     mainViewModel = mainViewModel
                                 )
+                            }
+
+                            // 高斯模糊层
+                            if (isMenuExpanded || blurRadius > 0.dp) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .hazeEffect(
+                                            state = hazeState,
+                                            style = HazeStyle(
+                                                blurRadius = blurRadius,
+                                                tint = HazeTint(Color.White.copy(alpha = 0.2f)),
+                                                noiseFactor = 0f
+                                            )
+                                        )
+                                        .clickable(
+                                            interactionSource = remember { MutableInteractionSource() },
+                                            indication = null
+                                        ) {
+                                            isMenuExpanded = false
+                                        }
+                                )
+                            }
+
+                            // 底部菜单栏
+                            if (showBottomMenu) {
+                                Box(modifier = Modifier.align(Alignment.BottomCenter).systemBarsPadding()) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        // 展开菜单栏
+                                        AnimatedVisibility(
+                                            visible = isMenuExpanded,
+                                            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                                            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+                                            modifier = Modifier.padding(bottom = 6.dp)
+                                        ) {
+                                            Surface(
+                                                shape = squircleShape,
+                                                color = colorResource(R.color.bg_dialog),
+                                                tonalElevation = 8.dp,
+                                                shadowElevation = 8.dp,
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .height(512.dp)
+                                                    .padding(horizontal = 12.dp)
+                                            ) {
+                                                Column(
+                                                    modifier = Modifier.padding(16.dp),
+                                                    horizontalAlignment = Alignment.CenterHorizontally
+                                                ) {
+                                                    Row(
+                                                        modifier = Modifier.fillMaxWidth().height(96.dp).padding(horizontal = 24.dp),
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.SpaceBetween
+                                                    ) {
+//                                                  IconButton(onClick = { onNavigate() }) {
+//                                                      Icon(painterResource(R.drawable.ic_calendar), null, tint = Color.Gray)
+//                                                  }
+                                                        // 尺子
+                                                        IconButton(onClick = { navController.expandMenuNavigate(Ruler) }) {
+                                                            Icon(painterResource(R.drawable.ic_ruler), null, tint = Color.Gray)
+                                                        }
+                                                        // 随机数
+                                                        IconButton(onClick = { navController.expandMenuNavigate(RandomNumber) }) {
+                                                            Icon(painterResource(R.drawable.ic_numbers), null, tint = Color.Gray)
+                                                        }
+                                                        // 设置
+                                                        IconButton(onClick = { navController.expandMenuNavigate(SettingsGraph) }) {
+                                                            Icon(painterResource(R.drawable.ic_settings), null, tint = Color.Gray)
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        // 底部菜单栏
+                                        Surface(
+                                            color = colorResource(R.color.bg_dialog),
+                                            shape = squircleShape,
+                                            tonalElevation = 8.dp,
+                                            shadowElevation = 8.dp,
+                                            modifier = Modifier
+                                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                                                .height(64.dp)
+                                                .fillMaxWidth()
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth().height(88.dp).padding(horizontal = 48.dp, vertical = 8.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                // 搜索按钮
+                                                IconButton(onClick = {}) { Icon(painterResource(R.drawable.ic_search), null, tint = Color.Gray) }
+
+                                                // 通用按钮
+                                                Box(modifier = Modifier.size(72.dp), contentAlignment = Alignment.Center) {
+                                                    ButtonPro(
+                                                        icon = R.drawable.ic_microphone,
+                                                        onTap = {
+                                                            if (isSetKeyWordsScreen) {
+                                                                mainViewModel.isShowAddKeywordDialog = true
+                                                            }
+                                                        },
+                                                        onLongPressStart = {
+                                                            runWithPermission(Manifest.permission.RECORD_AUDIO, requestAudioPermissionLauncher) {
+                                                                speechManager.startListening()
+                                                            }
+                                                        },
+                                                        onLongPressEnd = {
+                                                            speechManager.stopListening()
+                                                        }
+                                                    )
+                                                }
+
+                                                // 展开按钮
+                                                AnimationButton(
+                                                    animation = R.raw.ic_arrow_anim,
+                                                    changed = isMenuExpanded,
+                                                    onClick = { isMenuExpanded = !isMenuExpanded }
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
                             }
 
                             // 显示顶部标题栏
@@ -273,7 +328,6 @@ class MainActivity : ComponentActivity() {
                                                 noiseFactor = 0.05f
                                             )
                                         )
-                                        .statusBarsPadding()
                                 )
                             }
                         }
@@ -413,4 +467,6 @@ class MainActivity : ComponentActivity() {
             launcher.launch(permission)
         }
     }
+
+
 }

@@ -99,7 +99,6 @@ fun SettingsScreen(
                 if (path != null) {
                     prefs.edit { putString(currentAvatarType + "_avatar_path", path) }
                     Toast.makeText(context, "头像已更新", Toast.LENGTH_SHORT).show()
-                    // 如果需要刷新 UI 上的头像显示，可能需要在这里触发一个 State 变化
                 } else {
                     Toast.makeText(context, "更新头像失败", Toast.LENGTH_SHORT).show()
                 }
@@ -107,18 +106,11 @@ fun SettingsScreen(
         }
     }
 
-    // --- 2. 逻辑函数 ---
-
+    // 权限检查
     fun classNotificationCheck() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            // 这里我们先做一个简单的权限检查封装
-            // 实际项目中建议把 runWithPermission 封装成 Composable 友好的形式
-            // 这里为了简化，直接调用 launcher
             requestPostNotificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-
-            // 注意：这里原本的 scheduleDailyNotification 逻辑应该移到 launcher 回调里
-            // 或者在这里假设如果权限有了就执行
-            val receiver = Receiver() // 假设 Receiver 类存在
+            val receiver = Receiver()
             receiver.scheduleDailyNotification(
                 context, 7, 0, Receiver.ACTION_CLASS_ALARM_CHECK, 101, true, emptyArray()
             )
@@ -154,7 +146,7 @@ fun SettingsScreen(
     }
 
     MaterialTheme {
-        CompositionLocalProvider(
+        CompositionLocalProvider( // 禁用边缘回弹和光晕效果
             LocalOverscrollFactory provides null
         ) {
             Column(
@@ -234,6 +226,7 @@ fun SettingsScreen(
                         checked = isClassRemindEnabled,
                         icon = R.drawable.ic_message,
                         onCheckedChange = {
+                            // TODO:没有权限不改变开关状态
                             isClassRemindEnabled = it
                             classNotificationCheck()
                         }
@@ -307,7 +300,7 @@ fun SettingsScreen(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(96.dp))
+                Spacer(modifier = Modifier.height(64.dp))
             }
         }
 

@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.DisplayMetrics
 import android.view.WindowManager
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.LocalOverscrollFactory
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
@@ -16,6 +17,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -53,51 +55,55 @@ fun RulerScreen() {
 
     val scrollState = rememberScrollState()
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFE0E0E0))
+    CompositionLocalProvider( // 禁用边缘回弹和光晕效果
+        LocalOverscrollFactory provides null
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(scrollState)
+                .background(Color(0xFFE0E0E0))
         ) {
-            RulerContent(
-                heightDp = totalHeightDp,
-                pxPerMm = pxPerMm,
-                maxCm = maxCm
-            )
-        }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(scrollState)
+            ) {
+                RulerContent(
+                    heightDp = totalHeightDp,
+                    pxPerMm = pxPerMm,
+                    maxCm = maxCm
+                )
+            }
 
-        TextButton(
-            modifier = Modifier.align(Alignment.Center),
-            onClick = { showCalibrationDialog = true },
-        ) {
-            Text(
-                text = "校准",
-                style = MaterialTheme.typography.displayMedium,
-                color = Color.Black.copy(alpha = 0.8f),
-            )
-        }
+            TextButton(
+                modifier = Modifier.align(Alignment.Center),
+                onClick = { showCalibrationDialog = true },
+            ) {
+                Text(
+                    text = "校准",
+                    style = MaterialTheme.typography.displayMedium,
+                    color = Color.Black.copy(alpha = 0.8f),
+                )
+            }
 
-        if (showCalibrationDialog) {
-            EditTextDialog(
-                title = "校准",
-                initialValue = zoomFactor.toString(),
-                hint = "输入缩放倍数",
-                type = "Float",
-                onDismissRequest = { showCalibrationDialog = false },
-                onConfirm = { text ->
-                    try {
-                        zoomFactor = text.toFloat()
-                        prefs.edit { putFloat("ruler_zoom_factor", text.toFloat()) }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
+            if (showCalibrationDialog) {
+                EditTextDialog(
+                    title = "校准",
+                    initialValue = zoomFactor.toString(),
+                    hint = "输入缩放倍数",
+                    type = "Float",
+                    onDismissRequest = { showCalibrationDialog = false },
+                    onConfirm = { text ->
+                        try {
+                            zoomFactor = text.toFloat()
+                            prefs.edit { putFloat("ruler_zoom_factor", text.toFloat()) }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                        true
                     }
-                    true
-                }
-            )
+                )
+            }
         }
     }
 }

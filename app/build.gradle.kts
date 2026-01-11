@@ -107,5 +107,6 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
     implementation("dev.chrisbanes.haze:haze:1.7.1")
     implementation("dev.chrisbanes.haze:haze-materials:1.7.1")
+    implementation("dev.aige.pub:WheelPicker:1.2.0")
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar", "*.aar"))))
 }
