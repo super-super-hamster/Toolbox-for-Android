@@ -18,6 +18,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.LocalOverscrollFactory
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -39,6 +40,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -66,6 +68,7 @@ import com.hamster.toolbox.ai.Message
 import com.hamster.toolbox.ai.SpeechRecognizerManager
 import com.hamster.toolbox.screen.random.RandomNumberScreen
 import com.hamster.toolbox.screen.ruler.RulerScreen
+import com.hamster.toolbox.screen.schedule.ScheduleScreen
 import com.hamster.toolbox.screen.settings.settingsGraph
 import com.hamster.toolbox.system.Alarm
 import com.hamster.toolbox.utils.AnimationButton
@@ -82,6 +85,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+//TODO:点击dialog的card部分导致触发dismiss
 //TODO:右上角显示温度/湿度，点击展开详情
 //TODO:磨砂玻璃边缘弯曲效果？
 //TODO:天气,向下滑动天气透明度逐渐降低
@@ -132,6 +136,7 @@ class MainActivity : ComponentActivity() {
             val currentDestination = navBackStackEntry?.destination
 
             val currentTitle = when {
+                currentDestination?.hasRoute<Schedule>() == true -> "课程表"
                 currentDestination?.hasRoute<RandomNumber>() == true ->"随机数"
                 currentDestination?.hasRoute<Settings>() == true -> "设置"
                 currentDestination?.hasRoute<SetKeywords>() == true -> "热词管理"
@@ -157,178 +162,185 @@ class MainActivity : ComponentActivity() {
             }
 
             MaterialTheme {
-                Surface(modifier = Modifier.fillMaxSize(), color = colorResource(R.color.background)) { // 覆盖原有的主题色背景
-                    Scaffold { innerPadding ->
-                        Box(modifier = Modifier.fillMaxSize()) {
-                            NavHost(
-                                navController = navController,
-                                startDestination = RandomNumber,
-                                modifier = Modifier
-                                    .hazeSource(state = hazeState)
-                                    .padding(bottom = innerPadding.calculateBottomPadding())
-                                    .fillMaxSize()
-                            ) {
-                                // 随机数
-                                composable<RandomNumber> {
-                                    RandomNumberScreen()
-                                }
-
-                                // 尺子
-                                composable<Ruler> {
-                                    RulerScreen()
-                                }
-
-                                // 设置
-                                settingsGraph(
+                CompositionLocalProvider( LocalOverscrollFactory provides null) { // 禁用边缘回弹和光晕效果
+                    Surface(modifier = Modifier.fillMaxSize(), color = colorResource(R.color.background)) { // 覆盖原有的主题色背景
+                        Scaffold { innerPadding ->
+                            Box(modifier = Modifier.fillMaxSize()) {
+                                NavHost(
                                     navController = navController,
-                                    mainViewModel = mainViewModel
-                                )
-                            }
-
-                            // 高斯模糊层
-                            if (isMenuExpanded || blurRadius > 0.dp) {
-                                Box(
+                                    startDestination = Schedule,
                                     modifier = Modifier
+                                        .hazeSource(state = hazeState)
+                                        .padding(bottom = innerPadding.calculateBottomPadding())
                                         .fillMaxSize()
-                                        .hazeEffect(
-                                            state = hazeState,
-                                            style = HazeStyle(
-                                                blurRadius = blurRadius,
-                                                tint = HazeTint(Color.White.copy(alpha = 0.2f)),
-                                                noiseFactor = 0f
-                                            )
-                                        )
-                                        .clickable(
-                                            interactionSource = remember { MutableInteractionSource() },
-                                            indication = null
-                                        ) {
-                                            isMenuExpanded = false
-                                        }
-                                )
-                            }
+                                ) {
+                                    // 课程表
+                                    composable<Schedule> {
+                                        ScheduleScreen()
+                                    }
 
-                            // 底部菜单栏
-                            if (showBottomMenu) {
-                                Box(modifier = Modifier.align(Alignment.BottomCenter).systemBarsPadding()) {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        // 展开菜单栏
-                                        AnimatedVisibility(
-                                            visible = isMenuExpanded,
-                                            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-                                            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
-                                            modifier = Modifier.padding(bottom = 6.dp)
-                                        ) {
-                                            Surface(
-                                                shape = squircleShape,
-                                                color = colorResource(R.color.bg_dialog),
-                                                tonalElevation = 8.dp,
-                                                shadowElevation = 8.dp,
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .height(512.dp)
-                                                    .padding(horizontal = 12.dp)
+                                    // 随机数
+                                    composable<RandomNumber> {
+                                        RandomNumberScreen()
+                                    }
+
+                                    // 尺子
+                                    composable<Ruler> {
+                                        RulerScreen()
+                                    }
+
+                                    // 设置
+                                    settingsGraph(
+                                        navController = navController,
+                                        mainViewModel = mainViewModel
+                                    )
+                                }
+
+                                // 高斯模糊层
+                                if (isMenuExpanded || blurRadius > 0.dp) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .hazeEffect(
+                                                state = hazeState,
+                                                style = HazeStyle(
+                                                    blurRadius = blurRadius,
+                                                    tint = HazeTint(Color.White.copy(alpha = 0.2f)),
+                                                    noiseFactor = 0f
+                                                )
+                                            )
+                                            .clickable(
+                                                interactionSource = remember { MutableInteractionSource() },
+                                                indication = null
                                             ) {
-                                                Column(
-                                                    modifier = Modifier.padding(16.dp),
-                                                    horizontalAlignment = Alignment.CenterHorizontally
+                                                isMenuExpanded = false
+                                            }
+                                    )
+                                }
+
+                                // 底部菜单栏
+                                if (showBottomMenu) {
+                                    Box(modifier = Modifier.align(Alignment.BottomCenter).systemBarsPadding()) {
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                            // 展开菜单栏
+                                            AnimatedVisibility(
+                                                visible = isMenuExpanded,
+                                                enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                                                exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+                                                modifier = Modifier.padding(bottom = 6.dp)
+                                            ) {
+                                                Surface(
+                                                    shape = squircleShape,
+                                                    color = colorResource(R.color.bg_dialog),
+                                                    tonalElevation = 8.dp,
+                                                    shadowElevation = 8.dp,
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .height(512.dp)
+                                                        .padding(horizontal = 12.dp)
                                                 ) {
-                                                    Row(
-                                                        modifier = Modifier.fillMaxWidth().height(96.dp).padding(horizontal = 24.dp),
-                                                        verticalAlignment = Alignment.CenterVertically,
-                                                        horizontalArrangement = Arrangement.SpaceBetween
+                                                    Column(
+                                                        modifier = Modifier.padding(16.dp),
+                                                        horizontalAlignment = Alignment.CenterHorizontally
                                                     ) {
-//                                                  IconButton(onClick = { onNavigate() }) {
-//                                                      Icon(painterResource(R.drawable.ic_calendar), null, tint = Color.Gray)
-//                                                  }
-                                                        // 尺子
-                                                        IconButton(onClick = { navController.expandMenuNavigate(Ruler) }) {
-                                                            Icon(painterResource(R.drawable.ic_ruler), null, tint = Color.Gray)
-                                                        }
-                                                        // 随机数
-                                                        IconButton(onClick = { navController.expandMenuNavigate(RandomNumber) }) {
-                                                            Icon(painterResource(R.drawable.ic_numbers), null, tint = Color.Gray)
-                                                        }
-                                                        // 设置
-                                                        IconButton(onClick = { navController.expandMenuNavigate(SettingsGraph) }) {
-                                                            Icon(painterResource(R.drawable.ic_settings), null, tint = Color.Gray)
+                                                        Row(
+                                                            modifier = Modifier.fillMaxWidth().height(96.dp).padding(horizontal = 24.dp),
+                                                            verticalAlignment = Alignment.CenterVertically,
+                                                            horizontalArrangement = Arrangement.SpaceBetween
+                                                        ) {
+                                                            IconButton(onClick = { navController.expandMenuNavigate(Schedule) }) {
+                                                                Icon(painterResource(R.drawable.ic_calendar), null, tint = Color.Gray)
+                                                            }
+                                                            // 尺子
+                                                            IconButton(onClick = { navController.expandMenuNavigate(Ruler) }) {
+                                                                Icon(painterResource(R.drawable.ic_ruler), null, tint = Color.Gray)
+                                                            }
+                                                            // 随机数
+                                                            IconButton(onClick = { navController.expandMenuNavigate(RandomNumber) }) {
+                                                                Icon(painterResource(R.drawable.ic_numbers), null, tint = Color.Gray)
+                                                            }
+                                                            // 设置
+                                                            IconButton(onClick = { navController.expandMenuNavigate(SettingsGraph) }) {
+                                                                Icon(painterResource(R.drawable.ic_settings), null, tint = Color.Gray)
+                                                            }
                                                         }
                                                     }
                                                 }
                                             }
-                                        }
 
-                                        // 底部菜单栏
-                                        Surface(
-                                            color = colorResource(R.color.bg_dialog),
-                                            shape = squircleShape,
-                                            tonalElevation = 8.dp,
-                                            shadowElevation = 8.dp,
-                                            modifier = Modifier
-                                                .padding(horizontal = 12.dp, vertical = 6.dp)
-                                                .height(64.dp)
-                                                .fillMaxWidth()
-                                        ) {
-                                            Row(
-                                                modifier = Modifier.fillMaxWidth().height(88.dp).padding(horizontal = 48.dp, vertical = 8.dp),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            // 底部菜单栏
+                                            Surface(
+                                                color = colorResource(R.color.bg_dialog),
+                                                shape = squircleShape,
+                                                tonalElevation = 8.dp,
+                                                shadowElevation = 8.dp,
+                                                modifier = Modifier
+                                                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                                                    .height(64.dp)
+                                                    .fillMaxWidth()
                                             ) {
-                                                // 搜索按钮
-                                                IconButton(onClick = {}) { Icon(painterResource(R.drawable.ic_search), null, tint = Color.Gray) }
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth().height(88.dp).padding(horizontal = 48.dp, vertical = 8.dp),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.SpaceBetween
+                                                ) {
+                                                    // 搜索按钮
+                                                    IconButton(onClick = {}) { Icon(painterResource(R.drawable.ic_search), null, tint = Color.Gray) }
 
-                                                // 通用按钮
-                                                Box(modifier = Modifier.size(72.dp), contentAlignment = Alignment.Center) {
-                                                    ButtonPro(
-                                                        icon = R.drawable.ic_microphone,
-                                                        onTap = {
-                                                            if (isSetKeyWordsScreen) {
-                                                                mainViewModel.isShowAddKeywordDialog = true
+                                                    // 通用按钮
+                                                    Box(modifier = Modifier.size(72.dp), contentAlignment = Alignment.Center) {
+                                                        ButtonPro(
+                                                            icon = R.drawable.ic_microphone,
+                                                            onTap = {
+                                                                if (isSetKeyWordsScreen) {
+                                                                    mainViewModel.isShowAddKeywordDialog = true
+                                                                }
+                                                            },
+                                                            onLongPressStart = {
+                                                                runWithPermission(Manifest.permission.RECORD_AUDIO, requestAudioPermissionLauncher) {
+                                                                    speechManager.startListening()
+                                                                }
+                                                            },
+                                                            onLongPressEnd = {
+                                                                speechManager.stopListening()
                                                             }
-                                                        },
-                                                        onLongPressStart = {
-                                                            runWithPermission(Manifest.permission.RECORD_AUDIO, requestAudioPermissionLauncher) {
-                                                                speechManager.startListening()
-                                                            }
-                                                        },
-                                                        onLongPressEnd = {
-                                                            speechManager.stopListening()
-                                                        }
+                                                        )
+                                                    }
+
+                                                    // 展开按钮
+                                                    AnimationButton(
+                                                        animation = R.raw.ic_arrow_anim,
+                                                        changed = isMenuExpanded,
+                                                        onClick = { isMenuExpanded = !isMenuExpanded }
                                                     )
                                                 }
-
-                                                // 展开按钮
-                                                AnimationButton(
-                                                    animation = R.raw.ic_arrow_anim,
-                                                    changed = isMenuExpanded,
-                                                    onClick = { isMenuExpanded = !isMenuExpanded }
-                                                )
                                             }
                                         }
                                     }
                                 }
-                            }
 
-                            // 显示顶部标题栏
-                            if (showTopBar) {
-                                CenterAlignedTopAppBar(
-                                    title = { Text(currentTitle) },
-                                    colors = TopAppBarDefaults.topAppBarColors(
-                                        containerColor = Color.Transparent,
-                                        scrolledContainerColor = Color.Transparent
-                                    ),
-                                    modifier = Modifier
-                                        .align(Alignment.TopCenter)
-                                        .height(96.dp)
-                                        .fillMaxWidth()
-                                        .hazeEffect(
-                                            state = hazeState,
-                                            style = HazeStyle(
-                                                blurRadius = 8.dp,
-                                                tint = HazeTint(Color.White.copy(alpha = 0.2f)),
-                                                noiseFactor = 0.05f
+                                // 显示顶部标题栏
+                                if (showTopBar) {
+                                    CenterAlignedTopAppBar(
+                                        title = { Text(currentTitle) },
+                                        colors = TopAppBarDefaults.topAppBarColors(
+                                            containerColor = Color.Transparent,
+                                            scrolledContainerColor = Color.Transparent
+                                        ),
+                                        modifier = Modifier
+                                            .align(Alignment.TopCenter)
+                                            .height(96.dp)
+                                            .fillMaxWidth()
+                                            .hazeEffect(
+                                                state = hazeState,
+                                                style = HazeStyle(
+                                                    blurRadius = 8.dp,
+                                                    tint = HazeTint(Color.White.copy(alpha = 0.2f)),
+                                                    noiseFactor = 0.05f
+                                                )
                                             )
-                                        )
-                                )
+                                    )
+                                }
                             }
                         }
                     }

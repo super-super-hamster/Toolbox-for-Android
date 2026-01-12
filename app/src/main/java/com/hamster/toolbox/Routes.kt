@@ -24,3 +24,6 @@ object Ruler : Route
 
 @Serializable
 object RandomNumber : Route
+
+@Serializable
+object Schedule : Route

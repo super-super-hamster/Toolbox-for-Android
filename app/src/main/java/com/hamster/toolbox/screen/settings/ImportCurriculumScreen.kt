@@ -33,7 +33,7 @@ import com.hamster.toolbox.utils.copyCurriculumJSONPrompt
 import com.hamster.toolbox.utils.rememberSharedTiltState
 import com.hamster.toolbox.utils.rememberStringPreference
 import com.hamster.toolbox.utils.tiltGestureContainer
-//import com.hamster.toolbox.utils.validateAndSaveJson
+import com.hamster.toolbox.utils.validateAndSaveJson
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -48,7 +48,7 @@ fun ImportCurriculumScreen(
     val sharedTiltState = rememberSharedTiltState()
     var naturalLanguage by remember { mutableStateOf("") }
 
-    var jsonString by rememberStringPreference("curriculum_json")
+    var jsonString by rememberStringPreference("schedule_json")
 
     CompositionLocalProvider(
         LocalOverscrollFactory provides null
@@ -71,18 +71,6 @@ fun ImportCurriculumScreen(
                     initialValue = naturalLanguage,
                     hint = "请输入包含课程信息的自然语言，至少包含课程名称和上课时间，也可包含地点和老师名称",
                     onConfirm = { input ->
-//                        validateAndSaveJson(input, context)
-                        true
-                    }
-                )
-
-                EditTextItem(
-                    title = "通过JSON导入",
-                    summary = "将符合要求的JSON文本导入为课程表",
-                    dialogTitle = "输入符合要求的JSON",
-                    initialValue = jsonString,
-                    hint = "请输入符合格式要求的JSON文本",
-                    onConfirm = { input ->
                         scope.launch {
                             try {
                                 onShowLoading(true)
@@ -94,7 +82,7 @@ fun ImportCurriculumScreen(
                                     onNavigateToSettings("api_key")
                                 } else {
                                     val response = AI.sendWithPrompt(context, input, "import_curriculum", apiKey)
-//                                    validateAndSaveJson(response?.content, context)
+                                    validateAndSaveJson(response?.content, context)
                                 }
                             } catch (e: Exception) {
                                 e.printStackTrace()
@@ -103,6 +91,18 @@ fun ImportCurriculumScreen(
                                 onShowLoading(false)
                             }
                         }
+                        true
+                    }
+                )
+
+                EditTextItem(
+                    title = "通过JSON导入",
+                    summary = "将符合要求的JSON文本导入为课程表",
+                    dialogTitle = "输入符合要求的JSON",
+                    initialValue = jsonString,
+                    hint = "请输入符合格式要求的JSON文本",
+                    onConfirm = { input ->
+                        validateAndSaveJson(input, context)
                         true
                     }
                 )

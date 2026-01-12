@@ -2,7 +2,7 @@
   {
     "id": "import_curriculum",
     "title": "导入课程表",
-    "content": "[任务] 将以下课程表文本严格转换为一个 JSON 数组。\n[JSON 格式] 数组中每个对象必须包含：name (String), location (String), teacher (String或null), dayOfWeek (Int), startTimeSlot (Int), activeWeeks (List<Int>)。\n[核心规则]\ndayOfWeek 映射： \"周一\" = 1，\"周二\" = 2，...，\"周日\" = 7。\nteacher： 未提及老师时，必须为 null。\nstartTimeSlot： 只取开始节次。例如 \"3-4节\" 表示第三和第四小节，应解析为2。 \"第3节\" 应解析为 3。\nactiveWeeks： 必须是展开的整数列表。 \"1-8周\" -> [1, 2, 3, 4, 5, 6, 7, 8] \"1-8周(单)\" -> [1, 3, 5, 7] \"1-8周(双)\" -> [2, 4, 6, 8] \"1, 3, 5-7周\" -> [1, 3, 5, 6, 7]\n[要求]\n绝对禁止返回 JSON 以外的任何文本、解释或注释。\n输出必须是格式正确的 JSON。\n[待处理文本] ："
+    "content": "[任务] 将以下课程表文本严格转换为一个 JSON 数组。\n[JSON 格式] 数组中每个对象必须包含：name (String), location (String), teacher (String或null), dayOfWeek (Int), startTime (Int), activeWeeks (List<Int>)。\n[核心规则]\ndayOfWeek 映射： \"周一\" = 1，\"周二\" = 2，...，\"周日\" = 7。\nteacher： 未提及老师时，必须为 null。\nstartTime： 只取开始节次。例如 \"3-4节\" 表示第三和第四小节，应解析为2。 \"第3节\" 应解析为 3。\nactiveWeeks： 必须是展开的整数列表。 \"1-8周\" -> [1, 2, 3, 4, 5, 6, 7, 8] \"1-8周(单)\" -> [1, 3, 5, 7] \"1-8周(双)\" -> [2, 4, 6, 8] \"1, 3, 5-7周\" -> [1, 3, 5, 6, 7]\n[要求]\n绝对禁止返回 JSON 以外的任何文本、解释或注释。\n输出必须是格式正确的 JSON。\n[待处理文本] ："
   },
   {
     "id": "assistant",

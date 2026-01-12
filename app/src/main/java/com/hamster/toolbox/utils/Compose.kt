@@ -5,12 +5,17 @@ import android.content.Context
 import android.os.Build
 import android.view.WindowManager
 import androidx.annotation.DrawableRes
+import androidx.annotation.RawRes
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,6 +26,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -54,21 +61,29 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -77,62 +92,17 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.content.edit
 import androidx.preference.PreferenceManager
+import com.airbnb.lottie.LottieProperty
+import com.airbnb.lottie.SimpleColorFilter
 import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.rememberLottieComposition
+import com.airbnb.lottie.compose.rememberLottieDynamicProperties
+import com.airbnb.lottie.compose.rememberLottieDynamicProperty
 import com.hamster.toolbox.R
 import kotlinx.coroutines.launch
 import sv.lib.squircleshape.CornerSmoothing
 import sv.lib.squircleshape.SquircleShape
-import androidx.annotation.RawRes
-import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.waitForUpOrCancellation
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.platform.LocalViewConfiguration
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.input.KeyboardType
-import com.airbnb.lottie.LottieProperty
-import com.airbnb.lottie.SimpleColorFilter
-import com.airbnb.lottie.compose.rememberLottieDynamicProperties
-import com.airbnb.lottie.compose.rememberLottieDynamicProperty
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.Text
-import androidx.compose.runtime.*
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import kotlin.math.abs
-import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.*
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.unit.dp
-import kotlin.math.abs
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.ui.draw.clipToBounds
 
 val squircleShape = SquircleShape(
     radius = 16.dp,
@@ -370,6 +340,9 @@ fun EditTextDialog(
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
 
+    val configuration = LocalConfiguration.current
+    val screenHeight = configuration.screenHeightDp.dp
+
     // 在组件加载时触发请求焦点
     LaunchedEffect(Unit) {
         kotlinx.coroutines.delay(100)
@@ -401,102 +374,105 @@ fun EditTextDialog(
         )
     ) {
         Box(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = dismissAction
+                ),
             contentAlignment = Alignment.Center
         ) {
+            BlurEffect()
+
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = dismissAction
-                    )
+                    .imePadding(), // 内容避让键盘
+                contentAlignment = Alignment.Center
             ) {
-                BlurEffect()
-            }
-
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth(0.9f)
-                    .padding(16.dp),
-                shape = squircleShape,
-                colors = CardDefaults.cardColors(
-                    containerColor = colorResource(R.color.bg_dialog)
-                ),
-                elevation = CardDefaults.cardElevation(16.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth(0.9f)
+                        .heightIn(max = screenHeight * 0.6f) // 限制最大高度
+                        .padding(16.dp)
+                        .clickable(enabled = false) {},
+                    shape = squircleShape,
+                    colors = CardDefaults.cardColors(
+                        containerColor = colorResource(R.color.bg_dialog)
+                    ),
+                    elevation = CardDefaults.cardElevation(16.dp)
                 ) {
-                    Text(
-                        text = title,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    OutlinedTextField(
-                        value = tempText,
-                        onValueChange = { input ->
-                            val inputText = input.text
-                            when (type) {
-                                "Int" -> {
-                                    if (inputText.all { it.isDigit() }) {
-                                        tempText = input
-                                    }
-                                }
-                                "Float" -> {
-                                    if (inputText.matches(Regex("^\\d*\\.?\\d*$"))) {
-                                        tempText = input
-                                    }
-                                }
-                                else -> tempText = input
-                            } },
-                        placeholder = { Text(text = hint, color = Color.Gray) },
-                        singleLine = singleLine,
-                        modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
-                        keyboardOptions = KeyboardOptions(
-                            imeAction = if (singleLine) ImeAction.Done else ImeAction.Default,
-                            keyboardType = if (type == "String") KeyboardType.Text else KeyboardType.Number
-                        ),
-                        keyboardActions = KeyboardActions(
-                            onDone = { if (singleLine) submitAction() }
-                        )
-                    )
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(42.dp),
-                        horizontalArrangement = Arrangement.spacedBy(24.dp)
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Button(
+                        Text(
+                            text = title,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        OutlinedTextField(
+                            value = tempText,
+                            onValueChange = { input ->
+                                val inputText = input.text
+                                when (type) {
+                                    "Int" -> {
+                                        if (inputText.all { it.isDigit() }) {
+                                            tempText = input
+                                        }
+                                    }
+                                    "Float" -> {
+                                        if (inputText.matches(Regex("^\\d*\\.?\\d*$"))) {
+                                            tempText = input
+                                        }
+                                    }
+                                    else -> tempText = input
+                                } },
+                            placeholder = { Text(text = hint, color = Color.Gray) },
+                            singleLine = singleLine,
                             modifier = Modifier
-                                .weight(1f)
-                                .height(42.dp),
-                            shape = squircleShape,
-                            colors = ButtonDefaults.textButtonColors(Color.Transparent),
-                            onClick = cancelAction
-                        ) {
-                            Text("取消", color = Color.Gray)
-                        }
-
-                        Button(
+                                .fillMaxWidth()
+                                .weight(1f, fill = false) // 弹性高度
+                                .focusRequester(focusRequester), // 焦点
+                            keyboardOptions = KeyboardOptions(
+                                imeAction = if (singleLine) ImeAction.Done else ImeAction.Default,
+                                keyboardType = if (type == "String") KeyboardType.Text else KeyboardType.Number
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onDone = { if (singleLine) submitAction() }
+                            )
+                        )
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Row(
                             modifier = Modifier
-                                .weight(1f)
+                                .fillMaxWidth()
                                 .height(42.dp),
-                            shape = squircleShape,
-                            colors = ButtonDefaults.textButtonColors(colorResource(R.color.btn_confirm)),
-                            onClick = submitAction
+                            horizontalArrangement = Arrangement.spacedBy(24.dp)
                         ) {
-                            Text("确定")
+                            Button(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(42.dp),
+                                shape = squircleShape,
+                                colors = ButtonDefaults.textButtonColors(Color.Transparent),
+                                onClick = cancelAction
+                            ) {
+                                Text("取消", color = Color.Gray)
+                            }
+                            Button(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(42.dp),
+                                shape = squircleShape,
+                                colors = ButtonDefaults.textButtonColors(colorResource(R.color.btn_confirm)),
+                                onClick = submitAction
+                            ) {
+                                Text("确定")
+                            }
                         }
                     }
                 }

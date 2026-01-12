@@ -13,7 +13,6 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.LocalOverscrollFactory
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -22,9 +21,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -145,219 +142,197 @@ fun SettingsScreen(
         curriculumImportState = "已设置"
     }
 
-    MaterialTheme {
-        CompositionLocalProvider( // 禁用边缘回弹和光晕效果
-            LocalOverscrollFactory provides null
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .tiltGestureContainer(sharedTiltState)
-                    .background(colorResource(id = R.color.background))
-                    .verticalScroll(rememberScrollState())
-                    .padding(12.dp)
-            ) {
-                Spacer(modifier = Modifier.height(96.dp))
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .tiltGestureContainer(sharedTiltState)
+            .background(colorResource(id = R.color.background))
+            .verticalScroll(rememberScrollState())
+            .padding(12.dp)
+    ) {
+        Spacer(modifier = Modifier.height(96.dp))
 
-                ItemGroup(titleState = sharedTiltState) {
-                    ClickItem(title = "用户头像", icon = R.drawable.ic_user_avatar) {
-                        showUserAvatarOptionsDialog = true
-                        currentAvatarType = "user"
-                    }
-
-                    EditTextItem(
-                        modifier = getModifier("nickname"),
-                        title = "昵称",
-                        dialogTitle = "修改昵称",
-                        initialValue = nickname,
-                        hint = "昵称",
-                        singleLine = true,
-                        icon = R.drawable.ic_user_name,
-                        onCancel = { nickname = prefs.getString("nickname", "") ?: "" },
-                        onConfirm = { input ->
-                            nickname = input
-                            prefs.edit { putString("nickname", nickname) }
-                            true
-                        }
-                    )
-
-                    EditTextItem(
-                        modifier = getModifier("signature"),
-                        title = "个性签名",
-                        dialogTitle = "修改签名",
-                        initialValue = signature,
-                        hint = "个性签名",
-                        singleLine = true,
-                        icon = R.drawable.ic_user_signature,
-                        onCancel = { signature = prefs.getString("signature", "") ?: "" },
-                        onConfirm = { input ->
-                            signature = input
-                            prefs.edit { putString("signature", signature) }
-                            true
-                        }
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                ItemGroup(titleState = sharedTiltState) {
-                    ClickItem(
-                        modifier = getModifier("semester_start_date"),
-                        title = "学期开始日期",
-                        summary = semesterStartDate,
-                        icon = R.drawable.ic_calendar
-                    ) {
-                        showDatePickerDialog = true
-                    }
-
-                    ClickItem(
-                        modifier = getModifier("import_curriculum_options"),
-                        title = "导入课程表",
-                        summary = curriculumImportState,
-                        icon = R.drawable.ic_curriculum
-                    ) {
-                        onNavigate(ImportCurriculum)
-                    }
-
-                    SwitchItem(
-                        modifier = getModifier("class_notification"),
-                        title = "上课提醒",
-                        summary = "开启后将在上课前发送通知",
-                        checked = isClassRemindEnabled,
-                        icon = R.drawable.ic_message,
-                        onCheckedChange = {
-                            // TODO:没有权限不改变开关状态
-                            isClassRemindEnabled = it
-                            classNotificationCheck()
-                        }
-                    )
-
-                    SwitchItem(
-                        modifier = getModifier("alarm_notification"),
-                        title = "上课闹钟设置提醒",
-                        summary = "开启后将自动发送设置闹钟的通知",
-                        checked = isAlarmRemindEnabled,
-                        icon = R.drawable.ic_alarm,
-                        onCheckedChange = {
-                            isAlarmRemindEnabled = it
-                            classNotificationCheck()
-                        }
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                ItemGroup(titleState = sharedTiltState) {
-                    ClickItem(
-                        modifier = getModifier("assistant_avatar"),
-                        title = "助手头像",
-                        icon = R.drawable.ic_assistant
-                    ) {
-                        showAssistantAvatarOptionsDialog = true
-                        currentAvatarType = "assistant"
-                    }
-
-                    EditTextItem(
-                        modifier = getModifier("assistant_nickname"),
-                        title = "助手昵称",
-                        dialogTitle = "修改助手昵称",
-                        initialValue = assistantNickname,
-                        hint = "助手昵称",
-                        singleLine = true,
-                        icon = R.drawable.ic_user_name,
-                        onCancel = { assistantNickname = prefs.getString("assistant_nickname", "") ?: "" },
-                        onConfirm = { input ->
-                            assistantNickname = input
-                            prefs.edit { putString("assistant_nickname", assistantNickname) }
-                            true
-                        }
-                    )
-
-                    ClickItem(
-                        modifier = getModifier("keywords"),
-                        title = "热词",
-                        summary = "热词更容易被语音识别",
-                        icon = R.drawable.ic_characters
-                    ) {
-                        onNavigate(SetKeywords)
-                    }
-
-                    EditTextItem(
-                        modifier = getModifier("api_key"),
-                        title = "API",
-                        summary = if (apiKey.isEmpty()) "未设置" else "******",
-                        dialogTitle = "输入 API Key",
-                        initialValue = apiKey,
-                        hint = "API KEY",
-                        singleLine = true,
-                        icon = R.drawable.ic_a,
-                        onCancel = { apiKey = prefs.getString("api_key", "") ?: "" },
-                        onConfirm = { input ->
-                            apiKey = input
-                            prefs.edit { putString("api_key", apiKey) }
-                            true
-                        }
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(64.dp))
+        ItemGroup(titleState = sharedTiltState) {
+            ClickItem(title = "用户头像", icon = R.drawable.ic_user_avatar) {
+                showUserAvatarOptionsDialog = true
+                currentAvatarType = "user"
             }
-        }
-
-        if (showUserAvatarOptionsDialog || showAssistantAvatarOptionsDialog) {
-            InquiryDialog(
-                title = "修改头像",
-                content = "",
-                cancelText = "恢复默认",
-                confirmText = "相册中选择",
-                onCancel = {
-                    try {
-                        val file = File(context.filesDir, "$currentAvatarType.png")
-                        if (file.exists()) {
-                            file.delete()
-                        }
-                        prefs.edit { remove(currentAvatarType + "_avatar_path") }
-                        Toast.makeText(context, "已恢复默认头像", Toast.LENGTH_SHORT).show()
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                },
-                onDismissRequest = {
-                    showUserAvatarOptionsDialog = false
-                    showAssistantAvatarOptionsDialog = false
-                },
-                onConfirm = {
-                    avatarPickMedia.launch(
-                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                    )
+            EditTextItem(
+                modifier = getModifier("nickname"),
+                title = "昵称",
+                dialogTitle = "修改昵称",
+                initialValue = nickname,
+                hint = "昵称",
+                singleLine = true,
+                icon = R.drawable.ic_user_name,
+                onCancel = { nickname = prefs.getString("nickname", "") ?: "" },
+                onConfirm = { input ->
+                    nickname = input
+                    prefs.edit { putString("nickname", nickname) }
+                    true
+                }
+            )
+            EditTextItem(
+                modifier = getModifier("signature"),
+                title = "个性签名",
+                dialogTitle = "修改签名",
+                initialValue = signature,
+                hint = "个性签名",
+                singleLine = true,
+                icon = R.drawable.ic_user_signature,
+                onCancel = { signature = prefs.getString("signature", "") ?: "" },
+                onConfirm = { input ->
+                    signature = input
+                    prefs.edit { putString("signature", signature) }
                     true
                 }
             )
         }
 
-        if (showDatePickerDialog) {
-            DatePicker(
-                title = "选择开学日期",
-                initialSelectedDateMillis = convertDateToMillis(
-                    if (semesterStartDate == "未设置") null else semesterStartDate
-                ),
-                onDateSelected = { millis ->
-                    if (millis != null) {
-                        val instant = Instant.ofEpochMilli(millis)
-                        val selectedDateObj = instant.atZone(ZoneOffset.UTC).toLocalDate()
-                        val dayOfWeek = selectedDateObj.dayOfWeek.value
-                        val alignedDate = selectedDateObj.minusDays((dayOfWeek - 1).toLong())
-                        val newDateString = alignedDate.toString()
+        Spacer(modifier = Modifier.height(8.dp))
 
-                        semesterStartDate = newDateString
-                        prefs.edit { putString("semester_start_date", newDateString) }
-                    }
-                },
-                onDismiss = {
-                    showDatePickerDialog = false
+        ItemGroup(titleState = sharedTiltState) {
+            ClickItem(
+                modifier = getModifier("semester_start_date"),
+                title = "学期开始日期",
+                summary = semesterStartDate,
+                icon = R.drawable.ic_calendar
+            ) {
+                showDatePickerDialog = true
+            }
+            ClickItem(
+                modifier = getModifier("import_curriculum_options"),
+                title = "导入课程表",
+                summary = curriculumImportState,
+                icon = R.drawable.ic_curriculum
+            ) {
+                onNavigate(ImportCurriculum)
+            }
+            SwitchItem(
+                modifier = getModifier("class_notification"),
+                title = "上课提醒",
+                summary = "开启后将在上课前发送通知",
+                checked = isClassRemindEnabled,
+                icon = R.drawable.ic_message,
+                onCheckedChange = {
+                    // TODO:没有权限不改变开关状态
+                    isClassRemindEnabled = it
+                    classNotificationCheck()
+                }
+            )
+            SwitchItem(
+                modifier = getModifier("alarm_notification"),
+                title = "上课闹钟设置提醒",
+                summary = "开启后将自动发送设置闹钟的通知",
+                checked = isAlarmRemindEnabled,
+                icon = R.drawable.ic_alarm,
+                onCheckedChange = {
+                    isAlarmRemindEnabled = it
+                    classNotificationCheck()
                 }
             )
         }
+        Spacer(modifier = Modifier.height(8.dp))
+        ItemGroup(titleState = sharedTiltState) {
+            ClickItem(
+                modifier = getModifier("assistant_avatar"),
+                title = "助手头像",
+                icon = R.drawable.ic_assistant
+            ) {
+                showAssistantAvatarOptionsDialog = true
+                currentAvatarType = "assistant"
+            }
+            EditTextItem(
+                modifier = getModifier("assistant_nickname"),
+                title = "助手昵称",
+                dialogTitle = "修改助手昵称",
+                initialValue = assistantNickname,
+                hint = "助手昵称",
+                singleLine = true,
+                icon = R.drawable.ic_user_name,
+                onCancel = { assistantNickname = prefs.getString("assistant_nickname", "") ?: "" },
+                onConfirm = { input ->
+                    assistantNickname = input
+                    prefs.edit { putString("assistant_nickname", assistantNickname) }
+                    true
+                }
+            )
+            ClickItem(
+                modifier = getModifier("keywords"),
+                title = "热词",
+                summary = "热词更容易被语音识别",
+                icon = R.drawable.ic_characters
+            ) {
+                onNavigate(SetKeywords)
+            }
+            EditTextItem(
+                modifier = getModifier("api_key"),
+                title = "API",
+                summary = if (apiKey.isEmpty()) "未设置" else "******",
+                dialogTitle = "输入 API Key",
+                initialValue = apiKey,
+                hint = "API KEY",
+                singleLine = true,
+                icon = R.drawable.ic_a,
+                onCancel = { apiKey = prefs.getString("api_key", "") ?: "" },
+                onConfirm = { input ->
+                    apiKey = input
+                    prefs.edit { putString("api_key", apiKey) }
+                    true
+                }
+            )
+        }
+        Spacer(modifier = Modifier.height(64.dp))
+    }
+
+    if (showUserAvatarOptionsDialog || showAssistantAvatarOptionsDialog) {
+        InquiryDialog(
+            title = "修改头像",
+            content = "",
+            cancelText = "恢复默认",
+            confirmText = "相册中选择",
+            onCancel = {
+                try {
+                    val file = File(context.filesDir, "$currentAvatarType.png")
+                    if (file.exists()) {
+                        file.delete()
+                    }
+                    prefs.edit { remove(currentAvatarType + "_avatar_path") }
+                    Toast.makeText(context, "已恢复默认头像", Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                } },
+            onDismissRequest = {
+                showUserAvatarOptionsDialog = false
+                showAssistantAvatarOptionsDialog = false },
+            onConfirm = {
+                avatarPickMedia.launch(
+                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                )
+                true
+            }
+        )
+    }
+    if (showDatePickerDialog) {
+        DatePicker(
+            title = "选择开学日期",
+            initialSelectedDateMillis = convertDateToMillis(
+                if (semesterStartDate == "未设置") null else semesterStartDate
+            ),
+            onDateSelected = { millis ->
+                if (millis != null) {
+                    val instant = Instant.ofEpochMilli(millis)
+                    val selectedDateObj = instant.atZone(ZoneOffset.UTC).toLocalDate()
+                    val dayOfWeek = selectedDateObj.dayOfWeek.value
+                    val alignedDate = selectedDateObj.minusDays((dayOfWeek - 1).toLong())
+                    val newDateString = alignedDate.toString()
+                    semesterStartDate = newDateString
+                    prefs.edit { putString("semester_start_date", newDateString) }
+                } },
+            onDismiss = {
+                showDatePickerDialog = false
+            }
+        )
     }
 }
 
