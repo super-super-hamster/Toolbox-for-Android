@@ -136,7 +136,7 @@ fun WeekScheduleCard(
                                     .fillMaxHeight()
                                     .padding(1.dp)
                                     .background(
-                                        color = if (currentCourse != null) colorResource(R.color.mikuGreen) else Color.Gray,
+                                        color = (if (currentCourse != null) colorResource(R.color.mikuGreen) else Color.Transparent),
                                         shape = squircleShape
                                     ),
                                 contentAlignment = Alignment.Center

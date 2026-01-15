@@ -187,35 +187,6 @@ fun ClickItem(
 }
 
 @Composable
-fun BackItem(
-    title: String = "返回",
-    onClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(start = 0.dp, end = 16.dp, top = 16.dp, bottom = 16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            painter = painterResource(id = R.drawable.arrow_left_bold),
-            contentDescription = "Back",
-            modifier = Modifier.size(20.dp),
-            tint = MaterialTheme.colorScheme.primary
-        )
-
-        Spacer(modifier = Modifier.width(16.dp))
-
-        Text(
-            text = title,
-            fontSize = 16.sp,
-            color = colorResource(id = R.color.title_text)
-        )
-    }
-}
-
-@Composable
 fun SwitchItem(
     modifier: Modifier = Modifier,
     title: String,
@@ -546,24 +517,21 @@ fun InquiryDialog(
         )
     ) {
         Box(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = dismissAction
+                ),
             contentAlignment = Alignment.Center
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = dismissAction
-                    )
-            ) {
-                BlurEffect()
-            }
+            BlurEffect()
 
             Card(
                 modifier = Modifier
-                    .fillMaxWidth(0.85f),
+                    .fillMaxWidth(0.85f)
+                    .clickable(enabled = false) {},
                 shape = squircleShape,
                 colors = CardDefaults.cardColors(
                     containerColor = colorResource(R.color.bg_dialog)
@@ -673,7 +641,7 @@ fun ButtonPro(
     val viewConfiguration = LocalViewConfiguration.current
 
     Box(
-        modifier = Modifier.size(72.dp),
+        modifier = Modifier.height(48.dp).width(72.dp),
         contentAlignment = Alignment.Center
     ) {
         Box(
@@ -782,20 +750,16 @@ fun DatePicker(
         )
     ) {
         Box(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onDismiss
+                ),
             contentAlignment = Alignment.Center
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = onDismiss
-                    )
-            ) {
-                BlurEffect()
-            }
+            BlurEffect()
 
             Surface(
                 shape = squircleShape,
@@ -804,6 +768,7 @@ fun DatePicker(
                 modifier = Modifier
                     .wrapContentWidth()
                     .padding(vertical = 24.dp)
+                    .clickable(enabled = false) {}
             ) {
                 Column(
                     modifier = Modifier.padding(bottom = 12.dp)
@@ -860,8 +825,6 @@ fun DatePicker(
         }
     }
 }
-
-
 
 @Composable
 fun rememberStringPreference(key: String, default: String = ""): MutableState<String> {
@@ -966,7 +929,7 @@ fun Modifier.tiltGestureContainer(state: SharedTiltState): Modifier = this.point
 @Composable
 fun Modifier.applySharedTilt(
     state: SharedTiltState,
-    maxTilt: Float = 5f
+    maxTilt: Float = 1.5f
 ): Modifier {
     val rotX = remember { Animatable(0f) }
     val rotY = remember { Animatable(0f) }

@@ -75,132 +75,114 @@ fun RandomNumberScreen() {
         }
     }
 
-    MaterialTheme {
-        CompositionLocalProvider( // 禁用边缘回弹和光晕效果
-            LocalOverscrollFactory provides null
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(colorResource(id = R.color.background))
+            .padding(16.dp)
+    ) {
+        Spacer(modifier = Modifier.height(96.dp))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(colorResource(id = R.color.background))
-                    .padding(16.dp)
-            ) {
-                Spacer(modifier = Modifier.height(96.dp))
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    WheelPickerComposable(
-                        data = data,
-                        selectedItemPosition = selectedMin,
-                        onItemSelected = { picker, data, position ->
-                            selectedMin = position
-                        },
-                        modifier = Modifier.fillMaxHeight(),
-                        factory = {
-                            isCurved = true // 3D效果
-                            isCyclic = true // 循环滚动
-                            visibleItemCount = 7
-                            selectedItemTextColor = AndroidColor.BLACK
-                            isAtmospheric = true // 边缘透明
-
-                            setOnWheelChangeListener(object : WheelPicker.OnWheelChangeListener {
-                                // 记录上一次的索引
-                                var lastIndex = 0
-
-                                override fun onWheelScrolled(offset: Int) {
-                                    val itemHeight = if (visibleItemCount > 0) height / visibleItemCount else 0
-
-                                    if (itemHeight > 0) {
-                                        val currentIndex = -offset / itemHeight
-                                        if (currentIndex != lastIndex) {
-                                            lastIndex = currentIndex
-                                            // 触发震动
-                                            performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
-                                        }
-                                    }
+            WheelPickerComposable(
+                data = data,
+                selectedItemPosition = selectedMin,
+                onItemSelected = { picker, data, position ->
+                    selectedMin = position },
+                modifier = Modifier.fillMaxHeight(),
+                factory = {
+                    isCurved = true // 3D效果
+                    isCyclic = true // 循环滚动
+                    visibleItemCount = 7
+                    selectedItemTextColor = AndroidColor.BLACK
+                    isAtmospheric = true // 边缘透明
+                    setOnWheelChangeListener(object : WheelPicker.OnWheelChangeListener {
+                        // 记录上一次的索引
+                        var lastIndex = 0
+                        override fun onWheelScrolled(offset: Int) {
+                            val itemHeight = if (visibleItemCount > 0) height / visibleItemCount else 0
+                            if (itemHeight > 0) {
+                                val currentIndex = -offset / itemHeight
+                                if (currentIndex != lastIndex) {
+                                    lastIndex = currentIndex
+                                    // 触发震动
+                                    performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
                                 }
-
-                                override fun onWheelSelected(position: Int) {
-                                    selectedMax = max(selectedMax, selectedMin)
-                                }
-                                override fun onWheelScrollStateChanged(state: Int) {
-                                    canGenerate = state != WheelPicker.SCROLL_STATE_IDLE
-                                }
-                            })
-                        }
-                    )
-
-                    Text("≤", fontSize = 24.sp)
-                    Text(randomNumber.toString(), fontSize = 36.sp)
-                    Text("≤", fontSize = 24.sp)
-
-                    WheelPickerComposable(
-                        data = data,
-                        selectedItemPosition = selectedMax,
-                        onItemSelected = { picker, data, position ->
-                            selectedMax = position
-                        },
-                        modifier = Modifier.fillMaxHeight(),
-                        factory = {
-                            isCurved = true
-                            isCyclic = true
-                            visibleItemCount = 7
-                            selectedItemTextColor = AndroidColor.BLACK
-                            isAtmospheric = true
-
-                            setOnWheelChangeListener(object : WheelPicker.OnWheelChangeListener {
-                                var lastIndex = 0
-
-                                override fun onWheelScrolled(offset: Int) {
-                                    val itemHeight = if (visibleItemCount > 0) height / visibleItemCount else 0
-
-                                    if (itemHeight > 0) {
-                                        val currentIndex = -offset / itemHeight
-                                        if (currentIndex != lastIndex) {
-                                            lastIndex = currentIndex
-                                            performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
-                                        }
-                                    }
-                                }
-
-                                override fun onWheelSelected(position: Int) {
-                                    selectedMin = min(selectedMin, selectedMax)
-                                }
-                                override fun onWheelScrollStateChanged(state: Int) {}
-                            })
-                        }
-                    )
-                }
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 16.dp, bottom = 16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Button(
-                        modifier = Modifier
-                            .height(96.dp)
-                            .width(128.dp),
-                        colors = ButtonDefaults.buttonColors(colorResource(R.color.mikuGreen)),
-                        shape = squircleShape,
-                        onClick = {
-                            if (canGenerate) {
-                                isRolling = true
                             }
                         }
-                    ) {
-                        Text("生成", fontSize = 18.sp)
+                        override fun onWheelSelected(position: Int) {
+                            selectedMax = max(selectedMax, selectedMin)
+                        }
+                        override fun onWheelScrollStateChanged(state: Int) {
+                            canGenerate = state != WheelPicker.SCROLL_STATE_IDLE
+                        }
+                    })
+                }
+            )
+
+            Text("≤", fontSize = 24.sp)
+            Text(randomNumber.toString(), fontSize = 36.sp)
+            Text("≤", fontSize = 24.sp)
+
+            WheelPickerComposable(
+                data = data,
+                selectedItemPosition = selectedMax,
+                onItemSelected = { picker, data, position ->
+                    selectedMax = position },
+                modifier = Modifier.fillMaxHeight(),
+                factory = {
+                    isCurved = true
+                    isCyclic = true
+                    visibleItemCount = 7
+                    selectedItemTextColor = AndroidColor.BLACK
+                    isAtmospheric = true
+                    setOnWheelChangeListener(object : WheelPicker.OnWheelChangeListener {
+                        var lastIndex = 0
+                        override fun onWheelScrolled(offset: Int) {
+                            val itemHeight = if (visibleItemCount > 0) height / visibleItemCount else 0
+                            if (itemHeight > 0) {
+                                val currentIndex = -offset / itemHeight
+                                if (currentIndex != lastIndex) {
+                                    lastIndex = currentIndex
+                                    performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+                                }
+                            }
+                        }
+                        override fun onWheelSelected(position: Int) {
+                            selectedMin = min(selectedMin, selectedMax)
+                        }
+                        override fun onWheelScrollStateChanged(state: Int) {}
+                    })
+                }
+            )
+        }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp, bottom = 16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Button(
+                modifier = Modifier
+                    .height(96.dp)
+                    .width(128.dp),
+                colors = ButtonDefaults.buttonColors(colorResource(R.color.mikuGreen)),
+                shape = squircleShape,
+                onClick = {
+                    if (canGenerate) {
+                        isRolling = true
                     }
                 }
-
-                Spacer(modifier = Modifier.height(64.dp))
+            ) {
+                Text("生成", fontSize = 18.sp)
             }
         }
+
+        Spacer(modifier = Modifier.height(64.dp))
     }
 }

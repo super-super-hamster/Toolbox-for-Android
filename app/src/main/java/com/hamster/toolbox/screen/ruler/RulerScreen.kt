@@ -55,55 +55,47 @@ fun RulerScreen() {
 
     val scrollState = rememberScrollState()
 
-    CompositionLocalProvider( // 禁用边缘回弹和光晕效果
-        LocalOverscrollFactory provides null
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFE0E0E0))
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFE0E0E0))
+                .verticalScroll(scrollState)
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(scrollState)
-            ) {
-                RulerContent(
-                    heightDp = totalHeightDp,
-                    pxPerMm = pxPerMm,
-                    maxCm = maxCm
-                )
-            }
-
-            TextButton(
-                modifier = Modifier.align(Alignment.Center),
-                onClick = { showCalibrationDialog = true },
-            ) {
-                Text(
-                    text = "校准",
-                    style = MaterialTheme.typography.displayMedium,
-                    color = Color.Black.copy(alpha = 0.8f),
-                )
-            }
-
-            if (showCalibrationDialog) {
-                EditTextDialog(
-                    title = "校准",
-                    initialValue = zoomFactor.toString(),
-                    hint = "输入缩放倍数",
-                    type = "Float",
-                    onDismissRequest = { showCalibrationDialog = false },
-                    onConfirm = { text ->
-                        try {
-                            zoomFactor = text.toFloat()
-                            prefs.edit { putFloat("ruler_zoom_factor", text.toFloat()) }
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                        }
-                        true
+            RulerContent(
+                heightDp = totalHeightDp,
+                pxPerMm = pxPerMm,
+                maxCm = maxCm
+            )
+        }
+        TextButton(
+            modifier = Modifier.align(Alignment.Center),
+            onClick = { showCalibrationDialog = true },) {
+            Text(
+                text = "校准",
+                style = MaterialTheme.typography.displayMedium,
+                color = Color.Black.copy(alpha = 0.8f),)
+        }
+        if (showCalibrationDialog) {
+            EditTextDialog(
+                title = "校准",
+                initialValue = zoomFactor.toString(),
+                hint = "输入缩放倍数",
+                type = "Float",
+                onDismissRequest = { showCalibrationDialog = false },
+                onConfirm = { text ->
+                    try {
+                        zoomFactor = text.toFloat()
+                        prefs.edit { putFloat("ruler_zoom_factor", text.toFloat()) }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
                     }
-                )
-            }
+                    true
+                }
+            )
         }
     }
 }

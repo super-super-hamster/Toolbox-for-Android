@@ -12,18 +12,28 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.LocalOverscrollFactory
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -31,6 +41,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -47,6 +59,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
@@ -96,7 +109,7 @@ import kotlinx.coroutines.withContext
 //TODO:标题栏把日期选择器的顶部模糊了？
 //TODO:通知栏字体颜色适配
 //TODO:测距
-//TODO:小游戏（单人棋，数独，数织，贪吃蛇，2048，点灯游戏，俄罗斯方块）
+//TODO:小游戏（单人棋，数独，数织，贪吃蛇，2048，俄罗斯方块）
 
 class MainActivity : ComponentActivity() {
     private lateinit var speechManager: SpeechRecognizerManager
@@ -146,6 +159,14 @@ class MainActivity : ComponentActivity() {
 
             val showTopBar = true
             val showBottomMenu = true
+
+            var showSearchBar by remember { mutableStateOf(false) }
+            var searchText by remember { mutableStateOf("") }
+            val searchBarWeight by animateFloatAsState(
+                targetValue = if (showSearchBar) 1f else 0.001f,
+                label = "weight_anim",
+                animationSpec = spring(stiffness = Spring.StiffnessLow) // 动画弹性设定，让它丝滑一点
+            )
 
             val isSetKeyWordsScreen = currentDestination?.hierarchy?.any { it.hasRoute<SetKeywords>() } == true
 
@@ -279,16 +300,70 @@ class MainActivity : ComponentActivity() {
                                                     .height(64.dp)
                                                     .fillMaxWidth()
                                             ) {
-                                                Row(
-                                                    modifier = Modifier.fillMaxWidth().height(88.dp).padding(horizontal = 48.dp, vertical = 8.dp),
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.SpaceBetween
-                                                ) {
-                                                    // 搜索按钮
-                                                    IconButton(onClick = {}) { Icon(painterResource(R.drawable.ic_search), null, tint = Color.Gray) }
+                                                // 搜索按钮
+                                                Box(modifier = Modifier.fillMaxSize()) { // 不让搜索框与通用按钮和展开按钮产生碰撞
+                                                    Row(
+                                                        modifier = Modifier.fillMaxSize().padding(horizontal = 36.dp, vertical = 8.dp),
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                    ) {
+                                                        Row(
+                                                            modifier = Modifier
+                                                                .height(IntrinsicSize.Min) // 保持高度一致
+                                                                .then(if (showSearchBar) Modifier.weight(searchBarWeight, fill = false) else Modifier)
+                                                                .clip(squircleShape)
+                                                                .animateContentSize() // 自动处理宽度变化的动画
+                                                                .background(
+                                                                    color = if (showSearchBar) Color.Gray.copy(alpha = 0.25f) else Color.Transparent,
+                                                                    shape = squircleShape
+                                                                ),
+                                                            verticalAlignment = Alignment.CenterVertically,
+                                                        ) {
+                                                            Box(
+                                                                modifier = Modifier
+                                                                    .size(48.dp)
+                                                                    .clickable(
+                                                                        onClick = { showSearchBar = !showSearchBar },
+                                                                        indication = null,
+                                                                        interactionSource = remember { MutableInteractionSource() } // 必须配合 interactionSource 使用
+                                                                    ),
+                                                                contentAlignment = Alignment.Center
+                                                            ) {
+                                                                Icon(painterResource(R.drawable.ic_search), null, tint = Color.Gray)
+                                                            }
 
-                                                    // 通用按钮
-                                                    Box(modifier = Modifier.size(72.dp), contentAlignment = Alignment.Center) {
+                                                            AnimatedVisibility(
+                                                                visible = showSearchBar,
+                                                                enter = expandHorizontally() + fadeIn(),
+                                                                exit = shrinkHorizontally() + fadeOut(),
+                                                                modifier = Modifier.weight(1f)
+                                                            ) {
+                                                                BasicTextField(
+                                                                    value = searchText,
+                                                                    onValueChange = { searchText = it },
+                                                                    modifier = Modifier
+                                                                        .fillMaxSize(),
+                                                                    singleLine = true,
+                                                                    decorationBox = { innerTextField ->
+                                                                        Box(contentAlignment = Alignment.CenterStart) {
+                                                                            if (searchText.isEmpty()) {
+                                                                                Text("请输入搜索内容...", color = Color.Gray)
+                                                                            }
+                                                                            innerTextField()
+                                                                        }
+                                                                    }
+                                                                )
+                                                            }
+                                                        }
+                                                    }
+                                                }
+
+                                                // 通用按钮
+                                                AnimatedVisibility(
+                                                    visible = !showSearchBar,
+                                                    enter = scaleIn(initialScale = 0.5f) + fadeIn(),
+                                                    exit = scaleOut(targetScale = 0.5f) + fadeOut()
+                                                ) {
+                                                    Box(modifier = Modifier.height(48.dp).width(72.dp), contentAlignment = Alignment.Center) {
                                                         ButtonPro(
                                                             icon = R.drawable.ic_microphone,
                                                             onTap = {
@@ -306,12 +381,21 @@ class MainActivity : ComponentActivity() {
                                                             }
                                                         )
                                                     }
+                                                }
 
-                                                    // 展开按钮
+                                                // 展开按钮
+                                                Box(modifier = Modifier.height(48.dp).width(72.dp).padding(horizontal = 36.dp), contentAlignment = Alignment.CenterEnd) {
                                                     AnimationButton(
                                                         animation = R.raw.ic_arrow_anim,
                                                         changed = isMenuExpanded,
-                                                        onClick = { isMenuExpanded = !isMenuExpanded }
+                                                        onClick = {
+                                                            if (showSearchBar && !isMenuExpanded) {
+                                                                showSearchBar = false
+                                                                return@AnimationButton
+                                                            }
+                                                            isMenuExpanded = !isMenuExpanded
+                                                            showSearchBar = isMenuExpanded
+                                                        }
                                                     )
                                                 }
                                             }

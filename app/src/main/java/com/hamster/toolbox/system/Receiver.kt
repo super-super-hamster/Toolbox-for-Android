@@ -13,6 +13,7 @@ import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.preference.PreferenceManager
+import com.hamster.toolbox.utils.getSchedule
 import com.hamster.toolbox.utils.timeToMillis
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -65,7 +66,7 @@ class Receiver : BroadcastReceiver() {
                 NotificationManagerCompat.from(context).cancel(NOTIFICATION_ID)
             }
             ACTION_CLASS_ALARM_CHECK -> {
-                curriculumCheck(context)
+                scheduleCheck(context)
             }
         }
     }
@@ -161,7 +162,7 @@ class Receiver : BroadcastReceiver() {
     }
 
     //每日定时提醒
-    fun scheduleDailyNotification(context: Context, hour: Int, minute: Int, action: String, requestCode: Int, enable: Boolean, extraData: Array<String>?) {
+    fun dailyNotification(context: Context, hour: Int, minute: Int, action: String, requestCode: Int, enable: Boolean, extraData: Array<String>?) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
         val intent = Intent(context, Receiver::class.java).apply {
@@ -210,100 +211,100 @@ class Receiver : BroadcastReceiver() {
 
     //课程提醒检查
     @RequiresApi(Build.VERSION_CODES.O)
-    private fun curriculumCheck(context: Context) {
-//        val allCourses = getCurriculum(context)
-//
-//        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
-//        val startDay = prefs.getString("semester_start_date", null)
-//        if (startDay == null) {
-//            return
-//        }
-//
-//        val currentDate = LocalDate.now()
-//        val startDate = LocalDate.parse(
-//            startDay,
-//            DateTimeFormatter.ofPattern("yyyy-M-d")
-//        )
-//
-//        val weekNumber = ChronoUnit.DAYS.between(startDate, currentDate) / 7 + 1
-//        if (weekNumber <= 0) {
-//            return
-//        }
-//
-//        val currentDayOfWeek = currentDate.dayOfWeek.value
-//        val coursesThisWeek = allCourses.filter { weekNumber.toInt() in it.activeWeeks }
-//        val coursesForTomorrow = coursesThisWeek
-//            .filter { it.dayOfWeek == currentDayOfWeek}
-//            .sortedBy { it.startTimeSlot }
-//
-//        val hasClass = BooleanArray(4){ false }
-//        val classSlot = ArrayList<Int>()
-//        for(course in coursesForTomorrow) {
-//            hasClass[course.startTimeSlot - 1] = true
-//
-//            val tomorrowTime = LocalDateTime.now()
-//                .plusDays(1)
-//                .withMinute(30)
-//                .withSecond(0)
-//                .withNano(0)
-//            when(course.startTimeSlot) {
-//                1 -> {
-//                    tomorrowTime.withHour(7)
-//                    classSlot.add(1)
-//                }
-//                2 -> {
-//                    tomorrowTime.withHour(9)
-//                    if (!hasClass[0]) {
-//                        classSlot.add(2)
-//                    }
-//                }
-//                3 -> {
-//                    tomorrowTime.withHour(13)
-//                    classSlot.add(3)
-//                }
-//                4 -> {
-//                    tomorrowTime.withHour(15)
-//                    if (!hasClass[2]) {
-//                        classSlot.add(4)
-//                    }
-//                }
-//            }
-//
-//            val isClassRemindEnabled = prefs.getBoolean("class_notification", false)
-//            val triggerTime =timeToMillis(LocalDateTime.now()) - timeToMillis(tomorrowTime)
-//            scheduleNotification(
-//                context,
-//                triggerTime,
-//                ACTION_SHOW_NOTIFICATION,
-//                102,
-//                isClassRemindEnabled,
-//                arrayOf("上课提醒", "下一节课是：" + course.name +"\n" + "上课地点为：" + course.location, "知道了", "")
-//            )
-//        }
-//
-//        val alarmNotificationTime = LocalDateTime.now()
-//            .withHour(22)
-//            .withMinute(0)
-//            .withSecond(0)
-//            .withNano(0)
-//        val alarmNotificationMillis = timeToMillis(LocalDateTime.now()) - timeToMillis(alarmNotificationTime)
-//        val isAlarmRemindEnabled = prefs.getBoolean("alarm_notification", false)
-//        for (num in classSlot) {
-//            val hour = when(num) {
-//                1 -> 8
-//                2 -> 10
-//                3 -> 14
-//                4 -> 16
-//                else -> -1
-//            }
-//            scheduleNotification(
-//                context,
-//                alarmNotificationMillis,
-//                ACTION_SHOW_NOTIFICATION,
-//                103,
-//                isAlarmRemindEnabled,
-//                arrayOf("闹钟设置", "明天的$hour:00有课，是否设置闹钟？", "确认", CLASS_ALARM, hour.toString())
-//            )
-//        }
+    private fun scheduleCheck(context: Context) {
+        val allCourses = getSchedule(context)
+
+        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+        val startDay = prefs.getString("semester_start_date", null)
+        if (startDay == null) {
+            return
+        }
+
+        val currentDate = LocalDate.now()
+        val startDate = LocalDate.parse(
+            startDay,
+            DateTimeFormatter.ofPattern("yyyy-M-d")
+        )
+
+        val weekNumber = ChronoUnit.DAYS.between(startDate, currentDate) / 7 + 1
+        if (weekNumber <= 0) {
+            return
+        }
+
+        val currentDayOfWeek = currentDate.dayOfWeek.value
+        val coursesThisWeek = allCourses.filter { weekNumber.toInt() in it.activeWeeks }
+        val coursesForTomorrow = coursesThisWeek
+            .filter { it.dayOfWeek == currentDayOfWeek}
+            .sortedBy { it.startTime }
+
+        val hasClass = BooleanArray(4){ false }
+        val classSlot = ArrayList<Int>()
+        for(course in coursesForTomorrow) {
+            hasClass[course.startTime - 1] = true
+
+            val tomorrowTime = LocalDateTime.now()
+                .plusDays(1)
+                .withMinute(30)
+                .withSecond(0)
+                .withNano(0)
+            when(course.startTime) {
+                1 -> {
+                    tomorrowTime.withHour(7)
+                    classSlot.add(1)
+                }
+                2 -> {
+                    tomorrowTime.withHour(9)
+                    if (!hasClass[0]) {
+                        classSlot.add(2)
+                    }
+                }
+                3 -> {
+                    tomorrowTime.withHour(13)
+                    classSlot.add(3)
+                }
+                4 -> {
+                    tomorrowTime.withHour(15)
+                    if (!hasClass[2]) {
+                        classSlot.add(4)
+                    }
+                }
+            }
+
+            val isClassRemindEnabled = prefs.getBoolean("class_notification", false)
+            val triggerTime =timeToMillis(LocalDateTime.now()) - timeToMillis(tomorrowTime)
+            scheduleNotification(
+                context,
+                triggerTime,
+                ACTION_SHOW_NOTIFICATION,
+                102,
+                isClassRemindEnabled,
+                arrayOf("上课提醒", "下一节课是：" + course.name +"\n" + "上课地点为：" + course.location, "知道了", "")
+            )
+        }
+
+        val alarmNotificationTime = LocalDateTime.now()
+            .withHour(22)
+            .withMinute(0)
+            .withSecond(0)
+            .withNano(0)
+        val alarmNotificationMillis = timeToMillis(LocalDateTime.now()) - timeToMillis(alarmNotificationTime)
+        val isAlarmRemindEnabled = prefs.getBoolean("alarm_notification", false)
+        for (num in classSlot) {
+            val hour = when(num) {
+                1 -> 8
+                2 -> 10
+                3 -> 14
+                4 -> 16
+                else -> -1
+            }
+            scheduleNotification(
+                context,
+                alarmNotificationMillis,
+                ACTION_SHOW_NOTIFICATION,
+                103,
+                isAlarmRemindEnabled,
+                arrayOf("闹钟设置", "明天的$hour:00有课，是否设置闹钟？", "确认", CLASS_ALARM, hour.toString())
+            )
+        }
     }
 }

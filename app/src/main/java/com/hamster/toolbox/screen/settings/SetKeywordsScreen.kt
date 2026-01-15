@@ -65,73 +65,61 @@ fun SetKeywordsScreen(
         }
     }
 
-    MaterialTheme {
-        CompositionLocalProvider(
-            LocalOverscrollFactory provides null
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .tiltGestureContainer(sharedTiltState)
-                    .background(colorResource(id = R.color.background))
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp)
-            ) {
-                Spacer(modifier = Modifier.height(96.dp))
-
-                ItemGroup(titleState = sharedTiltState) {
-                    keywordsList.forEachIndexed { index, keyword ->
-                        InquiryItem(
-                            modifier = getModifier(keyword.word),
-                            title = keyword.word,
-                            summary = "",
-                            dialogTitle = "\"" + keyword.word + "\"",
-                            dialogContent = "是否删除？",
-                            onConfirm = {
-                                return@InquiryItem try {
-                                    keywordsList.removeAt(index)
-
-                                    scope.launch(Dispatchers.IO) {
-                                        KeywordManager.removeKeyword(context, keyword.word)
-                                    }
-                                    true
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
-                                    false
-                                }
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .tiltGestureContainer(sharedTiltState)
+            .background(colorResource(id = R.color.background))
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp)
+    ) {
+        Spacer(modifier = Modifier.height(96.dp))
+        ItemGroup(titleState = sharedTiltState) {
+            keywordsList.forEachIndexed { index, keyword ->
+                InquiryItem(
+                    modifier = getModifier(keyword.word),
+                    title = keyword.word,
+                    summary = "",
+                    dialogTitle = "\"" + keyword.word + "\"",
+                    dialogContent = "是否删除？",
+                    onConfirm = {
+                        return@InquiryItem try {
+                            keywordsList.removeAt(index)
+                            scope.launch(Dispatchers.IO) {
+                                KeywordManager.removeKeyword(context, keyword.word)
                             }
-                        )
-                    }
-                }
-
-                // 添加热词的 Dialog
-                if (mainViewModel.isShowAddKeywordDialog) {
-                    EditTextDialog(
-                        title = "添加热词",
-                        initialValue = "",
-                        hint = "热词",
-                        singleLine = true,
-                        onDismissRequest = { mainViewModel.isShowAddKeywordDialog = false },
-                        onConfirm = { input ->
-                            return@EditTextDialog try {
-                                val newData = KeywordsData(input, 5f)
-
-                                keywordsList.add(newData)
-
-                                scope.launch(Dispatchers.IO) {
-                                    KeywordManager.addKeyword(context, newData)
-                                }
-                                true
-                            } catch (e: Exception) {
-                                e.printStackTrace()
-                                false
-                            }
+                            true
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                            false
                         }
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(64.dp))
+                    }
+                )
             }
         }
+        // 添加热词的 Dialog
+        if (mainViewModel.isShowAddKeywordDialog) {
+            EditTextDialog(
+                title = "添加热词",
+                initialValue = "",
+                hint = "热词",
+                singleLine = true,
+                onDismissRequest = { mainViewModel.isShowAddKeywordDialog = false },
+                onConfirm = { input ->
+                    return@EditTextDialog try {
+                        val newData = KeywordsData(input, 5f)
+                        keywordsList.add(newData)
+                        scope.launch(Dispatchers.IO) {
+                            KeywordManager.addKeyword(context, newData)
+                        }
+                        true
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        false
+                    }
+                }
+            )
+        }
+        Spacer(modifier = Modifier.height(64.dp))
     }
 }

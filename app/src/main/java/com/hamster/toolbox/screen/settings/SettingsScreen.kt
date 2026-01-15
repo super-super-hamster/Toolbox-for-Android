@@ -60,6 +60,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.time.Instant
 import java.time.ZoneOffset
+import java.time.LocalTime
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalFoundationApi::class)
@@ -78,14 +79,7 @@ fun SettingsScreen(
     var currentAvatarType by remember { mutableStateOf("user") }
 
 
-    val requestPostNotificationPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-        } else {
-            Toast.makeText(context, "需要通知权限哦", Toast.LENGTH_SHORT).show()
-        }
-    }
+
 
     val avatarPickMedia = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia()
@@ -100,17 +94,6 @@ fun SettingsScreen(
                     Toast.makeText(context, "更新头像失败", Toast.LENGTH_SHORT).show()
                 }
             }
-        }
-    }
-
-    // 权限检查
-    fun classNotificationCheck() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            requestPostNotificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-            val receiver = Receiver()
-            receiver.scheduleDailyNotification(
-                context, 7, 0, Receiver.ACTION_CLASS_ALARM_CHECK, 101, true, emptyArray()
-            )
         }
     }
 
@@ -140,6 +123,28 @@ fun SettingsScreen(
 
     if (curriculumImportState != "未设置") {
         curriculumImportState = "已设置"
+    }
+
+    val classRemindRequestPostNotificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            isClassRemindEnabled = true
+        } else {
+            isClassRemindEnabled = false
+            Toast.makeText(context, "需要通知权限", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    val alarmRemindRequestPostNotificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            isAlarmRemindEnabled = true
+        } else {
+            isAlarmRemindEnabled = false
+            Toast.makeText(context, "需要通知权限", Toast.LENGTH_SHORT).show()
+        }
     }
 
     Column(
@@ -215,9 +220,26 @@ fun SettingsScreen(
                 checked = isClassRemindEnabled,
                 icon = R.drawable.ic_message,
                 onCheckedChange = {
-                    // TODO:没有权限不改变开关状态
-                    isClassRemindEnabled = it
-                    classNotificationCheck()
+                    val receiver = Receiver()
+                    var finalResult = false
+
+                    if (it) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            if (androidx.core.content.ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                                finalResult = true
+                            } else {
+                                classRemindRequestPostNotificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            }
+                        } else {
+                            finalResult = true
+                        }
+                    }
+
+                    isClassRemindEnabled = finalResult
+                    prefs.edit { putBoolean("class_notification", finalResult) }
+                    receiver.dailyNotification(
+                        context, (LocalTime.now().hour + 1) % 24, 0, Receiver.ACTION_CLASS_ALARM_CHECK, 101, isClassRemindEnabled || isAlarmRemindEnabled, emptyArray()
+                    )
                 }
             )
             SwitchItem(
@@ -227,8 +249,26 @@ fun SettingsScreen(
                 checked = isAlarmRemindEnabled,
                 icon = R.drawable.ic_alarm,
                 onCheckedChange = {
-                    isAlarmRemindEnabled = it
-                    classNotificationCheck()
+                    val receiver = Receiver()
+                    var finalResult = false
+
+                    if (it) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            if (androidx.core.content.ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                                finalResult = true
+                            } else {
+                                alarmRemindRequestPostNotificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            }
+                        } else {
+                            finalResult = true
+                        }
+                    }
+
+                    isAlarmRemindEnabled = finalResult
+                    prefs.edit { putBoolean("class_notification", finalResult) }
+                    receiver.dailyNotification(
+                        context, (LocalTime.now().hour + 1) % 24, 0, Receiver.ACTION_CLASS_ALARM_CHECK, 101, isClassRemindEnabled || isAlarmRemindEnabled, emptyArray()
+                    )
                 }
             )
         }
