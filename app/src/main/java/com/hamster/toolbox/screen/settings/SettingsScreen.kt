@@ -59,8 +59,10 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.time.Instant
-import java.time.ZoneOffset
 import java.time.LocalTime
+import java.time.ZoneOffset
+
+// TODO:高光
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalFoundationApi::class)
@@ -77,9 +79,6 @@ fun SettingsScreen(
     val sharedTiltState = rememberSharedTiltState()
     val targets = remember { mutableMapOf<String, ScrollTarget>() }
     var currentAvatarType by remember { mutableStateOf("user") }
-
-
-
 
     val avatarPickMedia = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia()
@@ -101,11 +100,17 @@ fun SettingsScreen(
         return targets.getOrPut(id) { ScrollTarget() }.modifier
     }
 
-    LaunchedEffect(triggerTime) {
-        if (!jumpTargetId.isNullOrEmpty()) {
-            delay(1000)
-            targets[jumpTargetId]?.scrollTo(context)
+    fun scrollTo(id: String?) {
+        if (!id.isNullOrEmpty()) {
+            scope.launch {
+                delay(400)
+                targets[id]?.scrollTo(context)
+            }
         }
+    }
+
+    LaunchedEffect(triggerTime) {
+        scrollTo(jumpTargetId)
     }
 
     var nickname by rememberStringPreference("nickname", stringResource(R.string.anonymous))
@@ -211,6 +216,10 @@ fun SettingsScreen(
                 summary = curriculumImportState,
                 icon = R.drawable.ic_curriculum
             ) {
+                if (prefs.getString("semester_start_date", null)?.isEmpty() == true) {
+                    scrollTo("semester_start_date")
+                    return@ClickItem
+                }
                 onNavigate(ImportCurriculum)
             }
             SwitchItem(
@@ -272,7 +281,9 @@ fun SettingsScreen(
                 }
             )
         }
+
         Spacer(modifier = Modifier.height(8.dp))
+
         ItemGroup(titleState = sharedTiltState) {
             ClickItem(
                 modifier = getModifier("assistant_avatar"),
@@ -322,7 +333,8 @@ fun SettingsScreen(
                 }
             )
         }
-        Spacer(modifier = Modifier.height(64.dp))
+
+        Spacer(modifier = Modifier.height(108.dp))
     }
 
     if (showUserAvatarOptionsDialog || showAssistantAvatarOptionsDialog) {

@@ -30,7 +30,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hamster.toolbox.R
 import com.hamster.toolbox.utils.getSchedule
+import com.hamster.toolbox.utils.rememberSharedTiltState
 import com.hamster.toolbox.utils.squircleShape
+import com.hamster.toolbox.utils.tiltGestureContainer
+
+// TODO：课程表可倾斜
 
 @Composable
 fun ScheduleScreen() {
@@ -46,11 +50,14 @@ fun ScheduleScreen() {
         }
     }
 
+    val sharedTiltState = rememberSharedTiltState()
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(colorResource(R.color.bg_dialog))
-            .padding(top = 96.dp, bottom = 80.dp),
+            .background(colorResource(R.color.background))
+            .padding(top = 96.dp, bottom = 108.dp)
+            .tiltGestureContainer(sharedTiltState),
         contentAlignment = Alignment.Center
     ) {
         HorizontalPager(

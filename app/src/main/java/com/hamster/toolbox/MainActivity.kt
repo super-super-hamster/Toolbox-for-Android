@@ -1,6 +1,7 @@
 package com.hamster.toolbox
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -42,6 +43,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -60,6 +62,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
@@ -79,6 +82,7 @@ import com.hamster.toolbox.ai.AI
 import com.hamster.toolbox.ai.AiResponse
 import com.hamster.toolbox.ai.Message
 import com.hamster.toolbox.ai.SpeechRecognizerManager
+import com.hamster.toolbox.screen.gameConsole.GameConsoleScreen
 import com.hamster.toolbox.screen.random.RandomNumberScreen
 import com.hamster.toolbox.screen.ruler.RulerScreen
 import com.hamster.toolbox.screen.schedule.ScheduleScreen
@@ -88,6 +92,12 @@ import com.hamster.toolbox.utils.AnimationButton
 import com.hamster.toolbox.utils.ButtonPro
 import com.hamster.toolbox.utils.prompt.PromptLoader
 import com.hamster.toolbox.utils.squircleShape
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.lens
+import com.kyant.backdrop.effects.vibrancy
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
@@ -98,18 +108,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-//TODO:点击dialog的card部分导致触发dismiss
 //TODO:右上角显示温度/湿度，点击展开详情
-//TODO:磨砂玻璃边缘弯曲效果？
 //TODO:天气,向下滑动天气透明度逐渐降低
-//TODO:dialog从点击位置出现？
-//TODO:课程新增日期字段，可空，导入课程表时自动计算
-//TODO:导入课程表前先设置开学日期
 //TODO:tips页面
-//TODO:标题栏把日期选择器的顶部模糊了？
 //TODO:通知栏字体颜色适配
 //TODO:测距
-//TODO:小游戏（单人棋，数独，数织，贪吃蛇，2048，俄罗斯方块）
 
 class MainActivity : ComponentActivity() {
     private lateinit var speechManager: SpeechRecognizerManager
@@ -125,6 +128,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     @OptIn(ExperimentalMaterial3Api::class, ExperimentalHazeMaterialsApi::class)
     @RequiresApi(Build.VERSION_CODES.R)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -157,8 +161,31 @@ class MainActivity : ComponentActivity() {
                 else -> "ToolBox"
             }
 
-            val showTopBar = true
-            val showBottomMenu = true
+            val showTopBar = when {
+                currentDestination?.hasRoute<Schedule>() == true -> true
+                currentDestination?.hasRoute<RandomNumber>() == true -> true
+                currentDestination?.hasRoute<Ruler>() == true -> false
+                currentDestination?.hasRoute<Settings>() == true -> true
+                currentDestination?.hasRoute<SetKeywords>() == true -> true
+                currentDestination?.hasRoute<ImportCurriculum>() == true -> true
+                currentDestination?.hasRoute<GameConsole>() == true -> false
+                else -> true
+            }
+
+            val showBottomMenu = when {
+                currentDestination?.hasRoute<Schedule>() == true -> true
+                currentDestination?.hasRoute<RandomNumber>() == true -> true
+                currentDestination?.hasRoute<Ruler>() == true -> false
+                currentDestination?.hasRoute<Settings>() == true -> true
+                currentDestination?.hasRoute<SetKeywords>() == true -> true
+                currentDestination?.hasRoute<ImportCurriculum>() == true -> true
+                currentDestination?.hasRoute<GameConsole>() == true -> false
+                else -> true
+            }
+
+            val backdrop = rememberLayerBackdrop {
+                drawContent()
+            }
 
             var showSearchBar by remember { mutableStateOf(false) }
             var searchText by remember { mutableStateOf("") }
@@ -179,7 +206,9 @@ class MainActivity : ComponentActivity() {
                     launchSingleTop = true // 同一个页面不会创建新的实例
                     restoreState = true // 恢复之前的状态
                 }
+
                 isMenuExpanded = false
+                showSearchBar = false
             }
 
             MaterialTheme {
@@ -191,8 +220,8 @@ class MainActivity : ComponentActivity() {
                                     navController = navController,
                                     startDestination = Schedule,
                                     modifier = Modifier
+                                        .layerBackdrop(backdrop) // 应用玻璃效果
                                         .hazeSource(state = hazeState)
-                                        .padding(bottom = innerPadding.calculateBottomPadding())
                                         .fillMaxSize()
                                 ) {
                                     // 课程表
@@ -208,6 +237,11 @@ class MainActivity : ComponentActivity() {
                                     // 尺子
                                     composable<Ruler> {
                                         RulerScreen()
+                                    }
+
+                                    // 游戏机
+                                    composable<GameConsole> {
+                                        GameConsoleScreen()
                                     }
 
                                     // 设置
@@ -235,6 +269,7 @@ class MainActivity : ComponentActivity() {
                                                 indication = null
                                             ) {
                                                 isMenuExpanded = false
+                                                showSearchBar = false
                                             }
                                     )
                                 }
@@ -269,6 +304,7 @@ class MainActivity : ComponentActivity() {
                                                             verticalAlignment = Alignment.CenterVertically,
                                                             horizontalArrangement = Arrangement.SpaceBetween
                                                         ) {
+                                                            // 课程表
                                                             IconButton(onClick = { navController.expandMenuNavigate(Schedule) }) {
                                                                 Icon(painterResource(R.drawable.ic_calendar), null, tint = Color.Gray)
                                                             }
@@ -280,6 +316,17 @@ class MainActivity : ComponentActivity() {
                                                             IconButton(onClick = { navController.expandMenuNavigate(RandomNumber) }) {
                                                                 Icon(painterResource(R.drawable.ic_numbers), null, tint = Color.Gray)
                                                             }
+                                                            // 游戏
+                                                            IconButton(onClick = { navController.expandMenuNavigate(GameConsole) }) {
+                                                                Icon(painterResource(R.drawable.ic_game_console), null, tint = Color.Gray)
+                                                            }
+                                                        }
+
+                                                        Row(
+                                                            modifier = Modifier.fillMaxWidth().height(96.dp).padding(horizontal = 24.dp),
+                                                            verticalAlignment = Alignment.CenterVertically,
+                                                            horizontalArrangement = Arrangement.SpaceBetween
+                                                        ) {
                                                             // 设置
                                                             IconButton(onClick = { navController.expandMenuNavigate(SettingsGraph) }) {
                                                                 Icon(painterResource(R.drawable.ic_settings), null, tint = Color.Gray)
@@ -413,16 +460,16 @@ class MainActivity : ComponentActivity() {
                                         ),
                                         modifier = Modifier
                                             .align(Alignment.TopCenter)
-                                            .height(96.dp)
+                                            .height(80.dp)
                                             .fillMaxWidth()
-                                            .hazeEffect(
-                                                state = hazeState,
-                                                style = HazeStyle(
-                                                    blurRadius = 8.dp,
-                                                    tint = HazeTint(Color.White.copy(alpha = 0.2f)),
-                                                    noiseFactor = 0.05f
-                                                )
-                                            )
+                                            .shadow(elevation = 0.dp)
+                                            .drawBackdrop(
+                                                backdrop = backdrop,
+                                                shape = { RoundedCornerShape(0.dp) },
+                                                effects = {
+                                                    vibrancy()
+                                                    blur(4f.dp.toPx())
+                                                    lens(12f.dp.toPx(), 8f.dp.toPx()) },)
                                     )
                                 }
                             }

@@ -15,19 +15,32 @@
     <color name="brown">#9A3C0E</color>
     <color name="silver">#D9D9D9</color>
 
-    <color name="red">#CB1B45</color>
-    <color name="orange">#F75C2F</color>
-    <color name="yellow">#FC9F4D</color>
-    <color name="green">#86C166</color>
-    <color name="blue">#0089A7</color>
-    <color name="indigo">#005CAF</color>
-    <color name="violet">#6A4C9C</color>
+    <color name="game_console_background">#2E2E2E</color>
+    <color name="game_console_screen">#EEEEEE</color>
+
+    <color name="game_2048_2">#DFE677</color>
+    <color name="game_2048_4">#B0E677</color>
+    <color name="game_2048_8">#83E678</color>
+    <color name="game_2048_16">#77E694</color>
+    <color name="game_2048_32">#77E6B9</color>
+    <color name="game_2048_64">#77E6DF</color>
+    <color name="game_2048_128">#77C9E6</color>
+    <color name="game_2048_256">#77A6E6</color>
+    <color name="game_2048_512">#7783E6</color>
+    <color name="game_2048_1024">#9077E6</color>
+    <color name="game_2048_2048">#B477E6</color>
+    <color name="game_2048_4096">#D877E6</color>
+    <color name="game_2048_8192">#E677BC</color>
+    <color name="game_2048_16384">#E3686A</color>
+    <color name="game_2048_32768">#E37D68</color>
+    <color name="game_2048_65536">#E39368</color>
+    <color name="game_2048_131072">#E3A868</color>
 
     <color name="background">#F2F2F4</color>
     <color name="bg_tile">#D9D9D9</color>
     <color name="item">#393939</color>
     <color name="title_text">#0089A7</color>
-    <color name="text">#FF000000</color>
+        <color name="text">#FF000000</color>
     <color name="item_group_card">#FFFFFFFF</color>
     <color name="item_group_card_shadow">#393939</color>
     <color name="bg_dialog">#FFFFFFFF</color>

@@ -19,6 +19,12 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    sourceSets {
+        getByName("main") {
+            res.srcDirs("src/main/res", "src/main/res-games")
+        }
+    }
+
     buildTypes {
         release {
             //开启代码压缩和混淆
@@ -62,7 +68,7 @@ android {
         variant.outputs
             .map { it as com.android.build.gradle.api.ApkVariantOutput }
             .forEach { output ->
-                output.outputFileName = "ToolBox.apk"
+                output.outputFileName = "Toolbox.apk"
             }
     }
 }
@@ -108,5 +114,6 @@ dependencies {
     implementation("dev.chrisbanes.haze:haze:1.7.1")
     implementation("dev.chrisbanes.haze:haze-materials:1.7.1")
     implementation("dev.aige.pub:WheelPicker:1.2.0")
+    implementation("io.github.kyant0:backdrop:1.0.4")
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar", "*.aar"))))
 }

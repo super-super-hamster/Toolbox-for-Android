@@ -60,13 +60,19 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.scale
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
@@ -85,6 +91,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -767,8 +774,9 @@ fun DatePicker(
                 tonalElevation = 6.dp,
                 modifier = Modifier
                     .wrapContentWidth()
-                    .padding(vertical = 24.dp)
+                    .padding(vertical = 16.dp, horizontal = 8.dp)
                     .clickable(enabled = false) {}
+                    .scale(0.85f)
             ) {
                 Column(
                     modifier = Modifier.padding(bottom = 12.dp)
@@ -965,4 +973,43 @@ fun Modifier.applySharedTilt(
             rotationY = rotY.value
             cameraDistance = 12f * density
         }
+}
+
+fun Modifier.glow(
+    color: Color,
+    blurRadius: Dp = 15.dp,
+    spread: Dp = 0.dp,
+    shape: androidx.compose.ui.graphics.Shape
+) = this.drawBehind {
+    val shadowColor = color.toArgb()
+    val transparentColor = color.copy(alpha = 0f).toArgb()
+
+    val spreadPx = spread.toPx()
+    val blurPx = blurRadius.toPx()
+
+    this.drawIntoCanvas { canvas ->
+        val paint = Paint()
+        val frameworkPaint = paint.asFrameworkPaint()
+
+        frameworkPaint.color = transparentColor // 形状本身透明
+        frameworkPaint.setShadowLayer(
+            blurPx,
+            0f,
+            0f,
+            shadowColor
+        )
+
+        canvas.save()
+        if (spreadPx > 0f) {
+            val scaleX = (size.width + 2 * spreadPx) / size.width
+            val scaleY = (size.height + 2 * spreadPx) / size.height
+
+            canvas.scale(scaleX, scaleY, center.x, center.y)
+        }
+
+        val outline = shape.createOutline(size, layoutDirection, this@drawBehind)
+        canvas.drawOutline(outline, paint)
+
+        canvas.restore()
+    }
 }
