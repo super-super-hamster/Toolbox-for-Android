@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="top_padding">96.dp</dimen>
+    <dimen name="bottom_padding">108.dp</dimen>
+
+    <item name="dialog_width" type="fraction">85%</item>
+</resources>

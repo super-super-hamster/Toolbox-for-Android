@@ -25,6 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aigestudio.wheelpicker.WheelPicker
@@ -70,7 +71,7 @@ fun RandomNumberScreen() {
             .background(colorResource(id = R.color.background))
             .padding(16.dp)
     ) {
-        Spacer(modifier = Modifier.height(96.dp))
+        Spacer(modifier = Modifier.height(dimensionResource(R.dimen.top_padding)))
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -172,6 +173,6 @@ fun RandomNumberScreen() {
             }
         }
 
-        Spacer(modifier = Modifier.height(108.dp))
+        Spacer(modifier = Modifier.height(dimensionResource(R.dimen.bottom_padding)))
     }
 }

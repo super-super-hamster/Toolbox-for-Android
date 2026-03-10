@@ -1,14 +1,10 @@
 package com.hamster.toolbox.ai
 
 import android.content.Context
-import com.hamster.toolbox.ai.AiResponse
-import com.hamster.toolbox.ai.AiService
-import com.hamster.toolbox.ai.Message
-import com.hamster.toolbox.ai.Request
+import com.google.gson.Gson
 import com.hamster.toolbox.utils.prompt.PromptLoader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import com.google.gson.Gson
 
 object AI {
     private val apiService = AiService.Companion.service

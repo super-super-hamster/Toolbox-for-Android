@@ -110,6 +110,7 @@ import com.hamster.toolbox.R
 import kotlinx.coroutines.launch
 import sv.lib.squircleshape.CornerSmoothing
 import sv.lib.squircleshape.SquircleShape
+import androidx.compose.ui.unit.IntSize
 
 val squircleShape = SquircleShape(
     radius = 16.dp,
@@ -340,117 +341,94 @@ fun EditTextDialog(
         onDismissRequest()
     }
 
-    val dismissAction = {
-        onDismissRequest()
-    }
-
-    Dialog(
-        onDismissRequest = dismissAction,
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false,
-            decorFitsSystemWindows = false
-        )
-    ) {
+    StandardDialog(onDismissRequest = onDismissRequest) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = dismissAction
-                ),
+                .imePadding(), // 内容避让键盘
             contentAlignment = Alignment.Center
         ) {
-            BlurEffect()
-
-            Box(
+            Card(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .imePadding(), // 内容避让键盘
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth(0.9f)
+                    .heightIn(max = screenHeight * 0.6f) // 限制最大高度
+                    .padding(16.dp)
+                    .clickable(enabled = false) {},
+                shape = squircleShape,
+                colors = CardDefaults.cardColors(
+                    containerColor = colorResource(R.color.bg_dialog)
+                ),
+                elevation = CardDefaults.cardElevation(16.dp)
             ) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth(0.9f)
-                        .heightIn(max = screenHeight * 0.6f) // 限制最大高度
-                        .padding(16.dp)
-                        .clickable(enabled = false) {},
-                    shape = squircleShape,
-                    colors = CardDefaults.cardColors(
-                        containerColor = colorResource(R.color.bg_dialog)
-                    ),
-                    elevation = CardDefaults.cardElevation(16.dp)
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Column(
-                        modifier = Modifier.padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                    Text(
+                        text = title,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = tempText,
+                        onValueChange = { input ->
+                            val inputText = input.text
+                            when (type) {
+                                "Int" -> {
+                                    if (inputText.all { it.isDigit() }) {
+                                        tempText = input
+                                    }
+                                }
+                                "Float" -> {
+                                    if (inputText.matches(Regex("^\\d*\\.?\\d*$"))) {
+                                        tempText = input
+                                    }
+                                }
+                                else -> tempText = input
+                            } },
+                        placeholder = { Text(text = hint, color = Color.Gray) },
+                        singleLine = singleLine,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f, fill = false) // 弹性高度
+                            .focusRequester(focusRequester), // 焦点
+                        keyboardOptions = KeyboardOptions(
+                            imeAction = if (singleLine) ImeAction.Done else ImeAction.Default,
+                            keyboardType = if (type == "String") KeyboardType.Text else KeyboardType.Number
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onDone = { if (singleLine) submitAction() }
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(42.dp),
+                        horizontalArrangement = Arrangement.spacedBy(24.dp)
                     ) {
-                        Text(
-                            text = title,
-                            modifier = Modifier.fillMaxWidth(),
-                            textAlign = TextAlign.Center,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        OutlinedTextField(
-                            value = tempText,
-                            onValueChange = { input ->
-                                val inputText = input.text
-                                when (type) {
-                                    "Int" -> {
-                                        if (inputText.all { it.isDigit() }) {
-                                            tempText = input
-                                        }
-                                    }
-                                    "Float" -> {
-                                        if (inputText.matches(Regex("^\\d*\\.?\\d*$"))) {
-                                            tempText = input
-                                        }
-                                    }
-                                    else -> tempText = input
-                                } },
-                            placeholder = { Text(text = hint, color = Color.Gray) },
-                            singleLine = singleLine,
+                        Button(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f, fill = false) // 弹性高度
-                                .focusRequester(focusRequester), // 焦点
-                            keyboardOptions = KeyboardOptions(
-                                imeAction = if (singleLine) ImeAction.Done else ImeAction.Default,
-                                keyboardType = if (type == "String") KeyboardType.Text else KeyboardType.Number
-                            ),
-                            keyboardActions = KeyboardActions(
-                                onDone = { if (singleLine) submitAction() }
-                            )
-                        )
-                        Spacer(modifier = Modifier.height(24.dp))
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
+                                .weight(1f)
                                 .height(42.dp),
-                            horizontalArrangement = Arrangement.spacedBy(24.dp)
+                            shape = squircleShape,
+                            colors = ButtonDefaults.textButtonColors(Color.Transparent),
+                            onClick = cancelAction
                         ) {
-                            Button(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(42.dp),
-                                shape = squircleShape,
-                                colors = ButtonDefaults.textButtonColors(Color.Transparent),
-                                onClick = cancelAction
-                            ) {
-                                Text("取消", color = Color.Gray)
-                            }
-                            Button(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(42.dp),
-                                shape = squircleShape,
-                                colors = ButtonDefaults.textButtonColors(colorResource(R.color.btn_confirm)),
-                                onClick = submitAction
-                            ) {
-                                Text("确定")
-                            }
+                            Text("取消", color = Color.Gray)
+                        }
+                        Button(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(42.dp),
+                            shape = squircleShape,
+                            colors = ButtonDefaults.textButtonColors(colorResource(R.color.btn_confirm)),
+                            onClick = submitAction
+                        ) {
+                            Text("确定")
                         }
                     }
                 }
@@ -512,91 +490,68 @@ fun InquiryDialog(
         onDismissRequest()
     }
 
-    val dismissAction = {
-        onDismissRequest()
-    }
-
-    Dialog(
-        onDismissRequest = dismissAction,
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false,
-            decorFitsSystemWindows = false
-        )
-    ) {
-        Box(
+    StandardDialog(onDismissRequest = onDismissRequest) {
+        Card(
             modifier = Modifier
-                .fillMaxSize()
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = dismissAction
-                ),
-            contentAlignment = Alignment.Center
+                .fillMaxWidth(0.85f)
+                .clickable(enabled = false) {},
+            shape = squircleShape,
+            colors = CardDefaults.cardColors(
+                containerColor = colorResource(R.color.bg_dialog)
+            ),
+            elevation = CardDefaults.cardElevation(16.dp)
         ) {
-            BlurEffect()
-
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth(0.85f)
-                    .clickable(enabled = false) {},
-                shape = squircleShape,
-                colors = CardDefaults.cardColors(
-                    containerColor = colorResource(R.color.bg_dialog)
-                ),
-                elevation = CardDefaults.cardElevation(16.dp)
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                if (content.isNotEmpty()) {
                     Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleLarge,
+                        text = content,
+                        style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center,
-                        fontWeight = FontWeight.Bold
+                        textAlign = TextAlign.Center
                     )
+                }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
-                    if (content.isNotEmpty()) {
-                        Text(
-                            text = content,
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.fillMaxWidth(),
-                            textAlign = TextAlign.Center
-                        )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(42.dp),
+                    horizontalArrangement = Arrangement.spacedBy(24.dp)
+                ) {
+                    Button(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(42.dp),
+                        shape = squircleShape,
+                        colors = ButtonDefaults.textButtonColors(Color.Transparent),
+                        onClick = cancelAction
+                    ) {
+                        Text(text = cancelText, color = Color.Gray)
                     }
 
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    Row(
+                    Button(
                         modifier = Modifier
-                            .fillMaxWidth()
+                            .weight(1f)
                             .height(42.dp),
-                        horizontalArrangement = Arrangement.spacedBy(24.dp)
+                        shape = squircleShape,
+                        colors = ButtonDefaults.textButtonColors(colorResource(R.color.btn_confirm)),
+                        onClick = confirmAction
                     ) {
-                        Button(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(42.dp),
-                            shape = squircleShape,
-                            colors = ButtonDefaults.textButtonColors(Color.Transparent),
-                            onClick = cancelAction
-                        ) {
-                            Text(text = cancelText, color = Color.Gray)
-                        }
-
-                        Button(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(42.dp),
-                            shape = squircleShape,
-                            colors = ButtonDefaults.textButtonColors(colorResource(R.color.btn_confirm)),
-                            onClick = confirmAction
-                        ) {
-                            Text(text = confirmText, color = colorResource(R.color.text))
-                        }
+                        Text(text = confirmText, color = colorResource(R.color.text))
                     }
                 }
             }
@@ -835,6 +790,46 @@ fun DatePicker(
 }
 
 @Composable
+fun StandardDialog(
+    onDismissRequest: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    Dialog(
+        onDismissRequest = onDismissRequest,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false
+        )
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onDismissRequest
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            BlurEffect()
+
+            Card(
+                modifier = modifier
+                    .clickable(enabled = false) {},
+                shape = squircleShape,
+                colors = CardDefaults.cardColors(
+                    containerColor = colorResource(R.color.bg_dialog)
+                ),
+                elevation = CardDefaults.cardElevation(16.dp)
+            ) {
+                content()
+            }
+        }
+    }
+}
+
+@Composable
 fun rememberStringPreference(key: String, default: String = ""): MutableState<String> {
     val context = LocalContext.current
     val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
@@ -909,15 +904,10 @@ fun BlurEffect(blurRadius: Int = 24, blurDimAmount: Float = 0f, fallbackDimAmoun
 @Stable
 class SharedTiltState {
     var currentGlobalTouch by mutableStateOf<Offset?>(null)
-    fun onTouch(offset: Offset?) {
-        currentGlobalTouch = offset
-    }
 }
 
 @Composable
-fun rememberSharedTiltState(): SharedTiltState {
-    return remember { SharedTiltState() }
-}
+fun rememberSharedTiltState() = remember { SharedTiltState() }
 
 fun Modifier.tiltGestureContainer(state: SharedTiltState): Modifier = this.pointerInput(Unit) {
     awaitPointerEventScope {
@@ -926,9 +916,9 @@ fun Modifier.tiltGestureContainer(state: SharedTiltState): Modifier = this.point
             val change = event.changes.firstOrNull()
 
             if (change != null && change.pressed) {
-                state.onTouch(change.position)
+                state.currentGlobalTouch = change.position // 获取屏幕绝对坐标
             } else {
-                state.onTouch(null)
+                state.currentGlobalTouch = null
             }
         }
     }
@@ -941,31 +931,30 @@ fun Modifier.applySharedTilt(
 ): Modifier {
     val rotX = remember { Animatable(0f) }
     val rotY = remember { Animatable(0f) }
-
     var myBounds by remember { mutableStateOf(Rect.Zero) }
 
-    LaunchedEffect(Unit) {
-        snapshotFlow { state.currentGlobalTouch }.collect { touch ->
-            if (touch != null && myBounds.contains(touch)) {
-                val centerX = myBounds.center.x
-                val centerY = myBounds.center.y
+    LaunchedEffect(state.currentGlobalTouch) {
+        val touch = state.currentGlobalTouch
+        // 关键判断：全局触摸点是否在这张卡片的全局 Bounds 内
+        if (touch != null && myBounds.contains(touch)) {
+            val centerX = myBounds.center.x
+            val centerY = myBounds.center.y
+            val normX = (touch.x - centerX) / (myBounds.width / 2f)
+            val normY = (touch.y - centerY) / (myBounds.height / 2f)
 
-                val normX = (touch.x - centerX) / (myBounds.width / 2f)
-                val normY = (touch.y - centerY) / (myBounds.height / 2f)
-
-                launch { rotX.snapTo(normY * -maxTilt) }
-                launch { rotY.snapTo(normX * maxTilt) }
-            } else {
-                if (rotX.value != 0f && rotY.value != 0f) {
-                    launch { rotX.animateTo(0f, spring(stiffness = Spring.StiffnessMedium, dampingRatio = Spring.DampingRatioMediumBouncy)) }
-                    launch { rotY.animateTo(0f, spring(stiffness = Spring.StiffnessMedium, dampingRatio = Spring.DampingRatioMediumBouncy)) }
-                }
+            launch { rotX.snapTo(normY * -maxTilt) }
+            launch { rotY.snapTo(normX * maxTilt) }
+        } else {
+            if (rotX.value != 0f || rotY.value != 0f) {
+                launch { rotX.animateTo(0f, spring(stiffness = Spring.StiffnessMedium)) }
+                launch { rotY.animateTo(0f, spring(stiffness = Spring.StiffnessMedium)) }
             }
         }
     }
 
     return this
         .onGloballyPositioned { coordinates ->
+            // 获取卡片在整个屏幕上的绝对位置。即使外层有 Scroll 滚动，这个位置也会实时更新！
             myBounds = coordinates.boundsInRoot()
         }
         .graphicsLayer {
