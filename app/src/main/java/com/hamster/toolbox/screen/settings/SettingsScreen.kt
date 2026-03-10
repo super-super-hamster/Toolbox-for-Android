@@ -249,11 +249,13 @@ fun SettingsScreen(
 
                         isClassRemindEnabled = finalResult
                         prefs.edit { putBoolean("class_notification", finalResult) }
+
                         receiver.dailyNotification(
-                            context, (LocalTime.now().hour + 1) % 24, 0, Receiver.ACTION_CLASS_ALARM_CHECK, 101, isClassRemindEnabled || isAlarmRemindEnabled, emptyArray()
+                            context, 22, 0, Receiver.ACTION_CLASS_ALARM_CHECK, 101, isClassRemindEnabled || isAlarmRemindEnabled, emptyArray()
                         )
                     }
                 )
+
                 SwitchItem(
                     modifier = getModifier("alarm_notification"),
                     title = "上课闹钟设置提醒",
@@ -277,9 +279,10 @@ fun SettingsScreen(
                         }
 
                         isAlarmRemindEnabled = finalResult
-                        prefs.edit { putBoolean("class_notification", finalResult) }
+                        prefs.edit { putBoolean("alarm_notification", finalResult) }
+
                         receiver.dailyNotification(
-                            context, (LocalTime.now().hour + 1) % 24, 0, Receiver.ACTION_CLASS_ALARM_CHECK, 101, isClassRemindEnabled || isAlarmRemindEnabled, emptyArray()
+                            context, 22, 0, Receiver.ACTION_CLASS_ALARM_CHECK, 101, isClassRemindEnabled || isAlarmRemindEnabled, emptyArray()
                         )
                     }
                 )

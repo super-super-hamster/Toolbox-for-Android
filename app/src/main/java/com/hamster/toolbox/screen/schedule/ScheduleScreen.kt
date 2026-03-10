@@ -29,7 +29,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
@@ -40,7 +39,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hamster.toolbox.R
-import com.hamster.toolbox.utils.ItemGroup
 import com.hamster.toolbox.utils.SharedTiltState
 import com.hamster.toolbox.utils.StandardDialog
 import com.hamster.toolbox.utils.applySharedTilt

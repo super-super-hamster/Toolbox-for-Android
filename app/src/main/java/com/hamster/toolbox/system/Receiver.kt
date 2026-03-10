@@ -1,6 +1,5 @@
 package com.hamster.toolbox.system
 
-import android.R
 import android.app.AlarmManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -27,42 +26,41 @@ class Receiver : BroadcastReceiver() {
         const val CHANNEL_ID = "tool_box_channel"
         const val NOTIFICATION_ID = 1001
 
-        //显示上课闹钟设置通知
         const val ACTION_SHOW_NOTIFICATION = "ACTION_SHOW_NOTIFICATION"
-        //点击按钮
         const val ACTION_BUTTON_CLICK = "ACTION_BUTTON_CLICK"
-        //上课闹钟通知检查
         const val ACTION_CLASS_ALARM_CHECK = "ACTION_CLASS_ALARM_CHECK"
         const val CLASS_ALARM = "CLASS_ALARM"
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onReceive(context: Context, intent: Intent) {
-        //action类似一个标签
         val action = intent.action
 
         when (action) {
             ACTION_SHOW_NOTIFICATION -> {
-                //发送通知
                 val extraData = intent.getStringArrayExtra("extra_data")
                 extraData?.let {
-                    if (it.size>4) {
-                        showNotification(context, it[0], it[1], it[2], arrayOf(it[3]))
+                    // 修改点：必须是 >= 4，否则 4 个元素的数组进不来
+                    if (it.size >= 4) {
+                        // 将第3个索引及之后的元素作为按钮的 extraData 传下去
+                        showNotification(context, it[0], it[1], it[2], it.copyOfRange(3, it.size))
                     }
                 }
             }
             ACTION_BUTTON_CLICK -> {
                 val extraData = intent.getStringArrayExtra("extra_data")
                 extraData?.let {
-                    when (it[0]) {
-                        CLASS_ALARM -> {
-                            val alarm = Alarm()
-                            alarm.setAlarm(context, it[1].toInt(), 0, vibrate = true)
+                    if (it.isNotEmpty()) {
+                        when (it[0]) {
+                            CLASS_ALARM -> {
+                                if (it.size > 1) {
+                                    val alarm = Alarm() // 确保你有这个类
+                                    alarm.setAlarm(context, it[1].toInt(), 0, vibrate = true)
+                                }
+                            }
                         }
                     }
                 }
-
-                //移除弹出的消息
                 NotificationManagerCompat.from(context).cancel(NOTIFICATION_ID)
             }
             ACTION_CLASS_ALARM_CHECK -> {
@@ -72,46 +70,39 @@ class Receiver : BroadcastReceiver() {
     }
 
     private fun showNotification(context: Context, title: String, text: String, buttonTitle: String, extraData: Array<String>?) {
-        //创建渠道
         createNotificationChannel(context)
 
-        // 修改action
         val buttonIntent = Intent(context, Receiver::class.java).apply {
             action = ACTION_BUTTON_CLICK
-            // 可以在onReceive中intent.getStringExtra("extra_data")获取附带的数据
             if (extraData != null) {
                 putExtra("extra_data", extraData)
             }
         }
         val buttonPendingIntent = PendingIntent.getBroadcast(
             context,
-            200,
+            // 修改点：使用系统时间作为动态请求码，防止多个通知按钮互相覆盖
+            System.currentTimeMillis().toInt(),
             buttonIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // 构建通知
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_dialog_info) // 必须设置小图标
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(title)
             .setContentText(text)
-            .setPriority(NotificationCompat.PRIORITY_HIGH) // 设置高优先级，会有悬浮弹窗
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
-            // 添加按钮
-            .addAction(R.drawable.ic_input_add, buttonTitle, buttonPendingIntent)
+            .addAction(android.R.drawable.ic_input_add, buttonTitle, buttonPendingIntent)
 
-        // 发送通知
         try {
-            NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, builder.build())
+            NotificationManagerCompat.from(context).notify(System.currentTimeMillis().toInt(), builder.build())
         } catch (e: SecurityException) {
             e.printStackTrace()
         }
     }
 
-    //标准实现 Android 8+ 必须创建渠道
     private fun createNotificationChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            //渠道名称，用户在设置中看到的名称
             val name = "提醒通知"
             val descriptionText = "用于任务提醒"
             val importance = NotificationManager.IMPORTANCE_HIGH
@@ -124,9 +115,7 @@ class Receiver : BroadcastReceiver() {
         }
     }
 
-    //定时提醒
     fun scheduleNotification(context: Context, triggerTimeMillis: Long, action: String, requestCode: Int, enable: Boolean, extraData: Array<String>?) {
-        //获取系统闹钟服务
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
         val intent = Intent(context, Receiver::class.java).apply {
@@ -136,20 +125,15 @@ class Receiver : BroadcastReceiver() {
             }
         }
 
-        //待定意图
         val pendingIntent = PendingIntent.getBroadcast(
             context,
-            requestCode, //请求码，用于区分不同的PendingIntent
+            requestCode,
             intent,
-            //FLAG_UPDATE_CURRENT：如果已有相同的请求码，那么更新而不是新建
-            //FLAG_IMMUTABLE：Android 12+强制要求，表示这个Intent内容不可修改
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
         if (enable) {
-            //设置提醒
-            //setExactAndAllowWhileIdle: 即使手机处于低电量模式也能触发
-            //不是准确时间
+            // 设置闹钟，必须传入绝对时间的时间戳
             alarmManager.setAndAllowWhileIdle(
                 AlarmManager.RTC_WAKEUP,
                 triggerTimeMillis,
@@ -161,7 +145,6 @@ class Receiver : BroadcastReceiver() {
         }
     }
 
-    //每日定时提醒
     fun dailyNotification(context: Context, hour: Int, minute: Int, action: String, requestCode: Int, enable: Boolean, extraData: Array<String>?) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
@@ -179,9 +162,7 @@ class Receiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        //计算下一次响铃时间
         val calendar = Calendar.getInstance()
-
         calendar.set(Calendar.HOUR_OF_DAY, hour)
         calendar.set(Calendar.MINUTE, minute)
         calendar.set(Calendar.SECOND, 0)
@@ -206,105 +187,100 @@ class Receiver : BroadcastReceiver() {
             alarmManager.cancel(pendingIntent)
             pendingIntent.cancel()
         }
-
     }
 
-    //课程提醒检查
     @RequiresApi(Build.VERSION_CODES.O)
     private fun scheduleCheck(context: Context) {
         val allCourses = getSchedule(context)
 
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
-        val startDay = prefs.getString("semester_start_date", null)
-        if (startDay == null) {
-            return
-        }
+        val startDay = prefs.getString("semester_start_date", null) ?: return
 
         val currentDate = LocalDate.now()
-        val startDate = LocalDate.parse(
-            startDay,
-            DateTimeFormatter.ofPattern("yyyy-M-d")
-        )
+        val startDate = LocalDate.parse(startDay, DateTimeFormatter.ofPattern("yyyy-M-d"))
 
         val weekNumber = ChronoUnit.DAYS.between(startDate, currentDate) / 7 + 1
-        if (weekNumber <= 0) {
-            return
-        }
+        if (weekNumber <= 0) return
 
-        val currentDayOfWeek = currentDate.dayOfWeek.value
+        // 修改点：因为是在今晚 22:00 查，所以要查“明天”的星期几
+        val tomorrowDate = currentDate.plusDays(1)
+        val tomorrowDayOfWeek = tomorrowDate.dayOfWeek.value
+
         val coursesThisWeek = allCourses.filter { weekNumber.toInt() in it.activeWeeks }
         val coursesForTomorrow = coursesThisWeek
-            .filter { it.dayOfWeek == currentDayOfWeek}
+            .filter { it.dayOfWeek == tomorrowDayOfWeek }
             .sortedBy { it.startTime }
 
-        val hasClass = BooleanArray(4){ false }
+        val hasClass = BooleanArray(4) { false }
         val classSlot = ArrayList<Int>()
-        for(course in coursesForTomorrow) {
+
+        val isClassRemindEnabled = prefs.getBoolean("class_notification", false)
+        val isAlarmRemindEnabled = prefs.getBoolean("alarm_notification", false)
+
+        for (course in coursesForTomorrow) {
             hasClass[course.startTime - 1] = true
 
-            val tomorrowTime = LocalDateTime.now()
+            // 修改点：使用 var 以允许重新赋值修改时间
+            var tomorrowTime = LocalDateTime.now()
                 .plusDays(1)
                 .withMinute(30)
                 .withSecond(0)
                 .withNano(0)
-            when(course.startTime) {
+
+            // 修改点：由于 LocalDateTime 是不可变的，必须重新赋值给 tomorrowTime
+            when (course.startTime) {
                 1 -> {
-                    tomorrowTime.withHour(7)
+                    tomorrowTime = tomorrowTime.withHour(7)
                     classSlot.add(1)
                 }
                 2 -> {
-                    tomorrowTime.withHour(9)
-                    if (!hasClass[0]) {
-                        classSlot.add(2)
-                    }
+                    tomorrowTime = tomorrowTime.withHour(9)
+                    if (!hasClass[0]) classSlot.add(2)
                 }
                 3 -> {
-                    tomorrowTime.withHour(13)
+                    tomorrowTime = tomorrowTime.withHour(13)
                     classSlot.add(3)
                 }
                 4 -> {
-                    tomorrowTime.withHour(15)
-                    if (!hasClass[2]) {
-                        classSlot.add(4)
-                    }
+                    tomorrowTime = tomorrowTime.withHour(15)
+                    if (!hasClass[2]) classSlot.add(4)
                 }
             }
 
-            val isClassRemindEnabled = prefs.getBoolean("class_notification", false)
-            val triggerTime =timeToMillis(LocalDateTime.now()) - timeToMillis(tomorrowTime)
+            // 修改点：AlarmManager 需要绝对的触发时间戳，而不是相减的差值
+            val triggerTime = timeToMillis(tomorrowTime)
+
             scheduleNotification(
                 context,
                 triggerTime,
                 ACTION_SHOW_NOTIFICATION,
-                102,
+                10200 + course.startTime, // 修改点：使用动态 requestCode 防止被下一节课覆盖
                 isClassRemindEnabled,
-                arrayOf("上课提醒", "下一节课是：" + course.name +"\n" + "上课地点为：" + course.location, "知道了", "")
+                arrayOf("上课提醒", "下一节课是：" + course.name + "\n" + "上课地点为：" + course.location, "知道了", "")
             )
         }
 
-        val alarmNotificationTime = LocalDateTime.now()
-            .withHour(22)
-            .withMinute(0)
-            .withSecond(0)
-            .withNano(0)
-        val alarmNotificationMillis = timeToMillis(LocalDateTime.now()) - timeToMillis(alarmNotificationTime)
-        val isAlarmRemindEnabled = prefs.getBoolean("alarm_notification", false)
-        for (num in classSlot) {
-            val hour = when(num) {
+        // 修改点：因为是在晚上 22:00 运行 scheduleCheck，此时已经到了发送闹钟提醒的时间。
+        // 所以不用再定到明天 22:00，而是直接在几秒后发送通知（避免广播拥堵，稍微延迟几秒执行）
+        val nowMillis = System.currentTimeMillis()
+        for ((index, num) in classSlot.withIndex()) {
+            val hour = when (num) {
                 1 -> 8
                 2 -> 10
                 3 -> 14
                 4 -> 16
                 else -> -1
             }
-            scheduleNotification(
-                context,
-                alarmNotificationMillis,
-                ACTION_SHOW_NOTIFICATION,
-                103,
-                isAlarmRemindEnabled,
-                arrayOf("闹钟设置", "明天的$hour:00有课，是否设置闹钟？", "确认", CLASS_ALARM, hour.toString())
-            )
+            if (hour != -1) {
+                scheduleNotification(
+                    context,
+                    nowMillis + (index + 1) * 2000L, // 每个通知错开 2 秒，防止系统合并或覆盖
+                    ACTION_SHOW_NOTIFICATION,
+                    10300 + num, // 修改点：动态 requestCode
+                    isAlarmRemindEnabled,
+                    arrayOf("闹钟设置", "明天的$hour:00有课，是否设置闹钟？", "确认", CLASS_ALARM, hour.toString())
+                )
+            }
         }
     }
 }

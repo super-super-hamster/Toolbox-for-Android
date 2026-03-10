@@ -341,96 +341,79 @@ fun EditTextDialog(
         onDismissRequest()
     }
 
-    StandardDialog(onDismissRequest = onDismissRequest) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .imePadding(), // 内容避让键盘
-            contentAlignment = Alignment.Center
+    StandardDialog(
+        onDismissRequest = onDismissRequest,
+        modifier = Modifier.heightIn(max = screenHeight * 0.6f) // 限制最大高度
+    ) {
+        Column(
+            modifier = Modifier.padding(24.dp).fillMaxWidth(0.85f),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Card(
+            Text(
+                text = title,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            OutlinedTextField(
+                value = tempText,
+                onValueChange = { input ->
+                    val inputText = input.text
+                    when (type) {
+                        "Int" -> {
+                            if (inputText.all { it.isDigit() }) {
+                                tempText = input
+                            }
+                        }
+                        "Float" -> {
+                            if (inputText.matches(Regex("^\\d*\\.?\\d*$"))) {
+                                tempText = input
+                            }
+                        }
+                        else -> tempText = input
+                    } },
+                placeholder = { Text(text = hint, color = Color.Gray) },
+                singleLine = singleLine,
                 modifier = Modifier
-                    .fillMaxWidth(0.9f)
-                    .heightIn(max = screenHeight * 0.6f) // 限制最大高度
-                    .padding(16.dp)
-                    .clickable(enabled = false) {},
-                shape = squircleShape,
-                colors = CardDefaults.cardColors(
-                    containerColor = colorResource(R.color.bg_dialog)
+                    .fillMaxWidth()
+                    .weight(1f, fill = false) // 弹性高度
+                    .focusRequester(focusRequester), // 焦点
+                keyboardOptions = KeyboardOptions(
+                    imeAction = if (singleLine) ImeAction.Done else ImeAction.Default,
+                    keyboardType = if (type == "String") KeyboardType.Text else KeyboardType.Number
                 ),
-                elevation = CardDefaults.cardElevation(16.dp)
+                keyboardActions = KeyboardActions(
+                    onDone = { if (singleLine) submitAction() }
+                )
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(42.dp),
+                horizontalArrangement = Arrangement.spacedBy(24.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                Button(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(42.dp),
+                    shape = squircleShape,
+                    colors = ButtonDefaults.textButtonColors(Color.Transparent),
+                    onClick = cancelAction
                 ) {
-                    Text(
-                        text = title,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    OutlinedTextField(
-                        value = tempText,
-                        onValueChange = { input ->
-                            val inputText = input.text
-                            when (type) {
-                                "Int" -> {
-                                    if (inputText.all { it.isDigit() }) {
-                                        tempText = input
-                                    }
-                                }
-                                "Float" -> {
-                                    if (inputText.matches(Regex("^\\d*\\.?\\d*$"))) {
-                                        tempText = input
-                                    }
-                                }
-                                else -> tempText = input
-                            } },
-                        placeholder = { Text(text = hint, color = Color.Gray) },
-                        singleLine = singleLine,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f, fill = false) // 弹性高度
-                            .focusRequester(focusRequester), // 焦点
-                        keyboardOptions = KeyboardOptions(
-                            imeAction = if (singleLine) ImeAction.Done else ImeAction.Default,
-                            keyboardType = if (type == "String") KeyboardType.Text else KeyboardType.Number
-                        ),
-                        keyboardActions = KeyboardActions(
-                            onDone = { if (singleLine) submitAction() }
-                        )
-                    )
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(42.dp),
-                        horizontalArrangement = Arrangement.spacedBy(24.dp)
-                    ) {
-                        Button(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(42.dp),
-                            shape = squircleShape,
-                            colors = ButtonDefaults.textButtonColors(Color.Transparent),
-                            onClick = cancelAction
-                        ) {
-                            Text("取消", color = Color.Gray)
-                        }
-                        Button(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(42.dp),
-                            shape = squircleShape,
-                            colors = ButtonDefaults.textButtonColors(colorResource(R.color.btn_confirm)),
-                            onClick = submitAction
-                        ) {
-                            Text("确定")
-                        }
-                    }
+                    Text("取消", color = Color.Gray)
+                }
+                Button(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(42.dp),
+                    shape = squircleShape,
+                    colors = ButtonDefaults.textButtonColors(colorResource(R.color.btn_confirm)),
+                    onClick = submitAction
+                ) {
+                    Text("确定")
                 }
             }
         }
@@ -805,6 +788,7 @@ fun StandardDialog(
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .imePadding()
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -815,12 +799,9 @@ fun StandardDialog(
             BlurEffect()
 
             Card(
-                modifier = modifier
-                    .clickable(enabled = false) {},
+                modifier = modifier.clickable(enabled = false) {}, // 接收外部传入的 modifier
                 shape = squircleShape,
-                colors = CardDefaults.cardColors(
-                    containerColor = colorResource(R.color.bg_dialog)
-                ),
+                colors = CardDefaults.cardColors(containerColor = colorResource(R.color.bg_dialog)),
                 elevation = CardDefaults.cardElevation(16.dp)
             ) {
                 content()
