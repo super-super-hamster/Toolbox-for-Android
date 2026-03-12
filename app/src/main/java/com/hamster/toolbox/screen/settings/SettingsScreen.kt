@@ -37,7 +37,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
 import androidx.preference.PreferenceManager
-import com.hamster.toolbox.ImportCurriculum
+import com.hamster.toolbox.CurriculumSettings
 import com.hamster.toolbox.R
 import com.hamster.toolbox.Route
 import com.hamster.toolbox.SetKeywords
@@ -61,7 +61,6 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.time.Instant
-import java.time.LocalTime
 import java.time.ZoneOffset
 
 // TODO:高光
@@ -215,7 +214,7 @@ fun SettingsScreen(
                 }
                 ClickItem(
                     modifier = getModifier("import_curriculum_options"),
-                    title = "导入课程表",
+                    title = "课程表设置",
                     summary = curriculumImportState,
                     icon = R.drawable.ic_curriculum
                 ) {
@@ -223,7 +222,7 @@ fun SettingsScreen(
                         scrollTo("semester_start_date")
                         return@ClickItem
                     }
-                    onNavigate(ImportCurriculum)
+                    onNavigate(CurriculumSettings)
                 }
                 SwitchItem(
                     modifier = getModifier("class_notification"),
@@ -231,26 +230,21 @@ fun SettingsScreen(
                     summary = "开启后将在上课前发送通知",
                     checked = isClassRemindEnabled,
                     icon = R.drawable.ic_message,
-                    onCheckedChange = {
-                        val receiver = Receiver()
-                        var finalResult = false
-
-                        if (it) {
+                    onCheckedChange = { isChecked ->
+                        if (isChecked) {
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                if (androidx.core.content.ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                                    finalResult = true
-                                } else {
+                                val permissionStatus = androidx.core.content.ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
+                                if (permissionStatus != android.content.pm.PackageManager.PERMISSION_GRANTED) {
                                     classRemindRequestPostNotificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                    return@SwitchItem
                                 }
-                            } else {
-                                finalResult = true
                             }
                         }
 
-                        isClassRemindEnabled = finalResult
-                        prefs.edit { putBoolean("class_notification", finalResult) }
+                        isClassRemindEnabled = isChecked
+                        prefs.edit { putBoolean("class_notification", isChecked) }
 
-                        receiver.dailyNotification(
+                        Receiver.dailyNotification(
                             context, 22, 0, Receiver.ACTION_CLASS_ALARM_CHECK, 101, isClassRemindEnabled || isAlarmRemindEnabled, emptyArray()
                         )
                     }
@@ -262,30 +256,26 @@ fun SettingsScreen(
                     summary = "开启后将自动发送设置闹钟的通知",
                     checked = isAlarmRemindEnabled,
                     icon = R.drawable.ic_alarm,
-                    onCheckedChange = {
-                        val receiver = Receiver()
-                        var finalResult = false
-
-                        if (it) {
+                    onCheckedChange = { isChecked ->
+                        if (isChecked) {
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                if (androidx.core.content.ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                                    finalResult = true
-                                } else {
+                                val permissionStatus = androidx.core.content.ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
+                                if (permissionStatus != android.content.pm.PackageManager.PERMISSION_GRANTED) {
                                     alarmRemindRequestPostNotificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                    return@SwitchItem
                                 }
-                            } else {
-                                finalResult = true
                             }
                         }
 
-                        isAlarmRemindEnabled = finalResult
-                        prefs.edit { putBoolean("alarm_notification", finalResult) }
+                        isAlarmRemindEnabled = isChecked
+                        prefs.edit { putBoolean("alarm_notification", isChecked) }
 
-                        receiver.dailyNotification(
+                        Receiver.dailyNotification(
                             context, 22, 0, Receiver.ACTION_CLASS_ALARM_CHECK, 101, isClassRemindEnabled || isAlarmRemindEnabled, emptyArray()
                         )
                     }
                 )
+
             }
 
             Spacer(modifier = Modifier.height(8.dp))

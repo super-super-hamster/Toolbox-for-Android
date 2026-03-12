@@ -157,7 +157,8 @@ class MainActivity : ComponentActivity() {
                 currentDestination?.hasRoute<RandomNumber>() == true ->"随机数"
                 currentDestination?.hasRoute<Settings>() == true -> "设置"
                 currentDestination?.hasRoute<SetKeywords>() == true -> "热词管理"
-                currentDestination?.hasRoute<ImportCurriculum>() == true -> "导入课程"
+                currentDestination?.hasRoute<CurriculumSettings>() == true -> "课程表设置"
+                currentDestination?.hasRoute<EditCurriculum>() == true -> "编辑课程表"
                 else -> "ToolBox"
             }
 
@@ -167,7 +168,7 @@ class MainActivity : ComponentActivity() {
                 currentDestination?.hasRoute<Ruler>() == true -> false
                 currentDestination?.hasRoute<Settings>() == true -> true
                 currentDestination?.hasRoute<SetKeywords>() == true -> true
-                currentDestination?.hasRoute<ImportCurriculum>() == true -> true
+                currentDestination?.hasRoute<CurriculumSettings>() == true -> true
                 currentDestination?.hasRoute<GameConsole>() == true -> false
                 else -> true
             }
@@ -178,7 +179,7 @@ class MainActivity : ComponentActivity() {
                 currentDestination?.hasRoute<Ruler>() == true -> false
                 currentDestination?.hasRoute<Settings>() == true -> true
                 currentDestination?.hasRoute<SetKeywords>() == true -> true
-                currentDestination?.hasRoute<ImportCurriculum>() == true -> true
+                currentDestination?.hasRoute<CurriculumSettings>() == true -> true
                 currentDestination?.hasRoute<GameConsole>() == true -> false
                 else -> true
             }

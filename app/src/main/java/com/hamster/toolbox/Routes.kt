@@ -14,7 +14,10 @@ data class Settings(
 ) : Route
 
 @Serializable
-object ImportCurriculum : Route
+object CurriculumSettings : Route
+
+@Serializable
+object EditCurriculum : Route
 
 @Serializable
 object SetKeywords : Route

@@ -8,10 +8,12 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.preference.PreferenceManager
+import com.hamster.toolbox.R
 import com.hamster.toolbox.utils.getSchedule
 import com.hamster.toolbox.utils.timeToMillis
 import java.time.LocalDate
@@ -30,6 +32,90 @@ class Receiver : BroadcastReceiver() {
         const val ACTION_BUTTON_CLICK = "ACTION_BUTTON_CLICK"
         const val ACTION_CLASS_ALARM_CHECK = "ACTION_CLASS_ALARM_CHECK"
         const val CLASS_ALARM = "CLASS_ALARM"
+
+        fun scheduleNotification(context: Context, triggerTimeMillis: Long, action: String, requestCode: Int, enable: Boolean, extraData: Array<String>?) {
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+
+            val intent = Intent(context, Receiver::class.java).apply {
+                this.action = action
+                if (extraData != null) {
+                    putExtra("extra_data", extraData)
+                }
+            }
+
+            val pendingIntent = PendingIntent.getBroadcast(
+                context,
+                requestCode,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+
+            if (enable) {
+                try {
+                    alarmManager.setAndAllowWhileIdle(
+                        AlarmManager.RTC_WAKEUP,
+                        triggerTimeMillis,
+                        pendingIntent
+                    )
+                } catch (e: SecurityException) {
+                    e.printStackTrace()
+                    alarmManager.setWindow(
+                        AlarmManager.RTC_WAKEUP,
+                        triggerTimeMillis,
+                        10 * 60 * 1000,
+                        pendingIntent
+                    )
+                    Log.e("AlarmTest", "缺少精确闹钟权限，已降级为普通闹钟")
+                }
+            } else {
+                alarmManager.cancel(pendingIntent)
+                pendingIntent.cancel()
+            }
+        }
+
+        fun dailyNotification(context: Context, hour: Int, minute: Int, action: String, requestCode: Int, enable: Boolean, extraData: Array<String>?) {
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+
+            val intent = Intent(context, Receiver::class.java).apply {
+                this.action = action
+                if (extraData != null) {
+                    putExtra("extra_data", extraData)
+                }
+            }
+
+            val pendingIntent = PendingIntent.getBroadcast(
+                context,
+                requestCode,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+
+            val calendar = Calendar.getInstance()
+            calendar.set(Calendar.HOUR_OF_DAY, hour)
+            calendar.set(Calendar.MINUTE, minute)
+            calendar.set(Calendar.SECOND, 0)
+            calendar.set(Calendar.MILLISECOND, 0)
+            if (calendar.timeInMillis <= System.currentTimeMillis()) {
+                calendar.add(Calendar.DAY_OF_MONTH, 1)
+            }
+            val triggerTime = calendar.timeInMillis
+
+            if (enable) {
+                try {
+                    alarmManager.setRepeating(
+                        AlarmManager.RTC_WAKEUP,
+                        triggerTime,
+                        AlarmManager.INTERVAL_DAY,
+                        pendingIntent
+                    )
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            } else {
+                alarmManager.cancel(pendingIntent)
+                pendingIntent.cancel()
+            }
+        }
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -40,9 +126,7 @@ class Receiver : BroadcastReceiver() {
             ACTION_SHOW_NOTIFICATION -> {
                 val extraData = intent.getStringArrayExtra("extra_data")
                 extraData?.let {
-                    // 修改点：必须是 >= 4，否则 4 个元素的数组进不来
                     if (it.size >= 4) {
-                        // 将第3个索引及之后的元素作为按钮的 extraData 传下去
                         showNotification(context, it[0], it[1], it[2], it.copyOfRange(3, it.size))
                     }
                 }
@@ -54,16 +138,18 @@ class Receiver : BroadcastReceiver() {
                         when (it[0]) {
                             CLASS_ALARM -> {
                                 if (it.size > 1) {
-                                    val alarm = Alarm() // 确保你有这个类
-                                    alarm.setAlarm(context, it[1].toInt(), 0, vibrate = true)
+                                    val alarm = Alarm()
+                                    alarm.setAlarm(context, it[1].toInt() - 1, 30, vibrate = true)
                                 }
                             }
                         }
                     }
                 }
-                NotificationManagerCompat.from(context).cancel(NOTIFICATION_ID)
+                val notifId = intent.getIntExtra("notification_id", NOTIFICATION_ID)
+                NotificationManagerCompat.from(context).cancel(notifId)
             }
             ACTION_CLASS_ALARM_CHECK -> {
+                Log.d("fuck", "check")
                 scheduleCheck(context)
             }
         }
@@ -72,22 +158,24 @@ class Receiver : BroadcastReceiver() {
     private fun showNotification(context: Context, title: String, text: String, buttonTitle: String, extraData: Array<String>?) {
         createNotificationChannel(context)
 
+        val notificationId = System.currentTimeMillis().toInt()
+
         val buttonIntent = Intent(context, Receiver::class.java).apply {
             action = ACTION_BUTTON_CLICK
+            putExtra("notification_id", notificationId)
             if (extraData != null) {
                 putExtra("extra_data", extraData)
             }
         }
         val buttonPendingIntent = PendingIntent.getBroadcast(
             context,
-            // 修改点：使用系统时间作为动态请求码，防止多个通知按钮互相覆盖
-            System.currentTimeMillis().toInt(),
+            notificationId,
             buttonIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(title)
             .setContentText(text)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -95,7 +183,7 @@ class Receiver : BroadcastReceiver() {
             .addAction(android.R.drawable.ic_input_add, buttonTitle, buttonPendingIntent)
 
         try {
-            NotificationManagerCompat.from(context).notify(System.currentTimeMillis().toInt(), builder.build())
+            NotificationManagerCompat.from(context).notify(notificationId, builder.build())
         } catch (e: SecurityException) {
             e.printStackTrace()
         }
@@ -115,86 +203,16 @@ class Receiver : BroadcastReceiver() {
         }
     }
 
-    fun scheduleNotification(context: Context, triggerTimeMillis: Long, action: String, requestCode: Int, enable: Boolean, extraData: Array<String>?) {
-        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-
-        val intent = Intent(context, Receiver::class.java).apply {
-            this.action = action
-            if (extraData != null) {
-                putExtra("extra_data", extraData)
-            }
-        }
-
-        val pendingIntent = PendingIntent.getBroadcast(
-            context,
-            requestCode,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        if (enable) {
-            // 设置闹钟，必须传入绝对时间的时间戳
-            alarmManager.setAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                triggerTimeMillis,
-                pendingIntent
-            )
-        } else {
-            alarmManager.cancel(pendingIntent)
-            pendingIntent.cancel()
-        }
-    }
-
-    fun dailyNotification(context: Context, hour: Int, minute: Int, action: String, requestCode: Int, enable: Boolean, extraData: Array<String>?) {
-        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-
-        val intent = Intent(context, Receiver::class.java).apply {
-            this.action = action
-            if (extraData != null) {
-                putExtra("extra_data", extraData)
-            }
-        }
-
-        val pendingIntent = PendingIntent.getBroadcast(
-            context,
-            requestCode,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val calendar = Calendar.getInstance()
-        calendar.set(Calendar.HOUR_OF_DAY, hour)
-        calendar.set(Calendar.MINUTE, minute)
-        calendar.set(Calendar.SECOND, 0)
-        calendar.set(Calendar.MILLISECOND, 0)
-        if (calendar.timeInMillis <= System.currentTimeMillis()) {
-            calendar.add(Calendar.DAY_OF_MONTH, 1)
-        }
-        val triggerTime = calendar.timeInMillis
-
-        if (enable) {
-            try {
-                alarmManager.setRepeating(
-                    AlarmManager.RTC_WAKEUP,
-                    triggerTime,
-                    AlarmManager.INTERVAL_DAY,
-                    pendingIntent
-                )
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        } else {
-            alarmManager.cancel(pendingIntent)
-            pendingIntent.cancel()
-        }
-    }
-
     @RequiresApi(Build.VERSION_CODES.O)
     private fun scheduleCheck(context: Context) {
         val allCourses = getSchedule(context)
 
+        Log.d("fuck", "schedule check")
+
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
         val startDay = prefs.getString("semester_start_date", null) ?: return
+
+        Log.d("fuck", "开学日期是: $startDay")
 
         val currentDate = LocalDate.now()
         val startDate = LocalDate.parse(startDay, DateTimeFormatter.ofPattern("yyyy-M-d"))
@@ -202,7 +220,6 @@ class Receiver : BroadcastReceiver() {
         val weekNumber = ChronoUnit.DAYS.between(startDate, currentDate) / 7 + 1
         if (weekNumber <= 0) return
 
-        // 修改点：因为是在今晚 22:00 查，所以要查“明天”的星期几
         val tomorrowDate = currentDate.plusDays(1)
         val tomorrowDayOfWeek = tomorrowDate.dayOfWeek.value
 
@@ -210,6 +227,8 @@ class Receiver : BroadcastReceiver() {
         val coursesForTomorrow = coursesThisWeek
             .filter { it.dayOfWeek == tomorrowDayOfWeek }
             .sortedBy { it.startTime }
+
+        Log.d("fuck", "明天是星期 $tomorrowDayOfWeek，明天共有 ${coursesForTomorrow.size} 节课")
 
         val hasClass = BooleanArray(4) { false }
         val classSlot = ArrayList<Int>()
@@ -260,8 +279,6 @@ class Receiver : BroadcastReceiver() {
             )
         }
 
-        // 修改点：因为是在晚上 22:00 运行 scheduleCheck，此时已经到了发送闹钟提醒的时间。
-        // 所以不用再定到明天 22:00，而是直接在几秒后发送通知（避免广播拥堵，稍微延迟几秒执行）
         val nowMillis = System.currentTimeMillis()
         for ((index, num) in classSlot.withIndex()) {
             val hour = when (num) {
@@ -274,9 +291,9 @@ class Receiver : BroadcastReceiver() {
             if (hour != -1) {
                 scheduleNotification(
                     context,
-                    nowMillis + (index + 1) * 2000L, // 每个通知错开 2 秒，防止系统合并或覆盖
+                    nowMillis + (index + 1) * 2000L,
                     ACTION_SHOW_NOTIFICATION,
-                    10300 + num, // 修改点：动态 requestCode
+                    10300 + num,
                     isAlarmRemindEnabled,
                     arrayOf("闹钟设置", "明天的$hour:00有课，是否设置闹钟？", "确认", CLASS_ALARM, hour.toString())
                 )

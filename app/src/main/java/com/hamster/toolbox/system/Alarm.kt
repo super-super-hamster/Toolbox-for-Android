@@ -6,7 +6,6 @@ import android.provider.AlarmClock
 import android.widget.Toast
 import com.google.gson.Gson
 
-
 class Alarm {
 
     fun setAlarm(
@@ -21,7 +20,7 @@ class Alarm {
             putExtra(AlarmClock.EXTRA_HOUR, hour)
             putExtra(AlarmClock.EXTRA_MINUTES, minute)
             //设置日期
-            if (days != null && days.isNotEmpty()) {
+            if (!days.isNullOrEmpty()) {
                 putExtra(AlarmClock.EXTRA_DAYS, days)
             }
             //设置震动
@@ -29,6 +28,8 @@ class Alarm {
             //设置不切换到系统闹钟
             putExtra(AlarmClock.EXTRA_SKIP_UI, true)
         }
+
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
         try {
             context.startActivity(intent)

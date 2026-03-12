@@ -16,6 +16,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.unit.dp
 import com.hamster.toolbox.MainViewModel
 import com.hamster.toolbox.R
@@ -70,7 +71,8 @@ fun SetKeywordsScreen(
             .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
-        Spacer(modifier = Modifier.height(96.dp))
+        Spacer(modifier = Modifier.height(dimensionResource(R.dimen.top_padding)))
+
         ItemGroup(titleState = sharedTiltState) {
             keywordsList.forEachIndexed { index, keyword ->
                 InquiryItem(
@@ -117,6 +119,6 @@ fun SetKeywordsScreen(
                 }
             )
         }
-        Spacer(modifier = Modifier.height(64.dp))
+        Spacer(modifier = Modifier.height(dimensionResource(R.dimen.bottom_padding)))
     }
 }
