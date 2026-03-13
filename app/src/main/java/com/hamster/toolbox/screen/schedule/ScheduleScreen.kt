@@ -1,5 +1,7 @@
 package com.hamster.toolbox.screen.schedule
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -23,9 +25,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddCircleOutline
-import androidx.compose.material.icons.filled.RemoveCircleOutline
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -53,6 +52,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.preference.PreferenceManager
 import com.hamster.toolbox.R
 import com.hamster.toolbox.utils.SharedTiltState
 import com.hamster.toolbox.utils.StandardDialog
@@ -62,15 +62,30 @@ import com.hamster.toolbox.utils.rememberSharedTiltState
 import com.hamster.toolbox.utils.saveSchedule
 import com.hamster.toolbox.utils.squircleShape
 import com.hamster.toolbox.utils.tiltGestureContainer
+import java.time.LocalDate
+import java.time.temporal.ChronoUnit
 
 // TODO： 日期
+
 
 @Composable
 fun ScheduleScreen() {
     val context = LocalContext.current
 
     val totalWeeks = 20
-    val pagerState = rememberPagerState(pageCount = { totalWeeks })
+//    val pagerState = rememberPagerState(pageCount = { totalWeeks })
+
+    val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+    val semesterStartDateStr = prefs.getString("semester_start_date", null)
+
+    val initialWeekPage = remember(semesterStartDateStr) {
+        calculateCurrentWeekIndex(semesterStartDateStr, totalWeeks)
+    }
+
+    val pagerState = rememberPagerState(
+        initialPage = initialWeekPage,
+        pageCount = { totalWeeks }
+    )
 
     var refreshTrigger by remember { mutableIntStateOf(0) }
     val courseList = remember(refreshTrigger) { getSchedule(context) }
@@ -109,13 +124,14 @@ fun ScheduleScreen() {
         ) {
             HorizontalPager(
                 state = pagerState,
-                contentPadding = PaddingValues(horizontal = 24.dp), // 让左右边距
+                contentPadding = PaddingValues(horizontal = 24.dp), // 左右边距
                 pageSpacing = 16.dp // 卡片之间的间距
             ) { page ->
                 WeekScheduleCard(
                     weekNumber = page + 1,
                     weekCourses.getOrNull(page + 1),
                     sharedTiltState = sharedTiltState,
+                    semesterStartDateStr = semesterStartDateStr,
                     onCourseUpdated = { oldCourse, newCourse ->
                         val newList = if (oldCourse == null) {
                             courseList + newCourse
@@ -137,12 +153,24 @@ fun WeekScheduleCard(
     weekNumber: Int,
     courses: Array<Array<Course?>>?,
     sharedTiltState: SharedTiltState,
+    semesterStartDateStr: String?,
     onCourseUpdated: (Course?, Course) -> Unit
 ) {
     var selectedCourse by remember { mutableStateOf<Course?>(null) }
 
     var activeEmptySlot by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     var addingSlot by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+
+    val startDateObj = remember(semesterStartDateStr) {
+        try {
+            if (semesterStartDateStr != null && semesterStartDateStr != "未设置") {
+                LocalDate.parse(semesterStartDateStr)
+            } else null
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
 
     Card(
         modifier = Modifier
@@ -172,14 +200,32 @@ fun WeekScheduleCard(
                 Spacer(modifier = Modifier.width(20.dp))
 
                 val days = listOf("一", "二", "三", "四", "五", "六", "日")
-                days.forEach { day ->
-                    Text(
-                        text = day,
+                days.forEachIndexed { index, day ->
+                    Column(
                         modifier = Modifier.weight(1f),
-                        textAlign = TextAlign.Center,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium
-                    )
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = day,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color.Black
+                        )
+
+                        val dateText = if (startDateObj != null) {
+                            val offsetDays = ((weekNumber - 1) * 7 + index).toLong()
+                            val currentDate = startDateObj.plusDays(offsetDays)
+                            "${currentDate.monthValue}/${currentDate.dayOfMonth}"
+                        } else {
+                            "--/--"
+                        }
+
+                        Text(
+                            text = dateText,
+                            fontSize = 10.sp,
+                            color = Color.Gray
+                        )
+                    }
                 }
             }
 
@@ -220,17 +266,13 @@ fun WeekScheduleCard(
                                         indication = null,
                                         onClick = {
                                             if (currentCourse != null) {
-                                                // 点击了有课的格子 -> 修改逻辑
                                                 selectedCourse = currentCourse
-                                                activeEmptySlot = null // 清除旁边的加号
+                                                activeEmptySlot = null
                                             } else {
-                                                // 点击了空白格子
                                                 if (isSlotActive) {
-                                                    // 第二次点击（点击了加号） -> 弹出添加框
                                                     addingSlot = Pair(day, i)
                                                     activeEmptySlot = null
                                                 } else {
-                                                    // 第一次点击 -> 显示加号
                                                     activeEmptySlot = Pair(day, i)
                                                 }
                                             }
@@ -295,10 +337,9 @@ fun WeekScheduleCard(
         )
     }
 
-    // 2. 添加新课程
     addingSlot?.let { (day, period) ->
         CourseEditDialog(
-            initialCourse = null, // 传 null 表示这是在添加新课
+            initialCourse = null,
             defaultWeek = weekNumber, defaultDay = day, defaultPeriod = period,
             onDismiss = { addingSlot = null },
             onConfirm = { _, new -> onCourseUpdated(null, new); addingSlot = null }
@@ -308,17 +349,13 @@ fun WeekScheduleCard(
 
 @Composable
 fun CourseEditDialog(
-    initialCourse: Course?, // 传入 null 表示这是“添加新课程”
-    defaultWeek: Int,       // 默认选中的周次（添加新课时起效）
-    defaultDay: Int,        // 默认选中的星期（添加新课时起效）
-    defaultPeriod: Int,     // 默认选中的节次（添加新课时起效）
+    initialCourse: Course?,
+    defaultWeek: Int,
+    defaultDay: Int,
+    defaultPeriod: Int,
     onDismiss: () -> Unit,
     onConfirm: (oldCourse: Course?, newCourse: Course) -> Unit
 ) {
-    // 1. 初始化基础数据
-    // 如果是修改课程，就用传进来的 initialCourse；
-    // 如果是添加新课程，就凭空构造一个默认的空白课程实体。
-    // 注意：如果你的 Course 类里还有 endTime 或其他必填字段，请在这里补齐默认值
     val course = initialCourse ?: Course(
         name = "",
         location = "",
@@ -328,7 +365,6 @@ fun CourseEditDialog(
         startTime = defaultPeriod
     )
 
-    // 2. 声明表单的状态
     var courseName by remember { mutableStateOf(course.name) }
     var location by remember { mutableStateOf(course.location) }
     var teacher by remember { mutableStateOf(course.teacher ?: "") }
@@ -337,14 +373,11 @@ fun CourseEditDialog(
     var selectedDay by remember { mutableIntStateOf(course.dayOfWeek) }
     var selectedPeriod by remember { mutableIntStateOf(course.startTime) }
 
-    // 控制展开面板的状态："NONE", "WEEKS", "DAYS", "PERIODS"
     var expandedPanel by remember { mutableStateOf("NONE") }
 
     val daysList = listOf("一", "二", "三", "四", "五", "六", "日")
 
-    // 动态展示的文本列表
     val weeksTextList = formatData(activeWeeks.toList())
-    // 防止 selectedDay 越界（比如初始化为0时）
     val validDayIndex = (selectedDay - 1).coerceIn(0, 6)
     val dayTextList = listOf("周" + daysList[validDayIndex])
     val periodTextList = listOf(selectedPeriod.toString())
@@ -354,10 +387,9 @@ fun CourseEditDialog(
             modifier = Modifier
                 .fillMaxWidth(0.85f)
                 .padding(24.dp)
-                .verticalScroll(rememberScrollState()), // 防止内容过多超出屏幕
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.Start
         ) {
-            // --- 1. 课程名称 ---
             BasicTextField(
                 value = courseName,
                 onValueChange = { courseName = it },
@@ -383,7 +415,6 @@ fun CourseEditDialog(
                 }
             )
 
-            // --- 2. 教室与教师 ---
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("教室：", fontSize = 18.sp)
                 BasicTextField(
@@ -405,14 +436,13 @@ fun CourseEditDialog(
             }
             Spacer(modifier = Modifier.height(24.dp))
 
-            // --- 3. 周次 (多选) ---
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Text("时间：在第 ", fontSize = 18.sp)
                 MdCodeText(textList = weeksTextList)
                 Text(" 周", fontSize = 18.sp)
                 Spacer(modifier = Modifier.weight(1f))
                 Icon(
-                    painter = painterResource(id = R.drawable.ic_edit), // 你的编辑图标
+                    painter = painterResource(id = R.drawable.ic_edit),
                     contentDescription = "修改周次",
                     modifier = Modifier.size(24.dp).clickable { expandedPanel = if (expandedPanel == "WEEKS") "NONE" else "WEEKS" }
                 )
@@ -424,7 +454,6 @@ fun CourseEditDialog(
             }
             Spacer(modifier = Modifier.height(16.dp))
 
-            // --- 4. 星期 (单选) ---
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Spacer(modifier = Modifier.width(52.dp))
                 Text("的 ", fontSize = 18.sp)
@@ -463,7 +492,6 @@ fun CourseEditDialog(
             }
             Spacer(modifier = Modifier.height(16.dp))
 
-            // --- 5. 节次 (单选) ---
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Spacer(modifier = Modifier.width(52.dp))
                 Text("的第 ", fontSize = 18.sp)
@@ -478,18 +506,17 @@ fun CourseEditDialog(
             }
             if (expandedPanel == "PERIODS") {
                 SingleSelectGrid(
-                    range = 1..12, // 假设一天最多12节课
+                    range = 1..12,
                     selectedItem = selectedPeriod,
                     columns = 6,
                     modifier = Modifier.padding(start = 52.dp)
                 ) { clicked ->
-                    selectedPeriod = clicked // 单选直接赋值
+                    selectedPeriod = clicked
                 }
             }
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // --- 6. 底部按钮区 ---
             Row(
                 modifier = Modifier.fillMaxWidth().height(42.dp),
                 horizontalArrangement = Arrangement.spacedBy(24.dp)
@@ -500,28 +527,25 @@ fun CourseEditDialog(
                     shape = squircleShape,
                     colors = ButtonDefaults.buttonColors(containerColor = Color.LightGray)
                 ) {
-                    Text("取消", color = Color.Black)
+                    Text("我知道了", color = Color.Black)
                 }
 
                 Button(
                     onClick = {
-                        // 构建更新后的对象，如果你的 Course 还有其他必填字段，注意在这里原样保留
                         val updatedCourse = course.copy(
-                            name = courseName.ifEmpty { "未命名课程" }, // 给个默认值防止空名崩溃
+                            name = courseName.ifEmpty { "未命名课程" },
                             location = location,
                             teacher = teacher,
                             activeWeeks = activeWeeks.toList().sorted(),
                             dayOfWeek = selectedDay,
                             startTime = selectedPeriod
                         )
-                        // 将旧课和新课一起传出去
                         onConfirm(initialCourse, updatedCourse)
                     },
                     modifier = Modifier.weight(1f).height(42.dp),
                     shape = squircleShape,
                     colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.btn_confirm))
                 ) {
-                    // 根据是添加还是修改，显示不同的按钮文字
                     Text(
                         text = if (initialCourse == null) "添加课程" else "保存修改",
                         color = colorResource(R.color.text)
@@ -541,7 +565,7 @@ fun MdCodeText(textList: List<String>, modifier: Modifier = Modifier) {
                 fontSize = 18.sp,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = modifier
-                    .background(color = Color.Gray.copy(alpha = 0.15f), shape = RoundedCornerShape(6.dp))
+                    .background(color = Color.Gray.copy(alpha = 0.15f), shape = squircleShape)
                     .padding(horizontal = 8.dp, vertical = 4.dp)
             )
         }
@@ -650,4 +674,25 @@ fun generateColor(string: String): Color {
         blue = (b % 128 + 127) / 255f,
         alpha = 0.8f
     )
+}
+
+fun calculateCurrentWeekIndex(startDateStr: String?, totalWeeks: Int): Int {
+    if (startDateStr == null || startDateStr == "未设置") return 0
+
+    return try {
+        val startDate = LocalDate.parse(startDateStr)
+        val currentDate = LocalDate.now()
+
+        val daysBetween = ChronoUnit.DAYS.between(startDate, currentDate)
+
+        if (daysBetween < 0) {
+            0
+        } else {
+            val weekIndex = (daysBetween / 7).toInt()
+
+            weekIndex.coerceIn(0, totalWeeks - 1)
+        }
+    } catch (_: Exception) {
+        0
+    }
 }
