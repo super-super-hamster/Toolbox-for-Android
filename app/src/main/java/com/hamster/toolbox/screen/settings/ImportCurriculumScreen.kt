@@ -35,14 +35,12 @@ import com.hamster.toolbox.utils.rememberStringPreference
 import com.hamster.toolbox.utils.tiltGestureContainer
 import com.hamster.toolbox.utils.validateAndSaveJson
 import kotlinx.coroutines.launch
-import com.hamster.toolbox.EditCurriculum
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun CurriculumSettingsScreen(
+fun ImportCurriculumScreen(
     onShowLoading: (Boolean) -> Unit,
     onNavigateToSettings: (String) -> Unit,
-    onNavigate: (Route) -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -103,14 +101,6 @@ fun CurriculumSettingsScreen(
             )
             ClickItem(title = "复制提示词", summary = "通过外部AI生成符合要求的JSON文本") {
                 copyCurriculumJSONPrompt(context)
-            }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        ItemGroup(titleState = sharedTiltState) {
-            ClickItem(title = "编辑课程表信息") {
-                onNavigate(EditCurriculum)
             }
         }
 

@@ -7,8 +7,7 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.navigation
 import androidx.navigation.toRoute
-import com.hamster.toolbox.CurriculumSettings
-import com.hamster.toolbox.EditCurriculum
+import com.hamster.toolbox.ImportCurriculum
 import com.hamster.toolbox.MainViewModel
 import com.hamster.toolbox.SetKeywords
 import com.hamster.toolbox.Settings
@@ -42,20 +41,19 @@ fun NavGraphBuilder.settingsGraph(
             )
         }
 
-        composable<CurriculumSettings>(
+        composable<ImportCurriculum>(
             enterTransition = { slideInWithScaleEnter() },
             exitTransition = { scaleOutExit() },
             popEnterTransition = { scaleInPopEnter() },
             popExitTransition = { slideOutWithScalePopExit() }
         ) {
-            CurriculumSettingsScreen(
+            ImportCurriculumScreen(
                 onShowLoading = { isShowLoading ->
                     // TODO: 显示加载动画
                 },
                 onNavigateToSettings = {
                     // TODO：导航回settings
                 },
-                onNavigate = { navController.navigate(it) }
             )
         }
 
@@ -68,15 +66,6 @@ fun NavGraphBuilder.settingsGraph(
             SetKeywordsScreen(
                 mainViewModel = mainViewModel
             )
-        }
-
-        composable<EditCurriculum>(
-            enterTransition = { slideInWithScaleEnter() },
-            exitTransition = { scaleOutExit() },
-            popEnterTransition = { scaleInPopEnter() },
-            popExitTransition = { slideOutWithScalePopExit() }
-        ) {
-            EditCurriculum()
         }
     }
 }

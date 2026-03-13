@@ -100,6 +100,14 @@ fun getSchedule(context: Context): List<Course> {
     }
 }
 
+fun saveSchedule(context: Context, newCourseList: List<Course>) {
+    val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+    val gson = Gson()
+    val jsonString = gson.toJson(newCourseList)
+
+    prefs.edit { putString("schedule_json", jsonString) }
+}
+
 // 将毫秒数转为"yyyy-MM-dd"
 fun convertMillisToDate(millis: Long): String {
     val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())

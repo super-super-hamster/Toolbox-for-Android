@@ -54,15 +54,6 @@ fun SetKeywordsScreen(
         return targets.getOrPut(id) { ScrollTarget() }.modifier
     }
 
-    fun jumpTo(id: String) {
-        if (id.isNotEmpty()) {
-            scope.launch {
-                delay(400)
-                targets[id]?.scrollTo(context)
-            }
-        }
-    }
-
     Column(
         modifier = Modifier
             .fillMaxWidth()

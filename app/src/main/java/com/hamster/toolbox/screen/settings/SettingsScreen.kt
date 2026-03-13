@@ -37,7 +37,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
 import androidx.preference.PreferenceManager
-import com.hamster.toolbox.CurriculumSettings
+import com.hamster.toolbox.ImportCurriculum
 import com.hamster.toolbox.R
 import com.hamster.toolbox.Route
 import com.hamster.toolbox.SetKeywords
@@ -214,7 +214,7 @@ fun SettingsScreen(
                 }
                 ClickItem(
                     modifier = getModifier("import_curriculum_options"),
-                    title = "课程表设置",
+                    title = "导入课程表",
                     summary = curriculumImportState,
                     icon = R.drawable.ic_curriculum
                 ) {
@@ -222,7 +222,7 @@ fun SettingsScreen(
                         scrollTo("semester_start_date")
                         return@ClickItem
                     }
-                    onNavigate(CurriculumSettings)
+                    onNavigate(ImportCurriculum)
                 }
                 SwitchItem(
                     modifier = getModifier("class_notification"),
