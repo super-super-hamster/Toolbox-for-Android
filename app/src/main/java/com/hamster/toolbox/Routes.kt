@@ -20,6 +20,9 @@ object ImportCurriculum : Route
 object SetKeywords : Route
 
 @Serializable
+object WeatherSettings : Route
+
+@Serializable
 object Ruler : Route
 
 @Serializable

@@ -1,7 +1,5 @@
 package com.hamster.toolbox.screen.schedule
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -65,15 +63,11 @@ import com.hamster.toolbox.utils.tiltGestureContainer
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
-// TODO： 日期
-
-
 @Composable
 fun ScheduleScreen() {
     val context = LocalContext.current
 
     val totalWeeks = 20
-//    val pagerState = rememberPagerState(pageCount = { totalWeeks })
 
     val prefs = PreferenceManager.getDefaultSharedPreferences(context)
     val semesterStartDateStr = prefs.getString("semester_start_date", null)
@@ -118,7 +112,6 @@ fun ScheduleScreen() {
             modifier = Modifier
                 .fillMaxSize()
                 .background(colorResource(R.color.background))
-                .tiltGestureContainer(sharedTiltState)
                 .padding(top = dimensionResource(R.dimen.top_padding), bottom = dimensionResource(R.dimen.bottom_padding)),
             contentAlignment = Alignment.Center
         ) {

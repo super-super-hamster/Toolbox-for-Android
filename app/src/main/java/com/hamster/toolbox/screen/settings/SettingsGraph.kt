@@ -1,7 +1,5 @@
 package com.hamster.toolbox.screen.settings
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
@@ -12,12 +10,12 @@ import com.hamster.toolbox.MainViewModel
 import com.hamster.toolbox.SetKeywords
 import com.hamster.toolbox.Settings
 import com.hamster.toolbox.SettingsGraph
+import com.hamster.toolbox.WeatherSettings
 import com.hamster.toolbox.utils.scaleInPopEnter
 import com.hamster.toolbox.utils.scaleOutExit
 import com.hamster.toolbox.utils.slideInWithScaleEnter
 import com.hamster.toolbox.utils.slideOutWithScalePopExit
 
-@RequiresApi(Build.VERSION_CODES.O)
 fun NavGraphBuilder.settingsGraph(
     navController: NavController,
     mainViewModel: MainViewModel
@@ -66,6 +64,15 @@ fun NavGraphBuilder.settingsGraph(
             SetKeywordsScreen(
                 mainViewModel = mainViewModel
             )
+        }
+
+        composable<WeatherSettings>(
+            enterTransition = { slideInWithScaleEnter() },
+            exitTransition = { scaleOutExit() },
+            popEnterTransition = { scaleInPopEnter() },
+            popExitTransition = { slideOutWithScalePopExit() }
+        ) {
+            WeatherSettings()
         }
     }
 }

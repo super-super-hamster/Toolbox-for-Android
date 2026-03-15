@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResultLauncher
@@ -92,6 +93,7 @@ import com.hamster.toolbox.utils.AnimationButton
 import com.hamster.toolbox.utils.ButtonPro
 import com.hamster.toolbox.utils.prompt.PromptLoader
 import com.hamster.toolbox.utils.squircleShape
+import com.hamster.toolbox.utils.weather.Weather
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.drawBackdrop
@@ -158,6 +160,7 @@ class MainActivity : ComponentActivity() {
                 currentDestination?.hasRoute<Settings>() == true -> "设置"
                 currentDestination?.hasRoute<SetKeywords>() == true -> "热词管理"
                 currentDestination?.hasRoute<ImportCurriculum>() == true -> "导入课程表"
+                currentDestination?.hasRoute<WeatherSettings>() == true -> "天气"
                 else -> "ToolBox"
             }
 
@@ -192,10 +195,16 @@ class MainActivity : ComponentActivity() {
             val searchBarWeight by animateFloatAsState(
                 targetValue = if (showSearchBar) 1f else 0.001f,
                 label = "weight_anim",
-                animationSpec = spring(stiffness = Spring.StiffnessLow) // 动画弹性设定，让它丝滑一点
+                animationSpec = spring(stiffness = Spring.StiffnessLow) // 动画弹性设定
             )
 
             val isSetKeyWordsScreen = currentDestination?.hierarchy?.any { it.hasRoute<SetKeywords>() } == true
+
+            // 拦截返回事件
+            BackHandler(enabled = isMenuExpanded) {
+                isMenuExpanded = false
+                showSearchBar = false
+            }
 
             // 展开菜单栏导航
             fun NavHostController.expandMenuNavigate(route: Any) {
@@ -454,6 +463,9 @@ class MainActivity : ComponentActivity() {
                                 if (showTopBar) {
                                     CenterAlignedTopAppBar(
                                         title = { Text(currentTitle) },
+                                        actions = {
+                                            Weather()
+                                        },
                                         colors = TopAppBarDefaults.topAppBarColors(
                                             containerColor = Color.Transparent,
                                             scrolledContainerColor = Color.Transparent

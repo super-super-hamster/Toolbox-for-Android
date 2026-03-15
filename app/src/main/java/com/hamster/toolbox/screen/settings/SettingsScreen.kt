@@ -11,7 +11,6 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -41,6 +40,7 @@ import com.hamster.toolbox.ImportCurriculum
 import com.hamster.toolbox.R
 import com.hamster.toolbox.Route
 import com.hamster.toolbox.SetKeywords
+import com.hamster.toolbox.WeatherSettings
 import com.hamster.toolbox.system.Receiver
 import com.hamster.toolbox.utils.ClickItem
 import com.hamster.toolbox.utils.DatePicker
@@ -65,7 +65,6 @@ import java.time.ZoneOffset
 
 // TODO:高光
 
-@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SettingsScreen(
@@ -312,13 +311,14 @@ fun SettingsScreen(
                 ) {
                     onNavigate(SetKeywords)
                 }
+
                 EditTextItem(
                     modifier = getModifier("api_key"),
-                    title = "API",
+                    title = "大模型 API",
                     summary = if (apiKey.isEmpty()) "未设置" else "******",
-                    dialogTitle = "输入 API Key",
+                    dialogTitle = "API Key",
                     initialValue = apiKey,
-                    hint = "API KEY",
+                    hint = "输入 API Key",
                     singleLine = true,
                     icon = R.drawable.ic_a,
                     onCancel = { apiKey = prefs.getString("api_key", "") ?: "" },
@@ -328,6 +328,14 @@ fun SettingsScreen(
                         true
                     }
                 )
+
+                ClickItem(
+                    modifier = getModifier("weather"),
+                    title = "天气",
+                    icon = R.drawable.ic_characters
+                ) {
+                    onNavigate(WeatherSettings)
+                }
             }
 
             Spacer(modifier = Modifier.height(dimensionResource(R.dimen.bottom_padding)))

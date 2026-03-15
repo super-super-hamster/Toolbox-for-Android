@@ -56,7 +56,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -110,7 +109,6 @@ import com.hamster.toolbox.R
 import kotlinx.coroutines.launch
 import sv.lib.squircleshape.CornerSmoothing
 import sv.lib.squircleshape.SquircleShape
-import androidx.compose.ui.unit.IntSize
 
 val squircleShape = SquircleShape(
     radius = 16.dp,
@@ -778,6 +776,8 @@ fun StandardDialog(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
+    val sharedTiltState = rememberSharedTiltState()
+
     Dialog(
         onDismissRequest = onDismissRequest,
         properties = DialogProperties(
@@ -789,6 +789,7 @@ fun StandardDialog(
             modifier = Modifier
                 .fillMaxSize()
                 .imePadding()
+                .tiltGestureContainer(sharedTiltState)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -799,7 +800,9 @@ fun StandardDialog(
             BlurEffect()
 
             Card(
-                modifier = modifier.clickable(enabled = false) {}, // 接收外部传入的 modifier
+                modifier = modifier
+                    .applySharedTilt(sharedTiltState)
+                    .clickable(enabled = false) {}, // 接收外部传入的 modifier
                 shape = squircleShape,
                 colors = CardDefaults.cardColors(containerColor = colorResource(R.color.bg_dialog)),
                 elevation = CardDefaults.cardElevation(16.dp)
