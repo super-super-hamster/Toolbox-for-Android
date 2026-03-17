@@ -164,6 +164,11 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(dimensionResource(R.dimen.top_padding)))
 
             ItemGroup(titleState = sharedTiltState) {
+                ClickItem(title = "测试", icon = R.drawable.ic_user_avatar) {
+                    val receiver = Receiver()
+                    receiver.showNotification(context, "test", "test", "test", null)
+                }
+
                 ClickItem(title = "用户头像", icon = R.drawable.ic_user_avatar) {
                     showUserAvatarOptionsDialog = true
                     currentAvatarType = "user"

@@ -7,6 +7,8 @@ import android.location.LocationManager
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
@@ -31,12 +33,22 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.time.LocalTime
 import java.util.Locale
+import kotlin.math.max
+import com.google.gson.Gson
+import androidx.core.content.edit
+
+// TODO: 显示当前位置，且可供修改
+// TODO: 雨滴玻璃
 
 @Composable
-fun Weather() {
+fun Weather(
+    onClick: () -> Unit
+) {
     var weatherData by remember { mutableStateOf<WeatherNow?>(null) }
+    var currentCity by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(true) }
     var isError by remember { mutableStateOf(false) }
+    val gson = remember { Gson() }
 
     val context = LocalContext.current
     val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
@@ -64,6 +76,7 @@ fun Weather() {
         }
     }
 
+    // 和风天气要求中国大陆地区使用GCJ-02坐标系，此处使用的是WGS-84坐标系，最大可能会有几百米的误差,影响不大
     LaunchedEffect(Unit) {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             val location = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
@@ -86,23 +99,70 @@ fun Weather() {
             return@LaunchedEffect
         }
 
-        if (locationQuery == null) Log.d("debug", "no location")
-
-        if (locationQuery == null) return@LaunchedEffect
+        if (locationQuery == null) {
+//            Log.d("debug", "no location")
+            return@LaunchedEffect
+        }
 
         isLoading = true
 
-        try {
-            val response = withContext(Dispatchers.IO) {
-                val api = WeatherApiClient.getApi(apiHost)
-                api.getWeatherNow(locationQuery!!, apiKey)
-            }
+        val cacheExpirationMs = 1800000L // 缓存有效期30分钟
+        val lastFetchTime = prefs.getLong("weather_last_fetch_time", 0L)
+        val currentTime = System.currentTimeMillis()
 
-            if (response.code == "200" && response.now != null) {
-                weatherData = response.now
+        // 尝试使用缓存
+        if (currentTime - lastFetchTime < cacheExpirationMs) {
+            val cachedWeatherJson = prefs.getString("weather_cached_data", null)
+            val cachedCity = prefs.getString("weather_cached_city", null)
+
+            if (cachedWeatherJson != null) {
+                weatherData = gson.fromJson(cachedWeatherJson, WeatherNow::class.java)
+                currentCity = cachedCity ?: ""
+
+                WeatherData.editWeatherState(weatherData?.text)
+                WeatherData.editLocation(currentCity)
+
                 isError = false
-            } else {
-                isError = true
+                isLoading = false
+                return@LaunchedEffect
+            }
+        }
+
+        try {
+            withContext(Dispatchers.IO) {
+                val weatherApi = WeatherApiClient.getApi(apiHost)
+                val weatherResp = weatherApi.getWeatherNow(locationQuery!!, apiKey)
+
+                val geoApi = WeatherApiClient.getApi(apiHost)
+                val geoResp = geoApi.getCityInfo(locationQuery!!, apiKey)
+
+                withContext(Dispatchers.Main) {
+                    if (weatherResp.code == "200" && weatherResp.now != null) {
+                        weatherData = weatherResp.now
+                        WeatherData.editWeatherState(weatherData?.text)
+                        isError = false
+                    } else {
+                        isError = true
+                    }
+
+                    if (geoResp.code == "200" && !geoResp.location.isNullOrEmpty()) {
+                        val loc = geoResp.location[0]
+                        currentCity = if (loc.adm2 == loc.name) {
+                            loc.name
+                        } else {
+                            "${loc.adm2} ${loc.name}"
+                        }
+                        WeatherData.editLocation(currentCity)
+                    }
+
+                    prefs.edit {
+                        putLong("weather_last_fetch_time", System.currentTimeMillis())
+                            .putString("weather_cached_data", gson.toJson(weatherResp.now))
+                            .putString("weather_cached_city", currentCity)
+                    }
+
+//                    Log.d("debug", currentCity)
+                }
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -114,7 +174,13 @@ fun Weather() {
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.padding(end = 16.dp)
+        modifier = Modifier
+            .padding(end = 16.dp)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = { onClick() }
+            )
     ) {
 
         if (isLoading || isError) {
@@ -130,6 +196,13 @@ fun Weather() {
                         }
                     }
                     "阴" -> {
+                        if (LocalTime.now().hour in 6..18) {
+                            Icon(painterResource(R.drawable.ic_weather_day_fog), null, tint = Color.Gray)
+                        } else {
+                            Icon(painterResource(R.drawable.ic_weather_night_fog), null, tint = Color.Gray)
+                        }
+                    }
+                    "雾" -> {
                         if (LocalTime.now().hour in 6..18) {
                             Icon(painterResource(R.drawable.ic_weather_day_cloudy), null, tint = Color.Gray)
                         } else {

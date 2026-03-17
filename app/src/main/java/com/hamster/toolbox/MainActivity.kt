@@ -13,6 +13,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
@@ -26,8 +27,11 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.LocalOverscrollFactory
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -94,6 +98,7 @@ import com.hamster.toolbox.utils.ButtonPro
 import com.hamster.toolbox.utils.prompt.PromptLoader
 import com.hamster.toolbox.utils.squircleShape
 import com.hamster.toolbox.utils.weather.Weather
+import com.hamster.toolbox.utils.weather.WeatherData
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.drawBackdrop
@@ -110,11 +115,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-//TODO:右上角显示温度/湿度，点击展开详情
-//TODO:天气,向下滑动天气透明度逐渐降低
-//TODO:tips页面
-//TODO:通知栏字体颜色适配
-//TODO:测距
+// TODO: 天气,向下滑动天气透明度逐渐降低
+// TODO: tips页面
+// TODO: 通知栏字体颜色适配
+// TODO: 测距
+// TODO: preferencesDataStore
 
 class MainActivity : ComponentActivity() {
     private lateinit var speechManager: SpeechRecognizerManager
@@ -150,6 +155,8 @@ class MainActivity : ComponentActivity() {
                 animationSpec = tween(100),
                 label = "blur"
             )
+
+            var showWeatherDetail by remember { mutableStateOf(false) }
 
             val navBackStackEntry by navController.currentBackStackEntryAsState()
             val currentDestination = navBackStackEntry?.destination
@@ -201,9 +208,11 @@ class MainActivity : ComponentActivity() {
             val isSetKeyWordsScreen = currentDestination?.hierarchy?.any { it.hasRoute<SetKeywords>() } == true
 
             // 拦截返回事件
-            BackHandler(enabled = isMenuExpanded) {
-                isMenuExpanded = false
-                showSearchBar = false
+            if (isMenuExpanded || showSearchBar) {
+                BackHandler {
+                    isMenuExpanded = false
+                    showSearchBar = false
+                }
             }
 
             // 展开菜单栏导航
@@ -462,9 +471,32 @@ class MainActivity : ComponentActivity() {
                                 // 显示顶部标题栏
                                 if (showTopBar) {
                                     CenterAlignedTopAppBar(
-                                        title = { Text(currentTitle) },
+                                        title = {
+                                            AnimatedContent (
+                                                targetState = showWeatherDetail,
+                                                transitionSpec = {
+                                                    if (showWeatherDetail) {
+                                                        (slideInHorizontally { width -> width } + fadeIn()) togetherWith
+                                                                (slideOutHorizontally { width -> -width } + fadeOut())
+                                                    } else {
+                                                        (slideInHorizontally { width -> -width } + fadeIn()) togetherWith
+                                                                (slideOutHorizontally { width -> width } + fadeOut())
+                                                    }
+                                                }
+                                            ) { targetIsWeather ->
+                                                if (targetIsWeather) {
+                                                    Text("${WeatherData.getLocation() ?: ""} ${WeatherData.getWeatherState() ?: ""}")
+                                                } else {
+                                                    Text(currentTitle)
+                                                }
+                                            }
+                                        },
                                         actions = {
-                                            Weather()
+                                            Weather(
+                                                onClick = {
+                                                    showWeatherDetail = !showWeatherDetail
+                                                }
+                                            )
                                         },
                                         colors = TopAppBarDefaults.topAppBarColors(
                                             containerColor = Color.Transparent,

@@ -102,12 +102,7 @@ class Receiver : BroadcastReceiver() {
 
             if (enable) {
                 try {
-                    alarmManager.setRepeating(
-                        AlarmManager.RTC_WAKEUP,
-                        triggerTime,
-                        AlarmManager.INTERVAL_DAY,
-                        pendingIntent
-                    )
+                    scheduleNotification(context, triggerTime, action, requestCode, true, extraData)
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
@@ -118,7 +113,6 @@ class Receiver : BroadcastReceiver() {
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
     override fun onReceive(context: Context, intent: Intent) {
         val action = intent.action
 
@@ -149,13 +143,17 @@ class Receiver : BroadcastReceiver() {
                 NotificationManagerCompat.from(context).cancel(notifId)
             }
             ACTION_CLASS_ALARM_CHECK -> {
-                Log.d("fuck", "check")
+                Log.d("debug", "check")
+
+                // 第二天的课程检查
+                dailyNotification(context, 20, 0, ACTION_CLASS_ALARM_CHECK, 10000, true, null)
+
                 scheduleCheck(context)
             }
         }
     }
 
-    private fun showNotification(context: Context, title: String, text: String, buttonTitle: String, extraData: Array<String>?) {
+    fun showNotification(context: Context, title: String, text: String, buttonTitle: String, extraData: Array<String>?) {
         createNotificationChannel(context)
 
         val notificationId = System.currentTimeMillis().toInt()
@@ -190,29 +188,26 @@ class Receiver : BroadcastReceiver() {
     }
 
     private fun createNotificationChannel(context: Context) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val name = "提醒通知"
-            val descriptionText = "用于任务提醒"
-            val importance = NotificationManager.IMPORTANCE_HIGH
-            val channel = NotificationChannel(CHANNEL_ID, name, importance).apply {
-                description = descriptionText
-            }
-            val notificationManager: NotificationManager =
-                context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannel(channel)
+        val name = "提醒通知"
+        val descriptionText = "用于任务提醒"
+        val importance = NotificationManager.IMPORTANCE_HIGH
+        val channel = NotificationChannel(CHANNEL_ID, name, importance).apply {
+            description = descriptionText
         }
+        val notificationManager: NotificationManager =
+            context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.createNotificationChannel(channel)
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
     private fun scheduleCheck(context: Context) {
         val allCourses = getSchedule(context)
 
-        Log.d("fuck", "schedule check")
+        Log.d("debug", "schedule check")
 
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
         val startDay = prefs.getString("semester_start_date", null) ?: return
 
-        Log.d("fuck", "开学日期是: $startDay")
+        Log.d("debug", "开学日期是: $startDay")
 
         val currentDate = LocalDate.now()
         val startDate = LocalDate.parse(startDay, DateTimeFormatter.ofPattern("yyyy-M-d"))
@@ -228,7 +223,7 @@ class Receiver : BroadcastReceiver() {
             .filter { it.dayOfWeek == tomorrowDayOfWeek }
             .sortedBy { it.startTime }
 
-        Log.d("fuck", "明天是星期 $tomorrowDayOfWeek，明天共有 ${coursesForTomorrow.size} 节课")
+        Log.d("debug", "明天是星期 $tomorrowDayOfWeek，明天共有 ${coursesForTomorrow.size} 节课")
 
         val hasClass = BooleanArray(4) { false }
         val classSlot = ArrayList<Int>()
@@ -239,14 +234,12 @@ class Receiver : BroadcastReceiver() {
         for (course in coursesForTomorrow) {
             hasClass[course.startTime - 1] = true
 
-            // 修改点：使用 var 以允许重新赋值修改时间
             var tomorrowTime = LocalDateTime.now()
                 .plusDays(1)
                 .withMinute(30)
                 .withSecond(0)
                 .withNano(0)
 
-            // 修改点：由于 LocalDateTime 是不可变的，必须重新赋值给 tomorrowTime
             when (course.startTime) {
                 1 -> {
                     tomorrowTime = tomorrowTime.withHour(7)
@@ -266,21 +259,21 @@ class Receiver : BroadcastReceiver() {
                 }
             }
 
-            // 修改点：AlarmManager 需要绝对的触发时间戳，而不是相减的差值
             val triggerTime = timeToMillis(tomorrowTime)
 
             scheduleNotification(
                 context,
                 triggerTime,
                 ACTION_SHOW_NOTIFICATION,
-                10200 + course.startTime, // 修改点：使用动态 requestCode 防止被下一节课覆盖
+                10200 + course.startTime,
                 isClassRemindEnabled,
                 arrayOf("上课提醒", "下一节课是：" + course.name + "\n" + "上课地点为：" + course.location, "知道了", "")
             )
         }
 
-        val nowMillis = System.currentTimeMillis()
-        for ((index, num) in classSlot.withIndex()) {
+        if (!isAlarmRemindEnabled) return
+
+        for ((_, num) in classSlot.withIndex()) {
             val hour = when (num) {
                 1 -> 8
                 2 -> 10
@@ -289,13 +282,12 @@ class Receiver : BroadcastReceiver() {
                 else -> -1
             }
             if (hour != -1) {
-                scheduleNotification(
+                showNotification(
                     context,
-                    nowMillis + (index + 1) * 2000L,
-                    ACTION_SHOW_NOTIFICATION,
-                    10300 + num,
-                    isAlarmRemindEnabled,
-                    arrayOf("闹钟设置", "明天的$hour:00有课，是否设置闹钟？", "确认", CLASS_ALARM, hour.toString())
+                    "闹钟设置",
+                    "明天的$hour:00有课，是否设置闹钟？",
+                    "确认",
+                    arrayOf(CLASS_ALARM, hour.toString())
                 )
             }
         }
