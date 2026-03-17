@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -69,6 +70,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
@@ -83,6 +85,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.preference.PreferenceManager
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.LottieConstants
+import com.airbnb.lottie.compose.animateLottieCompositionAsState
+import com.airbnb.lottie.compose.rememberLottieComposition
 import com.hamster.toolbox.ai.AI
 import com.hamster.toolbox.ai.AiResponse
 import com.hamster.toolbox.ai.Message
@@ -127,13 +134,7 @@ class MainActivity : ComponentActivity() {
 
     private val requestAudioPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { isGranted: Boolean ->
-        if (isGranted) {
-            // 同意权限后逻辑
-        } else {
-            // 不同意权限逻辑
-        }
-    }
+    ) { _: Boolean -> }
 
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     @OptIn(ExperimentalMaterial3Api::class, ExperimentalHazeMaterialsApi::class)
@@ -147,11 +148,19 @@ class MainActivity : ComponentActivity() {
         setContent {
             val mainViewModel: MainViewModel = viewModel()
 
+            // 加载
+            var showLoading by remember { mutableStateOf(false) }
+            val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.loading_anim))
+            val progress by animateLottieCompositionAsState(
+                composition = composition,
+                iterations = LottieConstants.IterateForever
+            )
+
             var isMenuExpanded by remember { mutableStateOf(false) }
             val navController = rememberNavController()
             val hazeState = remember { HazeState() }
             val blurRadius by animateDpAsState(
-                targetValue = if (isMenuExpanded) 8.dp else 0.dp,
+                targetValue = if (isMenuExpanded || showLoading) 8.dp else 0.dp,
                 animationSpec = tween(100),
                 label = "blur"
             )
@@ -160,6 +169,12 @@ class MainActivity : ComponentActivity() {
 
             val navBackStackEntry by navController.currentBackStackEntryAsState()
             val currentDestination = navBackStackEntry?.destination
+
+            val universalButtonIconId = when {
+                currentDestination?.hasRoute<Schedule>() == true -> R.drawable.ic_add
+                currentDestination?.hasRoute<SetKeywords>() == true -> R.drawable.ic_add
+                else -> R.drawable.ic_microphone
+            }
 
             val currentTitle = when {
                 currentDestination?.hasRoute<Schedule>() == true -> "课程表"
@@ -172,12 +187,7 @@ class MainActivity : ComponentActivity() {
             }
 
             val showTopBar = when {
-                currentDestination?.hasRoute<Schedule>() == true -> true
-                currentDestination?.hasRoute<RandomNumber>() == true -> true
                 currentDestination?.hasRoute<Ruler>() == true -> false
-                currentDestination?.hasRoute<Settings>() == true -> true
-                currentDestination?.hasRoute<SetKeywords>() == true -> true
-                currentDestination?.hasRoute<ImportCurriculum>() == true -> true
                 currentDestination?.hasRoute<GameConsole>() == true -> false
                 else -> true
             }
@@ -208,7 +218,7 @@ class MainActivity : ComponentActivity() {
             val isSetKeyWordsScreen = currentDestination?.hierarchy?.any { it.hasRoute<SetKeywords>() } == true
 
             // 拦截返回事件
-            if (isMenuExpanded || showSearchBar) {
+            if (isMenuExpanded || showSearchBar || showLoading) {
                 BackHandler {
                     isMenuExpanded = false
                     showSearchBar = false
@@ -229,10 +239,14 @@ class MainActivity : ComponentActivity() {
                 showSearchBar = false
             }
 
+            fun setLoading(isLoading: Boolean) {
+                showLoading = isLoading
+            }
+
             MaterialTheme {
                 CompositionLocalProvider( LocalOverscrollFactory provides null) { // 禁用边缘回弹和光晕效果
                     Surface(modifier = Modifier.fillMaxSize(), color = colorResource(R.color.background)) { // 覆盖原有的主题色背景
-                        Scaffold { innerPadding ->
+                        Scaffold { _ ->
                             Box(modifier = Modifier.fillMaxSize()) {
                                 NavHost(
                                     navController = navController,
@@ -265,7 +279,10 @@ class MainActivity : ComponentActivity() {
                                     // 设置
                                     settingsGraph(
                                         navController = navController,
-                                        mainViewModel = mainViewModel
+                                        mainViewModel = mainViewModel,
+                                        setLoading = { isLoading ->
+                                            setLoading(isLoading)
+                                        }
                                     )
                                 }
 
@@ -278,7 +295,7 @@ class MainActivity : ComponentActivity() {
                                                 state = hazeState,
                                                 style = HazeStyle(
                                                     blurRadius = blurRadius,
-                                                    tint = HazeTint(Color.White.copy(alpha = 0.2f)),
+                                                    tint = HazeTint(Color.Transparent),
                                                     noiseFactor = 0f
                                                 )
                                             )
@@ -430,15 +447,17 @@ class MainActivity : ComponentActivity() {
                                                 ) {
                                                     Box(modifier = Modifier.height(48.dp).width(72.dp), contentAlignment = Alignment.Center) {
                                                         ButtonPro(
-                                                            icon = R.drawable.ic_microphone,
+                                                            icon = universalButtonIconId,
                                                             onTap = {
                                                                 if (isSetKeyWordsScreen) {
                                                                     mainViewModel.isShowAddKeywordDialog = true
                                                                 }
                                                             },
                                                             onLongPressStart = {
-                                                                runWithPermission(Manifest.permission.RECORD_AUDIO, requestAudioPermissionLauncher) {
+                                                                if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
                                                                     speechManager.startListening()
+                                                                } else {
+                                                                    requestAudioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                                                                 }
                                                             },
                                                             onLongPressEnd = {
@@ -515,6 +534,27 @@ class MainActivity : ComponentActivity() {
                                                     blur(4f.dp.toPx())
                                                     lens(12f.dp.toPx(), 8f.dp.toPx()) },)
                                     )
+                                }
+
+                                // 显示加载
+                                if (showLoading) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .clickable(
+                                                interactionSource = remember { MutableInteractionSource() },
+                                                indication = null
+                                            ) {
+                                                showLoading = false
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        LottieAnimation(
+                                            composition = composition,
+                                            progress = { progress },
+                                            modifier = Modifier.size(196.dp)
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -606,11 +646,6 @@ class MainActivity : ComponentActivity() {
 //        navController.navigateStandard(R.id.nav_settings, bundle)
     }
 
-    // 显示加载动画
-    fun showLoading(show: Boolean) {
-        // TODO：加载动画
-    }
-
     private fun initSpeechManager() {
         speechManager = SpeechRecognizerManager(this)
         lifecycleScope.launch(Dispatchers.IO) {
@@ -646,14 +681,4 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-
-    private fun runWithPermission(permission: String, launcher: ActivityResultLauncher<String>, action: () -> Unit) {
-        if (checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED) {
-            action()
-        } else {
-            launcher.launch(permission)
-        }
-    }
-
-
 }

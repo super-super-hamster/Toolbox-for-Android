@@ -7,6 +7,7 @@ import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.net.Uri
 import android.os.Build
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -70,7 +71,8 @@ import java.time.ZoneOffset
 fun SettingsScreen(
     triggerTime: Long? = null,
     jumpTargetId: String? = null,
-    onNavigate: (Route) -> Unit
+    onNavigate: (Route) -> Unit,
+    setLoading: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -164,11 +166,17 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(dimensionResource(R.dimen.top_padding)))
 
             ItemGroup(titleState = sharedTiltState) {
-                ClickItem(title = "测试", icon = R.drawable.ic_user_avatar) {
+                ClickItem(title = "通知测试") {
                     val receiver = Receiver()
                     receiver.showNotification(context, "test", "test", "test", null)
                 }
 
+                ClickItem(title = "加载动画测试") {
+                    setLoading(true)
+                }
+            }
+
+            ItemGroup(titleState = sharedTiltState) {
                 ClickItem(title = "用户头像", icon = R.drawable.ic_user_avatar) {
                     showUserAvatarOptionsDialog = true
                     currentAvatarType = "user"

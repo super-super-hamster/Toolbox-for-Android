@@ -1,5 +1,6 @@
 package com.hamster.toolbox.screen.settings
 
+import android.util.Log
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
@@ -18,7 +19,8 @@ import com.hamster.toolbox.utils.slideOutWithScalePopExit
 
 fun NavGraphBuilder.settingsGraph(
     navController: NavController,
-    mainViewModel: MainViewModel
+    mainViewModel: MainViewModel,
+    setLoading: (Boolean) -> Unit
 ) {
     navigation<SettingsGraph>(startDestination = Settings()) {
         composable<Settings>(
@@ -35,6 +37,9 @@ fun NavGraphBuilder.settingsGraph(
                 jumpTargetId = args.jumpTarget,
                 onNavigate = { route ->
                     navController.navigate(route)
+                },
+                setLoading = { isLoading ->
+                    setLoading(isLoading)
                 }
             )
         }

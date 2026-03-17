@@ -1,17 +1,23 @@
 package com.hamster.toolbox.utils.weather
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.location.LocationManager
-import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -24,21 +30,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.core.content.edit
 import androidx.preference.PreferenceManager
+import com.google.gson.Gson
 import com.hamster.toolbox.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.time.LocalTime
 import java.util.Locale
-import kotlin.math.max
-import com.google.gson.Gson
-import androidx.core.content.edit
 
 // TODO: 显示当前位置，且可供修改
-// TODO: 雨滴玻璃
 
 @Composable
 fun Weather(
@@ -175,49 +179,57 @@ fun Weather(
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .padding(end = 16.dp)
+            .padding(end = 20.dp)
+            .fillMaxHeight()
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClick = { onClick() }
             )
     ) {
-
-        if (isLoading || isError) {
-            Icon(painterResource(R.drawable.ic_weather_sun_day), null, tint = Color.Gray)
+        val content = if (isLoading || isError) {
+            Pair(R.drawable.ic_weather_152, "10°C")
         } else {
-            weatherData?.let { weather ->
-                when (weather.text) {
-                    "晴" -> {
-                        if (LocalTime.now().hour in 6..18) {
-                            Icon(painterResource(R.drawable.ic_weather_sun_day), null, tint = Color.Gray)
-                        } else {
-                            Icon(painterResource(R.drawable.ic_weather_moon), null, tint = Color.Gray)
-                        }
-                    }
-                    "阴" -> {
-                        if (LocalTime.now().hour in 6..18) {
-                            Icon(painterResource(R.drawable.ic_weather_day_fog), null, tint = Color.Gray)
-                        } else {
-                            Icon(painterResource(R.drawable.ic_weather_night_fog), null, tint = Color.Gray)
-                        }
-                    }
-                    "雾" -> {
-                        if (LocalTime.now().hour in 6..18) {
-                            Icon(painterResource(R.drawable.ic_weather_day_cloudy), null, tint = Color.Gray)
-                        } else {
-                            Icon(painterResource(R.drawable.ic_weather_night_cloudy), null, tint = Color.Gray)
-                        }
-                    }
-                    "雨" -> Icon(painterResource(R.drawable.ic_weather_rain), null, tint = Color.Gray)
-                    else -> Text(text = weather.text, fontSize = 18.sp)
-                }
+            weatherData?.let { getQWeatherIconResId(context, it.icon) to "${it.temp}°C" }
+        }
 
+        content?.let { (iconRes, tempText) ->
+
+            Box(
+                modifier = Modifier.weight(0.6f),
+                contentAlignment = Alignment.BottomCenter
+            ) {
+                Icon(
+                    painter = painterResource(id = iconRes),
+                    contentDescription = null,
+                    tint = Color.Unspecified,
+                    modifier = Modifier.fillMaxHeight(0.8f)
+                )
+            }
+
+            Box(
+                modifier = Modifier.weight(0.4f),
+                contentAlignment = Alignment.TopCenter
+            ) {
                 Text(
-                    text = "${weather.temp}°C",
-                    fontSize = 18.sp,
+                    text = tempText,
+                    fontSize = 12.sp,
+                    maxLines = 1,
+                    softWrap = false,
+                    style = LocalTextStyle.current.copy(
+                        platformStyle = PlatformTextStyle(includeFontPadding = false)
+                    )
                 )
             }
         }
     }
+}
+
+@SuppressLint("DiscouragedApi")
+fun getQWeatherIconResId(context: Context, iconCode: String): Int {
+    val resName = "ic_weather_$iconCode"
+
+    val resId = context.resources.getIdentifier(resName, "drawable", context.packageName)
+
+    return if (resId != 0) resId else R.drawable.ic_weather_100
 }
