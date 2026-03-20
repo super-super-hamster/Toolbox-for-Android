@@ -6,42 +6,29 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.LocalOverscrollFactory
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -50,11 +37,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -62,12 +47,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -85,6 +70,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.preference.PreferenceManager
+import com.airbnb.lottie.Lottie
 import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.LottieConstants
@@ -94,16 +80,18 @@ import com.hamster.toolbox.ai.AI
 import com.hamster.toolbox.ai.AiResponse
 import com.hamster.toolbox.ai.Message
 import com.hamster.toolbox.ai.SpeechRecognizerManager
+import com.hamster.toolbox.main.ExpandedBottomMenu
+import com.hamster.toolbox.main.MainViewModel
 import com.hamster.toolbox.screen.gameConsole.GameConsoleScreen
 import com.hamster.toolbox.screen.random.RandomNumberScreen
 import com.hamster.toolbox.screen.ruler.RulerScreen
 import com.hamster.toolbox.screen.schedule.ScheduleScreen
 import com.hamster.toolbox.screen.settings.settingsGraph
 import com.hamster.toolbox.system.Alarm
-import com.hamster.toolbox.utils.AnimationButton
-import com.hamster.toolbox.utils.ButtonPro
+import com.hamster.toolbox.utils.compose.AnimationButton
+import com.hamster.toolbox.utils.compose.ButtonPro
+import com.hamster.toolbox.utils.compose.squircleShape
 import com.hamster.toolbox.utils.prompt.PromptLoader
-import com.hamster.toolbox.utils.squircleShape
 import com.hamster.toolbox.utils.weather.Weather
 import com.hamster.toolbox.utils.weather.WeatherData
 import com.kyant.backdrop.backdrops.layerBackdrop
@@ -131,6 +119,7 @@ import kotlinx.coroutines.withContext
 class MainActivity : ComponentActivity() {
     private lateinit var speechManager: SpeechRecognizerManager
     private var isModelReady = false
+    private val mainViewModel: MainViewModel by viewModels()
 
     private val requestAudioPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -146,13 +135,27 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            val mainViewModel: MainViewModel = viewModel()
+            val context = LocalContext.current
+            val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
+
+            // 底部菜单下标
+            var selectedIndex by remember { mutableIntStateOf(0) }
+
+            var inputText by remember { mutableStateOf("") }
 
             // 加载
             var showLoading by remember { mutableStateOf(false) }
-            val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.loading_anim))
-            val progress by animateLottieCompositionAsState(
-                composition = composition,
+            val loadingComposition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.loading_anim))
+            val loadingProgress by animateLottieCompositionAsState(
+                composition = loadingComposition,
+                iterations = LottieConstants.IterateForever
+            )
+
+            // 录音
+            var showRecording by remember { mutableStateOf(false) }
+            val recordingComposition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.audio_wave_anim))
+            val recordingProgress by animateLottieCompositionAsState(
+                composition = recordingComposition,
                 iterations = LottieConstants.IterateForever
             )
 
@@ -160,7 +163,7 @@ class MainActivity : ComponentActivity() {
             val navController = rememberNavController()
             val hazeState = remember { HazeState() }
             val blurRadius by animateDpAsState(
-                targetValue = if (isMenuExpanded || showLoading) 8.dp else 0.dp,
+                targetValue = if (isMenuExpanded || showLoading || showRecording) 8.dp else 0.dp,
                 animationSpec = tween(100),
                 label = "blur"
             )
@@ -207,21 +210,12 @@ class MainActivity : ComponentActivity() {
                 drawContent()
             }
 
-            var showSearchBar by remember { mutableStateOf(false) }
-            var searchText by remember { mutableStateOf("") }
-            val searchBarWeight by animateFloatAsState(
-                targetValue = if (showSearchBar) 1f else 0.001f,
-                label = "weight_anim",
-                animationSpec = spring(stiffness = Spring.StiffnessLow) // 动画弹性设定
-            )
-
             val isSetKeyWordsScreen = currentDestination?.hierarchy?.any { it.hasRoute<SetKeywords>() } == true
 
             // 拦截返回事件
-            if (isMenuExpanded || showSearchBar || showLoading) {
+            if (isMenuExpanded || showLoading) {
                 BackHandler {
                     isMenuExpanded = false
-                    showSearchBar = false
                 }
             }
 
@@ -236,7 +230,6 @@ class MainActivity : ComponentActivity() {
                 }
 
                 isMenuExpanded = false
-                showSearchBar = false
             }
 
             fun setLoading(isLoading: Boolean) {
@@ -250,7 +243,7 @@ class MainActivity : ComponentActivity() {
                             Box(modifier = Modifier.fillMaxSize()) {
                                 NavHost(
                                     navController = navController,
-                                    startDestination = Schedule,
+                                    startDestination = SettingsGraph,
                                     modifier = Modifier
                                         .layerBackdrop(backdrop) // 应用玻璃效果
                                         .hazeSource(state = hazeState)
@@ -304,7 +297,6 @@ class MainActivity : ComponentActivity() {
                                                 indication = null
                                             ) {
                                                 isMenuExpanded = false
-                                                showSearchBar = false
                                             }
                                     )
                                 }
@@ -318,7 +310,7 @@ class MainActivity : ComponentActivity() {
                                                 visible = isMenuExpanded,
                                                 enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
                                                 exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
-                                                modifier = Modifier.padding(bottom = 6.dp)
+                                                modifier = Modifier.padding(vertical = 6.dp)
                                             ) {
                                                 Surface(
                                                     shape = squircleShape,
@@ -330,44 +322,14 @@ class MainActivity : ComponentActivity() {
                                                         .height(512.dp)
                                                         .padding(horizontal = 12.dp)
                                                 ) {
-                                                    Column(
-                                                        modifier = Modifier.padding(16.dp),
-                                                        horizontalAlignment = Alignment.CenterHorizontally
-                                                    ) {
-                                                        Row(
-                                                            modifier = Modifier.fillMaxWidth().height(96.dp).padding(horizontal = 24.dp),
-                                                            verticalAlignment = Alignment.CenterVertically,
-                                                            horizontalArrangement = Arrangement.SpaceBetween
-                                                        ) {
-                                                            // 课程表
-                                                            IconButton(onClick = { navController.expandMenuNavigate(Schedule) }) {
-                                                                Icon(painterResource(R.drawable.ic_calendar), null, tint = Color.Gray)
-                                                            }
-                                                            // 尺子
-                                                            IconButton(onClick = { navController.expandMenuNavigate(Ruler) }) {
-                                                                Icon(painterResource(R.drawable.ic_ruler), null, tint = Color.Gray)
-                                                            }
-                                                            // 随机数
-                                                            IconButton(onClick = { navController.expandMenuNavigate(RandomNumber) }) {
-                                                                Icon(painterResource(R.drawable.ic_numbers), null, tint = Color.Gray)
-                                                            }
-                                                            // 游戏
-                                                            IconButton(onClick = { navController.expandMenuNavigate(GameConsole) }) {
-                                                                Icon(painterResource(R.drawable.ic_game_console), null, tint = Color.Gray)
-                                                            }
-                                                        }
-
-                                                        Row(
-                                                            modifier = Modifier.fillMaxWidth().height(96.dp).padding(horizontal = 24.dp),
-                                                            verticalAlignment = Alignment.CenterVertically,
-                                                            horizontalArrangement = Arrangement.SpaceBetween
-                                                        ) {
-                                                            // 设置
-                                                            IconButton(onClick = { navController.expandMenuNavigate(SettingsGraph) }) {
-                                                                Icon(painterResource(R.drawable.ic_settings), null, tint = Color.Gray)
-                                                            }
-                                                        }
-                                                    }
+                                                    ExpandedBottomMenu(
+                                                        apiKey = prefs.getString("api_key", null),
+                                                        mainViewModel = mainViewModel,
+                                                        selectedIndex = selectedIndex,
+                                                        setSelectedIndex = { selectedIndex = it },
+                                                        inputText = inputText,
+                                                        setInputText = { inputText = it },
+                                                        onNavigate = { navController.expandMenuNavigate(it) })
                                                 }
                                             }
 
@@ -382,105 +344,65 @@ class MainActivity : ComponentActivity() {
                                                     .height(64.dp)
                                                     .fillMaxWidth()
                                             ) {
-                                                // 搜索按钮
-                                                Box(modifier = Modifier.fillMaxSize()) { // 不让搜索框与通用按钮和展开按钮产生碰撞
-                                                    Row(
-                                                        modifier = Modifier.fillMaxSize().padding(horizontal = 36.dp, vertical = 8.dp),
-                                                        verticalAlignment = Alignment.CenterVertically,
-                                                    ) {
-                                                        Row(
-                                                            modifier = Modifier
-                                                                .height(IntrinsicSize.Min) // 保持高度一致
-                                                                .then(if (showSearchBar) Modifier.weight(searchBarWeight, fill = false) else Modifier)
-                                                                .clip(squircleShape)
-                                                                .animateContentSize() // 自动处理宽度变化的动画
-                                                                .background(
-                                                                    color = if (showSearchBar) Color.Gray.copy(alpha = 0.25f) else Color.Transparent,
-                                                                    shape = squircleShape
-                                                                ),
-                                                            verticalAlignment = Alignment.CenterVertically,
-                                                        ) {
-                                                            Box(
-                                                                modifier = Modifier
-                                                                    .size(48.dp)
-                                                                    .clickable(
-                                                                        onClick = { showSearchBar = !showSearchBar },
-                                                                        indication = null,
-                                                                        interactionSource = remember { MutableInteractionSource() } // 必须配合 interactionSource 使用
-                                                                    ),
-                                                                contentAlignment = Alignment.Center
-                                                            ) {
-                                                                Icon(painterResource(R.drawable.ic_search), null, tint = Color.Gray)
-                                                            }
-
-                                                            AnimatedVisibility(
-                                                                visible = showSearchBar,
-                                                                enter = expandHorizontally() + fadeIn(),
-                                                                exit = shrinkHorizontally() + fadeOut(),
-                                                                modifier = Modifier.weight(1f)
-                                                            ) {
-                                                                BasicTextField(
-                                                                    value = searchText,
-                                                                    onValueChange = { searchText = it },
-                                                                    modifier = Modifier
-                                                                        .fillMaxSize(),
-                                                                    singleLine = true,
-                                                                    decorationBox = { innerTextField ->
-                                                                        Box(contentAlignment = Alignment.CenterStart) {
-                                                                            if (searchText.isEmpty()) {
-                                                                                Text("请输入搜索内容...", color = Color.Gray)
-                                                                            }
-                                                                            innerTextField()
-                                                                        }
-                                                                    }
-                                                                )
-                                                            }
-                                                        }
-                                                    }
-                                                }
-
-                                                // 通用按钮
-                                                AnimatedVisibility(
-                                                    visible = !showSearchBar,
-                                                    enter = scaleIn(initialScale = 0.5f) + fadeIn(),
-                                                    exit = scaleOut(targetScale = 0.5f) + fadeOut()
+                                                Box(
+                                                    modifier = Modifier
+                                                        .fillMaxSize()
+                                                        .padding(horizontal = 48.dp)
                                                 ) {
-                                                    Box(modifier = Modifier.height(48.dp).width(72.dp), contentAlignment = Alignment.Center) {
+                                                    // 搜索按钮
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(48.dp)
+                                                            .align(Alignment.CenterStart)
+                                                            .clickable(
+                                                                onClick = {
+                                                                    selectedIndex = 0
+                                                                    isMenuExpanded = !isMenuExpanded
+                                                                },
+                                                                indication = null,
+                                                                interactionSource = remember { MutableInteractionSource() } // 必须配合 interactionSource 使用
+                                                            ),
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        Icon(painterResource(R.drawable.ic_search), null, tint = Color.Gray)
+                                                    }
+
+                                                    // 通用按钮
+                                                    Box(modifier = Modifier.height(48.dp).width(72.dp).align(Alignment.Center), contentAlignment = Alignment.Center) {
                                                         ButtonPro(
                                                             icon = universalButtonIconId,
                                                             onTap = {
                                                                 if (isSetKeyWordsScreen) {
                                                                     mainViewModel.isShowAddKeywordDialog = true
-                                                                }
-                                                            },
+                                                                } },
                                                             onLongPressStart = {
                                                                 if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                                                                    showRecording = true
                                                                     speechManager.startListening()
                                                                 } else {
                                                                     requestAudioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                                                                }
-                                                            },
+                                                                } },
                                                             onLongPressEnd = {
+                                                                showRecording = false
+                                                                selectedIndex = 0
+                                                                isMenuExpanded = true
+                                                                inputText = mainViewModel.speechFinalResult
                                                                 speechManager.stopListening()
                                                             }
                                                         )
                                                     }
-                                                }
 
-                                                // 展开按钮
-                                                Box(modifier = Modifier.height(48.dp).width(72.dp).padding(horizontal = 36.dp), contentAlignment = Alignment.CenterEnd) {
-                                                    AnimationButton(
-                                                        animation = R.raw.ic_arrow_anim,
-                                                        changed = isMenuExpanded,
-                                                        onClick = {
-                                                            if (showSearchBar && !isMenuExpanded) {
-                                                                showSearchBar = false
-                                                                return@AnimationButton
+                                                    // 展开按钮
+                                                    Box(modifier = Modifier.height(48.dp).width(72.dp).align(Alignment.CenterEnd), contentAlignment = Alignment.CenterEnd) {
+                                                        AnimationButton(
+                                                            animation = R.raw.ic_arrow_anim,
+                                                            changed = isMenuExpanded,
+                                                            onClick = {
+                                                                selectedIndex = 1
+                                                                isMenuExpanded = !isMenuExpanded
                                                             }
-                                                            isMenuExpanded = !isMenuExpanded
-                                                            showSearchBar = isMenuExpanded
-                                                        }
-                                                    )
+                                                        )
+                                                    }
                                                 }
                                             }
                                         }
@@ -550,8 +472,27 @@ class MainActivity : ComponentActivity() {
                                         contentAlignment = Alignment.Center
                                     ) {
                                         LottieAnimation(
-                                            composition = composition,
-                                            progress = { progress },
+                                            composition = loadingComposition,
+                                            progress = { loadingProgress },
+                                            modifier = Modifier.size(196.dp)
+                                        )
+                                    }
+                                }
+
+                                // 显示录音
+                                if (showRecording) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .clickable(
+                                                interactionSource = remember { MutableInteractionSource() },
+                                                indication = null
+                                            ) { },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        LottieAnimation(
+                                            composition = recordingComposition,
+                                            progress = { recordingProgress },
                                             modifier = Modifier.size(196.dp)
                                         )
                                     }
@@ -572,78 +513,6 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         speechManager.release()
-    }
-
-    suspend fun assistantSend(content: String, apiKey: String) {
-        try {
-            val result = AI.sendToAssistant(content, apiKey)
-            if (result != null) {
-                assistantQuery(result)
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
-
-    suspend fun assistantQuery(response: AiResponse) {
-        var isChatOrQa = false
-
-        when(response.type) {
-            "chat", "qa" -> {
-//                if (navController.currentDestination?.id != R.id.nav_assistant) {
-//                    showAssistantBubble(response.content)
-//                }
-                isChatOrQa = true
-            }
-            "avatar", "nickname", "signature", "semester_start_date", "import_curriculum_options",
-            "curriculum_notification", "class_notification", "alarm_notification", "assistant_avatar",
-            "assistant_nickname", "api_key" -> {
-                settingsScrollTo(response.type)
-//                if (navController.currentDestination?.id != R.id.nav_assistant) {
-////                    showAssistantBubble(response.content)
-//                }
-            }
-            "nav_curriculum" -> {
-//                navController.navigateStandard(R.id.nav_curriculum)
-            }
-            "nav_ruler" -> {
-//                navController.navigateStandard(R.id.nav_ruler)
-            }
-            "nav_assistant" -> {
-//                navController.navigateStandard(R.id.nav_assistant)
-            }
-            "nav_settings" -> {
-//                navController.navigateStandard(R.id.nav_settings)
-            }
-            "nav_random" -> {
-//                navController.navigateStandard(R.id.nav_random)
-            }
-            "set_alarm" -> {
-                val prefs = PreferenceManager.getDefaultSharedPreferences(this)
-                val apiKey = prefs.getString("api_key", null)
-                if (apiKey.isNullOrBlank()) {
-//                    showAssistantBubble("需要先在设置中配置API")
-                    settingsScrollTo("api_key")
-                    return
-                }
-                val alarmResponse = AI.sendWithPrompt(this, response.content, "set_alarm", apiKey)
-                val alarm = Alarm()
-                alarm.setAlarmFromJSON(this, alarmResponse?.content)
-            }
-        }
-
-        if (!isChatOrQa) {
-            AI.chatHistory.add(Message("assistant", "好的"))
-        }
-    }
-
-    fun settingsScrollTo(id: String) {
-        val bundle = Bundle().apply {
-            putString("assistant_find", id)
-            putLong("trigger_key", System.currentTimeMillis())
-        }
-
-//        navController.navigateStandard(R.id.nav_settings, bundle)
     }
 
     private fun initSpeechManager() {
@@ -674,8 +543,7 @@ class MainActivity : ComponentActivity() {
 
                 withContext(Dispatchers.IO) {
                     if (text.isNotEmpty()) {
-                        assistantSend(text, apiKey)
-                        Log.d("say", text)
+                        mainViewModel.setSpeechFinalResult(text)
                     }
                 }
             }

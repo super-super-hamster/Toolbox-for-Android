@@ -21,7 +21,7 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.hamster.toolbox.R
-import com.hamster.toolbox.utils.squircleShape
+import com.hamster.toolbox.utils.compose.squircleShape
 import kotlin.math.max
 import kotlin.math.min
 

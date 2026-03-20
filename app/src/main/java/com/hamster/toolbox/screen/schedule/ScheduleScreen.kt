@@ -1,5 +1,6 @@
 package com.hamster.toolbox.screen.schedule
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -42,7 +43,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
-import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -52,14 +52,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.preference.PreferenceManager
 import com.hamster.toolbox.R
-import com.hamster.toolbox.utils.SharedTiltState
-import com.hamster.toolbox.utils.StandardDialog
-import com.hamster.toolbox.utils.applySharedTilt
+import com.hamster.toolbox.utils.compose.PageColumn
+import com.hamster.toolbox.utils.compose.SharedTiltState
+import com.hamster.toolbox.utils.compose.StandardDialog
+import com.hamster.toolbox.utils.compose.applySharedTilt
 import com.hamster.toolbox.utils.getSchedule
-import com.hamster.toolbox.utils.rememberSharedTiltState
+import com.hamster.toolbox.utils.compose.rememberSharedTiltState
 import com.hamster.toolbox.utils.saveSchedule
-import com.hamster.toolbox.utils.squircleShape
-import com.hamster.toolbox.utils.tiltGestureContainer
+import com.hamster.toolbox.utils.compose.squircleShape
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
@@ -107,36 +107,34 @@ fun ScheduleScreen() {
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().tiltGestureContainer(sharedTiltState)) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(colorResource(R.color.background))
-                .padding(top = dimensionResource(R.dimen.top_padding), bottom = dimensionResource(R.dimen.bottom_padding)),
-            contentAlignment = Alignment.Center
-        ) {
-            HorizontalPager(
-                state = pagerState,
-                contentPadding = PaddingValues(horizontal = 24.dp), // 左右边距
-                pageSpacing = 16.dp // 卡片之间的间距
-            ) { page ->
-                WeekScheduleCard(
-                    weekNumber = page + 1,
-                    weekCourses.getOrNull(page + 1),
-                    sharedTiltState = sharedTiltState,
-                    semesterStartDateStr = semesterStartDateStr,
-                    onCourseUpdated = { oldCourse, newCourse ->
-                        val newList = if (oldCourse == null) {
-                            courseList + newCourse
-                        } else {
-                            courseList.map { if (it == oldCourse) newCourse else it }
-                        }
-
-                        saveSchedule(context, newList)
-                        refreshTrigger++
+    PageColumn(sharedTiltState = sharedTiltState) {
+        HorizontalPager(
+            modifier = Modifier.weight(1f),
+            state = pagerState,
+            contentPadding = PaddingValues(horizontal = 24.dp), // 左右边距
+            pageSpacing = 16.dp // 卡片之间的间距
+        ) { page ->
+            WeekScheduleCard(
+                weekNumber = page + 1,
+                weekCourses.getOrNull(page + 1),
+                sharedTiltState = sharedTiltState,
+                semesterStartDateStr = semesterStartDateStr,
+                onCourseUpdated = { oldCourse, newCourse ->
+                    val newList = if (newCourse == null) {
+                        // 删除课程
+                        if (oldCourse != null) courseList.filter { it != oldCourse } else courseList
+                    } else if (oldCourse == null) {
+                        // 添加课程
+                        courseList + newCourse
+                    } else {
+                        // 更新课程
+                        courseList.map { if (it == oldCourse) newCourse else it }
                     }
-                )
-            }
+
+                    saveSchedule(context, newList)
+                    refreshTrigger++
+                }
+            )
         }
     }
 }
@@ -147,7 +145,7 @@ fun WeekScheduleCard(
     courses: Array<Array<Course?>>?,
     sharedTiltState: SharedTiltState,
     semesterStartDateStr: String?,
-    onCourseUpdated: (Course?, Course) -> Unit
+    onCourseUpdated: (Course?, Course?) -> Unit
 ) {
     var selectedCourse by remember { mutableStateOf<Course?>(null) }
 
@@ -272,9 +270,11 @@ fun WeekScheduleCard(
                                         }
                                     )
                                     .background(
-                                        color = if (currentCourse != null) generateColor(currentCourse.name).copy(alpha = 0.75f)
-                                            else if (isSlotActive) Color.Gray.copy(alpha = 0.15f)
-                                            else Color.Transparent,
+                                        color = if (currentCourse != null) generateColor(
+                                            currentCourse.name
+                                        ).copy(alpha = 0.75f)
+                                        else if (isSlotActive) Color.Gray.copy(alpha = 0.15f)
+                                        else Color.Transparent,
                                         shape = squircleShape
                                     ),
                                 contentAlignment = Alignment.Center,
@@ -326,7 +326,8 @@ fun WeekScheduleCard(
             initialCourse = course,
             defaultWeek = weekNumber, defaultDay = course.dayOfWeek, defaultPeriod = course.startTime,
             onDismiss = { selectedCourse = null },
-            onConfirm = { old, new -> onCourseUpdated(old, new); selectedCourse = null }
+            onConfirm = { old, new -> onCourseUpdated(old, new); selectedCourse = null },
+            onDelete = { old -> onCourseUpdated(old, null); selectedCourse = null }
         )
     }
 
@@ -335,7 +336,8 @@ fun WeekScheduleCard(
             initialCourse = null,
             defaultWeek = weekNumber, defaultDay = day, defaultPeriod = period,
             onDismiss = { addingSlot = null },
-            onConfirm = { _, new -> onCourseUpdated(null, new); addingSlot = null }
+            onConfirm = { _, new -> onCourseUpdated(null, new); addingSlot = null },
+            onDelete = { }
         )
     }
 }
@@ -347,6 +349,7 @@ fun CourseEditDialog(
     defaultDay: Int,
     defaultPeriod: Int,
     onDismiss: () -> Unit,
+    onDelete: (oldCourse: Course) -> Unit,
     onConfirm: (oldCourse: Course?, newCourse: Course) -> Unit
 ) {
     val course = initialCourse ?: Course(
@@ -383,30 +386,53 @@ fun CourseEditDialog(
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.Start
         ) {
-            BasicTextField(
-                value = courseName,
-                onValueChange = { courseName = it },
-                textStyle = TextStyle(
-                    fontSize = 24.sp, fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurface
-                ),
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 24.dp),
-                decorationBox = { innerTextField ->
-                    if (courseName.isEmpty()) {
-                        Text(
-                            text = "课程名称",
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.Gray.copy(alpha = 0.5f),
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                    .padding(bottom = 24.dp)
+            ) {
+                BasicTextField(
+                    value = courseName,
+                    onValueChange = { courseName = it },
+                    textStyle = TextStyle(
+                        fontSize = 24.sp, fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurface
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 24.dp),
+                    decorationBox = { innerTextField ->
+                        if (courseName.isEmpty()) {
+                            Text(
+                                text = "课程名称",
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Gray.copy(alpha = 0.5f),
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                        innerTextField()
                     }
-                    innerTextField()
+                )
+
+                if (initialCourse != null) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_delete),
+                        contentDescription = "删除课程",
+                        tint = Color.Red.copy(alpha = 0.7f),
+                        modifier = Modifier
+                            .size(20.dp)
+                            .align(Alignment.CenterStart)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) {
+                                onDelete(initialCourse)
+                            }
+                    )
                 }
-            )
+            }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("教室：", fontSize = 18.sp)
@@ -437,7 +463,14 @@ fun CourseEditDialog(
                 Icon(
                     painter = painterResource(id = R.drawable.ic_edit),
                     contentDescription = "修改周次",
-                    modifier = Modifier.size(24.dp).clickable { expandedPanel = if (expandedPanel == "WEEKS") "NONE" else "WEEKS" }
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = {
+                                expandedPanel = if (expandedPanel == "WEEKS") "NONE" else "WEEKS"
+                            })
                 )
             }
             if (expandedPanel == "WEEKS") {
@@ -455,12 +488,21 @@ fun CourseEditDialog(
                 Icon(
                     painter = painterResource(R.drawable.ic_edit),
                     contentDescription = "修改星期",
-                    modifier = Modifier.size(24.dp).clickable { expandedPanel = if (expandedPanel == "DAYS") "NONE" else "DAYS" }
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clickable (
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = {
+                                expandedPanel = if (expandedPanel == "DAYS") "NONE" else "DAYS"
+                            })
                 )
             }
             if (expandedPanel == "DAYS") {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(start = 52.dp, top = 12.dp, bottom = 8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 52.dp, top = 12.dp, bottom = 8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     daysList.forEachIndexed { index, day ->
@@ -470,7 +512,11 @@ fun CourseEditDialog(
                             modifier = Modifier
                                 .size(30.dp)
                                 .clip(squircleShape)
-                                .background(if (isSelected) colorResource(R.color.mikuGreen) else Color.Gray.copy(alpha = 0.1f))
+                                .background(
+                                    if (isSelected) colorResource(R.color.mikuGreen) else Color.Gray.copy(
+                                        alpha = 0.1f
+                                    )
+                                )
                                 .clickable { selectedDay = dayValue }, // 单选直接赋值
                             contentAlignment = Alignment.Center
                         ) {
@@ -494,7 +540,14 @@ fun CourseEditDialog(
                 Icon(
                     painter = painterResource(R.drawable.ic_edit),
                     contentDescription = "修改节次",
-                    modifier = Modifier.size(24.dp).clickable { expandedPanel = if (expandedPanel == "PERIODS") "NONE" else "PERIODS" }
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clickable (
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = {
+                                expandedPanel = if (expandedPanel == "PERIODS") "NONE" else "PERIODS"
+                            })
                 )
             }
             if (expandedPanel == "PERIODS") {
@@ -511,12 +564,16 @@ fun CourseEditDialog(
             Spacer(modifier = Modifier.height(32.dp))
 
             Row(
-                modifier = Modifier.fillMaxWidth().height(42.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(42.dp),
                 horizontalArrangement = Arrangement.spacedBy(24.dp)
             ) {
                 Button(
                     onClick = onDismiss,
-                    modifier = Modifier.weight(1f).height(42.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(42.dp),
                     shape = squircleShape,
                     colors = ButtonDefaults.buttonColors(containerColor = Color.LightGray)
                 ) {
@@ -535,7 +592,9 @@ fun CourseEditDialog(
                         )
                         onConfirm(initialCourse, updatedCourse)
                     },
-                    modifier = Modifier.weight(1f).height(42.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(42.dp),
                     shape = squircleShape,
                     colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.btn_confirm))
                 ) {
@@ -570,18 +629,29 @@ fun MultiSelectGrid(
     range: IntRange, selectedItems: Set<Int>, columns: Int,
     modifier: Modifier = Modifier, onToggle: (Int) -> Unit
 ) {
-    Column(modifier = modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp)) {
+    Column(modifier = modifier
+        .fillMaxWidth()
+        .padding(top = 12.dp, bottom = 8.dp)) {
         val chunkedItems = range.chunked(columns)
         chunkedItems.forEach { rowItems ->
             Row(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 rowItems.forEach { item ->
                     val isSelected = selectedItems.contains(item)
                     Box(
-                        modifier = Modifier.weight(1f).aspectRatio(1f).clip(squircleShape)
-                            .background(if (isSelected) colorResource(R.color.mikuGreen) else Color.Gray.copy(alpha = 0.1f))
+                        modifier = Modifier
+                            .weight(1f)
+                            .aspectRatio(1f)
+                            .clip(squircleShape)
+                            .background(
+                                if (isSelected) colorResource(R.color.mikuGreen) else Color.Gray.copy(
+                                    alpha = 0.1f
+                                )
+                            )
                             .clickable { onToggle(item) },
                         contentAlignment = Alignment.Center
                     ) {
@@ -603,18 +673,29 @@ fun SingleSelectGrid(
     range: IntRange, selectedItem: Int, columns: Int,
     modifier: Modifier = Modifier, onSelect: (Int) -> Unit
 ) {
-    Column(modifier = modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp)) {
+    Column(modifier = modifier
+        .fillMaxWidth()
+        .padding(top = 12.dp, bottom = 8.dp)) {
         val chunkedItems = range.chunked(columns)
         chunkedItems.forEach { rowItems ->
             Row(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 rowItems.forEach { item ->
                     val isSelected = (selectedItem == item)
                     Box(
-                        modifier = Modifier.weight(1f).aspectRatio(1f).clip(squircleShape)
-                            .background(if (isSelected) colorResource(R.color.mikuGreen) else Color.Gray.copy(alpha = 0.1f))
+                        modifier = Modifier
+                            .weight(1f)
+                            .aspectRatio(1f)
+                            .clip(squircleShape)
+                            .background(
+                                if (isSelected) colorResource(R.color.mikuGreen) else Color.Gray.copy(
+                                    alpha = 0.1f
+                                )
+                            )
                             .clickable { onSelect(item) },
                         contentAlignment = Alignment.Center
                     ) {

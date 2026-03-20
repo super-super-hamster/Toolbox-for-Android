@@ -7,9 +7,7 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.util.Log
-import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.preference.PreferenceManager
@@ -65,7 +63,6 @@ class Receiver : BroadcastReceiver() {
                         10 * 60 * 1000,
                         pendingIntent
                     )
-                    Log.e("AlarmTest", "缺少精确闹钟权限，已降级为普通闹钟")
                 }
             } else {
                 alarmManager.cancel(pendingIntent)
@@ -146,7 +143,7 @@ class Receiver : BroadcastReceiver() {
                 Log.d("debug", "check")
 
                 // 第二天的课程检查
-                dailyNotification(context, 20, 0, ACTION_CLASS_ALARM_CHECK, 10000, true, null)
+                dailyNotification(context, 22, 0, ACTION_CLASS_ALARM_CHECK, 10000, true, null)
 
                 scheduleCheck(context)
             }
@@ -207,8 +204,6 @@ class Receiver : BroadcastReceiver() {
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
         val startDay = prefs.getString("semester_start_date", null) ?: return
 
-        Log.d("debug", "开学日期是: $startDay")
-
         val currentDate = LocalDate.now()
         val startDate = LocalDate.parse(startDay, DateTimeFormatter.ofPattern("yyyy-M-d"))
 
@@ -222,8 +217,6 @@ class Receiver : BroadcastReceiver() {
         val coursesForTomorrow = coursesThisWeek
             .filter { it.dayOfWeek == tomorrowDayOfWeek }
             .sortedBy { it.startTime }
-
-        Log.d("debug", "明天是星期 $tomorrowDayOfWeek，明天共有 ${coursesForTomorrow.size} 节课")
 
         val hasClass = BooleanArray(4) { false }
         val classSlot = ArrayList<Int>()
@@ -267,7 +260,7 @@ class Receiver : BroadcastReceiver() {
                 ACTION_SHOW_NOTIFICATION,
                 10200 + course.startTime,
                 isClassRemindEnabled,
-                arrayOf("上课提醒", "下一节课是：" + course.name + "\n" + "上课地点为：" + course.location, "知道了", "")
+                arrayOf("上课提醒", "下一节课是 " + course.name + "\n" + "在 " + course.location, "知道了", "")
             )
         }
 

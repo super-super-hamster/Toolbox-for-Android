@@ -6,7 +6,8 @@ import com.google.gson.annotations.SerializedName
 @Keep
 data class Request(
     @SerializedName("model") val model: String = "deepseek-chat",
-    @SerializedName("messages") val messages: List<Message>
+    @SerializedName("messages") val messages: List<Message>,
+    @SerializedName("stream") val stream: Boolean = false
 )
 
 @Keep

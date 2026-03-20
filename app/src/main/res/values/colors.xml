@@ -53,4 +53,11 @@
     <color name="btn_cancel">#80393939</color>
     <color name="icon">#0089A7</color>
     <color name="sheet_button">#80D9D9D9</color>
+
+    <color name="tabs_bg">#F4F4F5</color>
+    <color name="tabs_text">#757575</color>
+    <color name="tabs_selected_bg">#FFFFFF</color>
+    <color name="tabs_selected_text">#1D1D1D</color>
+
+    <color name="user_bubble">#F5F5F5</color>
 </resources>

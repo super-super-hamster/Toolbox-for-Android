@@ -1,13 +1,10 @@
 package com.hamster.toolbox.screen.random
 
-import androidx.compose.foundation.background
+import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -25,13 +22,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.colorResource
-import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aigestudio.wheelpicker.WheelPicker
 import com.aigestudio.wheelpicker.compose.WheelPickerComposable
 import com.hamster.toolbox.R
-import com.hamster.toolbox.utils.squircleShape
+import com.hamster.toolbox.utils.compose.PageColumn
+import com.hamster.toolbox.utils.compose.rememberSharedTiltState
+import com.hamster.toolbox.utils.compose.squircleShape
 import kotlinx.coroutines.delay
 import kotlin.math.max
 import kotlin.math.min
@@ -65,13 +63,9 @@ fun RandomNumberScreen() {
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(colorResource(id = R.color.background))
-            .padding(16.dp)
-    ) {
-        Spacer(modifier = Modifier.height(dimensionResource(R.dimen.top_padding)))
+    val sharedTiltState = rememberSharedTiltState()
+
+    PageColumn(sharedTiltState = sharedTiltState) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -101,7 +95,7 @@ fun RandomNumberScreen() {
                                 if (currentIndex != lastIndex) {
                                     lastIndex = currentIndex
                                     // 触发震动
-                                    performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+                                    performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                                 }
                             }
                         }
@@ -139,7 +133,7 @@ fun RandomNumberScreen() {
                                 val currentIndex = -offset / itemHeight
                                 if (currentIndex != lastIndex) {
                                     lastIndex = currentIndex
-                                    performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+                                    performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                                 }
                             }
                         }
@@ -172,7 +166,5 @@ fun RandomNumberScreen() {
                 Text("生成", fontSize = 18.sp)
             }
         }
-
-        Spacer(modifier = Modifier.height(dimensionResource(R.dimen.bottom_padding)))
     }
 }

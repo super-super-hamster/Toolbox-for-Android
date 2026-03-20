@@ -1,0 +1,22 @@
+package com.hamster.toolbox.main
+
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.lifecycle.ViewModel
+
+class MainViewModel : ViewModel() {
+    var isShowAddKeywordDialog by mutableStateOf(false)
+
+    private var _speechFinalResult by mutableStateOf("")
+    val speechFinalResult: String get() = _speechFinalResult
+    fun setSpeechFinalResult(result: String) {
+        _speechFinalResult = result
+    }
+
+    private var _settingsScrollTarget by mutableStateOf("")
+    val settingsScrollTarget: String get() = _settingsScrollTarget
+    fun setSettingsScrollTarget(target: String) {
+        _settingsScrollTarget = target
+    }
+}

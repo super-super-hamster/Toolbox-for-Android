@@ -3,7 +3,7 @@ package com.hamster.toolbox.system
 import android.content.Context
 import android.content.Intent
 import android.provider.AlarmClock
-import android.widget.Toast
+import android.util.Log
 import com.google.gson.Gson
 
 class Alarm {
@@ -30,17 +30,12 @@ class Alarm {
         }
 
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-
-        try {
-            context.startActivity(intent)
-            Toast.makeText(context, "闹钟设置成功", Toast.LENGTH_SHORT).show()
-        } catch (e: Exception) {
-            e.printStackTrace()
-            Toast.makeText(context, "闹钟设置失败", Toast.LENGTH_SHORT).show()
-        }
     }
 
-    fun setAlarmFromJSON(context: Context, json: String?): Boolean{
+    fun setAlarmFromJSON(context: Context, json: String?): Boolean {
+        Log.d("fuck", "alarm")
+        json?.let { Log.d("fuck", it) }
+
         if (json.isNullOrBlank()) {
             return false
         }

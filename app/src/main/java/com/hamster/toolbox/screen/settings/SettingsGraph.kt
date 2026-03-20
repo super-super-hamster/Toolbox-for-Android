@@ -1,13 +1,12 @@
 package com.hamster.toolbox.screen.settings
 
-import android.util.Log
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.navigation
 import androidx.navigation.toRoute
 import com.hamster.toolbox.ImportCurriculum
-import com.hamster.toolbox.MainViewModel
+import com.hamster.toolbox.main.MainViewModel
 import com.hamster.toolbox.SetKeywords
 import com.hamster.toolbox.Settings
 import com.hamster.toolbox.SettingsGraph

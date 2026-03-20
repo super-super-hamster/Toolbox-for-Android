@@ -2,24 +2,19 @@ package com.hamster.toolbox.screen.settings
 
 import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.net.Uri
 import android.os.Build
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -31,10 +26,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.colorResource
-import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.preference.PreferenceManager
 import com.hamster.toolbox.ImportCurriculum
@@ -43,18 +37,18 @@ import com.hamster.toolbox.Route
 import com.hamster.toolbox.SetKeywords
 import com.hamster.toolbox.WeatherSettings
 import com.hamster.toolbox.system.Receiver
-import com.hamster.toolbox.utils.ClickItem
-import com.hamster.toolbox.utils.DatePicker
-import com.hamster.toolbox.utils.EditTextItem
-import com.hamster.toolbox.utils.InquiryDialog
-import com.hamster.toolbox.utils.ItemGroup
+import com.hamster.toolbox.utils.compose.ClickItem
+import com.hamster.toolbox.utils.compose.DatePicker
+import com.hamster.toolbox.utils.compose.EditTextItem
+import com.hamster.toolbox.utils.compose.InquiryDialog
+import com.hamster.toolbox.utils.compose.ItemGroup
+import com.hamster.toolbox.utils.compose.PageColumn
 import com.hamster.toolbox.utils.ScrollTarget
-import com.hamster.toolbox.utils.SwitchItem
+import com.hamster.toolbox.utils.compose.SwitchItem
 import com.hamster.toolbox.utils.convertDateToMillis
-import com.hamster.toolbox.utils.rememberBooleanPreference
-import com.hamster.toolbox.utils.rememberSharedTiltState
-import com.hamster.toolbox.utils.rememberStringPreference
-import com.hamster.toolbox.utils.tiltGestureContainer
+import com.hamster.toolbox.utils.compose.rememberBooleanPreference
+import com.hamster.toolbox.utils.compose.rememberSharedTiltState
+import com.hamster.toolbox.utils.compose.rememberStringPreference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -154,204 +148,191 @@ fun SettingsScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().tiltGestureContainer(sharedTiltState)) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-//            .tiltGestureContainer(sharedTiltState)
-                .background(colorResource(id = R.color.background))
-                .verticalScroll(rememberScrollState())
-                .padding(12.dp)
-        ) {
-            Spacer(modifier = Modifier.height(dimensionResource(R.dimen.top_padding)))
-
-            ItemGroup(titleState = sharedTiltState) {
-                ClickItem(title = "通知测试") {
-                    val receiver = Receiver()
-                    receiver.showNotification(context, "test", "test", "test", null)
-                }
-
-                ClickItem(title = "加载动画测试") {
-                    setLoading(true)
-                }
+    PageColumn(modifier = Modifier.verticalScroll(rememberScrollState()), sharedTiltState = sharedTiltState) {
+        ItemGroup(titleState = sharedTiltState) {
+            ClickItem(title = "通知测试") {
+                val receiver = Receiver()
+                receiver.showNotification(context, "test", "test", "test", null)
             }
 
-            ItemGroup(titleState = sharedTiltState) {
-                ClickItem(title = "用户头像", icon = R.drawable.ic_user_avatar) {
-                    showUserAvatarOptionsDialog = true
-                    currentAvatarType = "user"
-                }
-                EditTextItem(
-                    modifier = getModifier("nickname"),
-                    title = "昵称",
-                    dialogTitle = "修改昵称",
-                    initialValue = nickname,
-                    hint = "昵称",
-                    singleLine = true,
-                    icon = R.drawable.ic_user_name,
-                    onCancel = { nickname = prefs.getString("nickname", "") ?: "" },
-                    onConfirm = { input ->
-                        nickname = input
-                        prefs.edit { putString("nickname", nickname) }
-                        true
-                    }
-                )
-                EditTextItem(
-                    modifier = getModifier("signature"),
-                    title = "个性签名",
-                    dialogTitle = "修改签名",
-                    initialValue = signature,
-                    hint = "个性签名",
-                    singleLine = true,
-                    icon = R.drawable.ic_user_signature,
-                    onCancel = { signature = prefs.getString("signature", "") ?: "" },
-                    onConfirm = { input ->
-                        signature = input
-                        prefs.edit { putString("signature", signature) }
-                        true
-                    }
-                )
+            ClickItem(title = "加载动画测试") {
+                setLoading(true)
             }
+        }
 
-            Spacer(modifier = Modifier.height(8.dp))
+        ItemGroup(titleState = sharedTiltState) {
+            ClickItem(title = "用户头像", icon = R.drawable.ic_user_avatar) {
+                showUserAvatarOptionsDialog = true
+                currentAvatarType = "user"
+            }
+            EditTextItem(
+                modifier = getModifier("nickname"),
+                title = "昵称",
+                dialogTitle = "修改昵称",
+                initialValue = nickname,
+                hint = "昵称",
+                singleLine = true,
+                icon = R.drawable.ic_user_name,
+                onCancel = { nickname = prefs.getString("nickname", "") ?: "" },
+                onConfirm = { input ->
+                    nickname = input
+                    prefs.edit { putString("nickname", nickname) }
+                    true
+                }
+            )
+            EditTextItem(
+                modifier = getModifier("signature"),
+                title = "个性签名",
+                dialogTitle = "修改签名",
+                initialValue = signature,
+                hint = "个性签名",
+                singleLine = true,
+                icon = R.drawable.ic_user_signature,
+                onCancel = { signature = prefs.getString("signature", "") ?: "" },
+                onConfirm = { input ->
+                    signature = input
+                    prefs.edit { putString("signature", signature) }
+                    true
+                }
+            )
+        }
 
-            ItemGroup(titleState = sharedTiltState) {
-                ClickItem(
-                    modifier = getModifier("semester_start_date"),
-                    title = "学期开始日期",
-                    summary = semesterStartDate,
-                    icon = R.drawable.ic_calendar
-                ) {
-                    showDatePickerDialog = true
+        Spacer(modifier = Modifier.height(8.dp))
+
+        ItemGroup(titleState = sharedTiltState) {
+            ClickItem(
+                modifier = getModifier("semester_start_date"),
+                title = "学期开始日期",
+                summary = semesterStartDate,
+                icon = R.drawable.ic_calendar
+            ) {
+                showDatePickerDialog = true
+            }
+            ClickItem(
+                modifier = getModifier("import_curriculum_options"),
+                title = "导入课程表",
+                summary = curriculumImportState,
+                icon = R.drawable.ic_curriculum
+            ) {
+                if (prefs.getString("semester_start_date", null)?.isEmpty() == true) {
+                    scrollTo("semester_start_date")
+                    return@ClickItem
                 }
-                ClickItem(
-                    modifier = getModifier("import_curriculum_options"),
-                    title = "导入课程表",
-                    summary = curriculumImportState,
-                    icon = R.drawable.ic_curriculum
-                ) {
-                    if (prefs.getString("semester_start_date", null)?.isEmpty() == true) {
-                        scrollTo("semester_start_date")
-                        return@ClickItem
-                    }
-                    onNavigate(ImportCurriculum)
-                }
-                SwitchItem(
-                    modifier = getModifier("class_notification"),
-                    title = "上课提醒",
-                    summary = "开启后将在上课前发送通知",
-                    checked = isClassRemindEnabled,
-                    icon = R.drawable.ic_message,
-                    onCheckedChange = { isChecked ->
-                        if (isChecked) {
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                val permissionStatus = androidx.core.content.ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
-                                if (permissionStatus != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                                    classRemindRequestPostNotificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                    return@SwitchItem
-                                }
+                onNavigate(ImportCurriculum)
+            }
+            SwitchItem(
+                modifier = getModifier("class_notification"),
+                title = "上课提醒",
+                summary = "开启后将在上课前发送通知",
+                checked = isClassRemindEnabled,
+                icon = R.drawable.ic_message,
+                onCheckedChange = { isChecked ->
+                    if (isChecked) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            val permissionStatus = ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
+                            if (permissionStatus != PackageManager.PERMISSION_GRANTED) {
+                                classRemindRequestPostNotificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                return@SwitchItem
                             }
                         }
-
-                        isClassRemindEnabled = isChecked
-                        prefs.edit { putBoolean("class_notification", isChecked) }
-
-                        Receiver.dailyNotification(
-                            context, 22, 0, Receiver.ACTION_CLASS_ALARM_CHECK, 101, isClassRemindEnabled || isAlarmRemindEnabled, emptyArray()
-                        )
                     }
-                )
 
-                SwitchItem(
-                    modifier = getModifier("alarm_notification"),
-                    title = "上课闹钟设置提醒",
-                    summary = "开启后将自动发送设置闹钟的通知",
-                    checked = isAlarmRemindEnabled,
-                    icon = R.drawable.ic_alarm,
-                    onCheckedChange = { isChecked ->
-                        if (isChecked) {
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                val permissionStatus = androidx.core.content.ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
-                                if (permissionStatus != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                                    alarmRemindRequestPostNotificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                    return@SwitchItem
-                                }
+                    isClassRemindEnabled = isChecked
+                    prefs.edit { putBoolean("class_notification", isChecked) }
+
+                    Receiver.dailyNotification(
+                        context, 22, 0, Receiver.ACTION_CLASS_ALARM_CHECK, 101, isClassRemindEnabled || isAlarmRemindEnabled, emptyArray()
+                    )
+                }
+            )
+
+            SwitchItem(
+                modifier = getModifier("alarm_notification"),
+                title = "上课闹钟设置提醒",
+                summary = "开启后将自动发送设置闹钟的通知",
+                checked = isAlarmRemindEnabled,
+                icon = R.drawable.ic_alarm,
+                onCheckedChange = { isChecked ->
+                    if (isChecked) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            val permissionStatus = ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
+                            if (permissionStatus != PackageManager.PERMISSION_GRANTED) {
+                                alarmRemindRequestPostNotificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                return@SwitchItem
                             }
                         }
-
-                        isAlarmRemindEnabled = isChecked
-                        prefs.edit { putBoolean("alarm_notification", isChecked) }
-
-                        Receiver.dailyNotification(
-                            context, 22, 0, Receiver.ACTION_CLASS_ALARM_CHECK, 101, isClassRemindEnabled || isAlarmRemindEnabled, emptyArray()
-                        )
                     }
-                )
 
+                    isAlarmRemindEnabled = isChecked
+                    prefs.edit { putBoolean("alarm_notification", isChecked) }
+
+                    Receiver.dailyNotification(
+                        context, 22, 0, Receiver.ACTION_CLASS_ALARM_CHECK, 101, isClassRemindEnabled || isAlarmRemindEnabled, emptyArray()
+                    )
+                }
+            )
+
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        ItemGroup(titleState = sharedTiltState) {
+            ClickItem(
+                modifier = getModifier("assistant_avatar"),
+                title = "助手头像",
+                icon = R.drawable.ic_assistant
+            ) {
+                showAssistantAvatarOptionsDialog = true
+                currentAvatarType = "assistant"
+            }
+            EditTextItem(
+                modifier = getModifier("assistant_nickname"),
+                title = "助手昵称",
+                dialogTitle = "修改助手昵称",
+                initialValue = assistantNickname,
+                hint = "助手昵称",
+                singleLine = true,
+                icon = R.drawable.ic_user_name,
+                onCancel = { assistantNickname = prefs.getString("assistant_nickname", "") ?: "" },
+                onConfirm = { input ->
+                    assistantNickname = input
+                    prefs.edit { putString("assistant_nickname", assistantNickname) }
+                    true
+                }
+            )
+            ClickItem(
+                modifier = getModifier("keywords"),
+                title = "热词",
+                summary = "热词更容易被语音识别",
+                icon = R.drawable.ic_characters
+            ) {
+                onNavigate(SetKeywords)
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            ItemGroup(titleState = sharedTiltState) {
-                ClickItem(
-                    modifier = getModifier("assistant_avatar"),
-                    title = "助手头像",
-                    icon = R.drawable.ic_assistant
-                ) {
-                    showAssistantAvatarOptionsDialog = true
-                    currentAvatarType = "assistant"
+            EditTextItem(
+                modifier = getModifier("api_key"),
+                title = "大模型 API",
+                summary = if (apiKey.isEmpty()) "未设置" else "******",
+                dialogTitle = "API Key",
+                initialValue = apiKey,
+                hint = "输入 API Key",
+                singleLine = true,
+                icon = R.drawable.ic_a,
+                onCancel = { apiKey = prefs.getString("api_key", "") ?: "" },
+                onConfirm = { input ->
+                    apiKey = input
+                    prefs.edit { putString("api_key", apiKey) }
+                    true
                 }
-                EditTextItem(
-                    modifier = getModifier("assistant_nickname"),
-                    title = "助手昵称",
-                    dialogTitle = "修改助手昵称",
-                    initialValue = assistantNickname,
-                    hint = "助手昵称",
-                    singleLine = true,
-                    icon = R.drawable.ic_user_name,
-                    onCancel = { assistantNickname = prefs.getString("assistant_nickname", "") ?: "" },
-                    onConfirm = { input ->
-                        assistantNickname = input
-                        prefs.edit { putString("assistant_nickname", assistantNickname) }
-                        true
-                    }
-                )
-                ClickItem(
-                    modifier = getModifier("keywords"),
-                    title = "热词",
-                    summary = "热词更容易被语音识别",
-                    icon = R.drawable.ic_characters
-                ) {
-                    onNavigate(SetKeywords)
-                }
+            )
 
-                EditTextItem(
-                    modifier = getModifier("api_key"),
-                    title = "大模型 API",
-                    summary = if (apiKey.isEmpty()) "未设置" else "******",
-                    dialogTitle = "API Key",
-                    initialValue = apiKey,
-                    hint = "输入 API Key",
-                    singleLine = true,
-                    icon = R.drawable.ic_a,
-                    onCancel = { apiKey = prefs.getString("api_key", "") ?: "" },
-                    onConfirm = { input ->
-                        apiKey = input
-                        prefs.edit { putString("api_key", apiKey) }
-                        true
-                    }
-                )
-
-                ClickItem(
-                    modifier = getModifier("weather"),
-                    title = "天气",
-                    icon = R.drawable.ic_characters
-                ) {
-                    onNavigate(WeatherSettings)
-                }
+            ClickItem(
+                modifier = getModifier("weather"),
+                title = "天气",
+                icon = R.drawable.ic_characters
+            ) {
+                onNavigate(WeatherSettings)
             }
-
-            Spacer(modifier = Modifier.height(dimensionResource(R.dimen.bottom_padding)))
         }
     }
 

@@ -1,35 +1,22 @@
 package com.hamster.toolbox.screen.settings
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.colorResource
-import androidx.compose.ui.res.dimensionResource
-import androidx.compose.ui.unit.dp
-import com.hamster.toolbox.MainViewModel
-import com.hamster.toolbox.R
+import com.hamster.toolbox.main.MainViewModel
 import com.hamster.toolbox.ai.KeywordManager
 import com.hamster.toolbox.ai.KeywordsData
-import com.hamster.toolbox.utils.EditTextDialog
-import com.hamster.toolbox.utils.InquiryItem
-import com.hamster.toolbox.utils.ItemGroup
+import com.hamster.toolbox.utils.compose.EditTextDialog
+import com.hamster.toolbox.utils.compose.InquiryItem
+import com.hamster.toolbox.utils.compose.ItemGroup
+import com.hamster.toolbox.utils.compose.PageColumn
 import com.hamster.toolbox.utils.ScrollTarget
-import com.hamster.toolbox.utils.rememberSharedTiltState
-import com.hamster.toolbox.utils.tiltGestureContainer
+import com.hamster.toolbox.utils.compose.rememberSharedTiltState
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 //TODO:搜索
@@ -54,16 +41,7 @@ fun SetKeywordsScreen(
         return targets.getOrPut(id) { ScrollTarget() }.modifier
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .tiltGestureContainer(sharedTiltState)
-            .background(colorResource(id = R.color.background))
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp)
-    ) {
-        Spacer(modifier = Modifier.height(dimensionResource(R.dimen.top_padding)))
-
+    PageColumn(sharedTiltState = sharedTiltState) {
         ItemGroup(titleState = sharedTiltState) {
             keywordsList.forEachIndexed { index, keyword ->
                 InquiryItem(
@@ -110,6 +88,5 @@ fun SetKeywordsScreen(
                 }
             )
         }
-        Spacer(modifier = Modifier.height(dimensionResource(R.dimen.bottom_padding)))
     }
 }

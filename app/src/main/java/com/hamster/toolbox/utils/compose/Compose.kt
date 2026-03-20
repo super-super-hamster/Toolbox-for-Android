@@ -1,4 +1,4 @@
-package com.hamster.toolbox.utils
+package com.hamster.toolbox.utils.compose
 
 import android.app.ActivityManager
 import android.content.Context
@@ -68,6 +68,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.graphicsLayer
@@ -84,11 +85,13 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -106,12 +109,29 @@ import com.airbnb.lottie.compose.rememberLottieComposition
 import com.airbnb.lottie.compose.rememberLottieDynamicProperties
 import com.airbnb.lottie.compose.rememberLottieDynamicProperty
 import com.hamster.toolbox.R
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import sv.lib.squircleshape.CornerSmoothing
 import sv.lib.squircleshape.SquircleShape
 
 val squircleShape = SquircleShape(
     radius = 16.dp,
+    smoothing = CornerSmoothing.Medium
+)
+
+val userBubbleShape = SquircleShape(
+    topStart = 16.dp,
+    topEnd = 3.dp,
+    bottomStart = 16.dp,
+    bottomEnd = 16.dp,
+    smoothing = CornerSmoothing.Medium
+)
+
+val assistantBubbleShape = SquircleShape(
+    topStart = 3.dp,
+    topEnd = 16.dp,
+    bottomStart = 16.dp,
+    bottomEnd = 16.dp,
     smoothing = CornerSmoothing.Medium
 )
 
@@ -307,7 +327,7 @@ fun EditTextDialog(
 ) {
     var tempText by remember {
         mutableStateOf(
-            androidx.compose.ui.text.input.TextFieldValue(
+            TextFieldValue(
                 text = initialValue,
                 selection = TextRange(initialValue.length)
             )
@@ -322,7 +342,7 @@ fun EditTextDialog(
 
     // 在组件加载时触发请求焦点
     LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay(100)
+        delay(100)
         focusRequester.requestFocus()
 
         keyboardController?.show()
@@ -570,6 +590,28 @@ fun ExplanationItem(
                 lineHeight = 20.sp,
                 color = colorResource(id = R.color.explanation_text)
             )
+        }
+    }
+}
+
+@Composable
+fun PageColumn(
+    modifier: Modifier = Modifier,
+    sharedTiltState: SharedTiltState,
+    content: @Composable ColumnScope.() -> Unit //@Composable ColumnScope.() 让content知道自己的父组件是column
+) {
+    Box(modifier = Modifier.fillMaxSize().tiltGestureContainer(sharedTiltState)) {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .background(colorResource(id = R.color.background))
+                .padding(12.dp)
+        ) {
+            Spacer(modifier = Modifier.height(dimensionResource(R.dimen.top_padding)))
+
+            content()
+
+            Spacer(modifier = Modifier.height(dimensionResource(R.dimen.bottom_padding)))
         }
     }
 }
@@ -952,7 +994,7 @@ fun Modifier.glow(
     color: Color,
     blurRadius: Dp = 15.dp,
     spread: Dp = 0.dp,
-    shape: androidx.compose.ui.graphics.Shape
+    shape: Shape
 ) = this.drawBehind {
     val shadowColor = color.toArgb()
     val transparentColor = color.copy(alpha = 0f).toArgb()

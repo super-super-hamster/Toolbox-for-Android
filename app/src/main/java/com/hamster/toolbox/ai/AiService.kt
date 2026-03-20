@@ -2,11 +2,13 @@ package com.hamster.toolbox.ai
 
 import com.google.gson.GsonBuilder
 import okhttp3.OkHttpClient
+import okhttp3.ResponseBody
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.Body
 import retrofit2.http.Header
 import retrofit2.http.POST
+import retrofit2.http.Streaming
 import java.util.concurrent.TimeUnit
 
 interface AiService {
@@ -21,9 +23,17 @@ interface AiService {
         @Body request: Request
     ): Response
 
+    // 流式输出
+    @Streaming
+    @POST("v1/chat/completions")
+    suspend fun getChatCompletionStream(
+        @Header("Authorization") apiKey: String,
+        @Body request: Request
+    ): retrofit2.Response<ResponseBody>
+
     //companion object的大括号中包含的是静态的成员和方法
     companion object {
-        //const val在编译时就应该确定下来
+        //const val在编译时就确定下来
         private const val BASE_URL = "https://api.deepseek.com/"
 
         private val client = OkHttpClient.Builder()
