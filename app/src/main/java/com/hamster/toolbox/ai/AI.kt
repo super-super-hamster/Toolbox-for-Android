@@ -50,13 +50,10 @@ object AI {
 
         val request = Request(messages = messageList)
 
-        Log.d("fuck", "send")
-
         return withContext(Dispatchers.IO) {
             try {
                 val response = apiService.getChatCompletion("Bearer $apiKey", request)
                 val responseJson = response.choices.firstOrNull()?.message?.content
-                Log.d("fuck", "response json")
                 responseJson?.let { Log.d("fuck", it) }
                 val aiResponse: AiResponse = Gson().fromJson(responseJson, AiResponse::class.java)
                 aiResponse
@@ -79,10 +76,7 @@ object AI {
             "nav_settings" -> { withContext(Dispatchers.Main) { onNavigate(SettingsGraph) } }
             "nav_random" -> { withContext(Dispatchers.Main) { onNavigate(RandomNumber) } }
             "set_alarm" -> {
-//                val prefs = PreferenceManager.getDefaultSharedPreferences(context)
-//                val apiKey = prefs.getString("api_key", null)
                 if (apiKey.isNullOrBlank()) {
-//                    settingsScrollTo("api_key", mainViewModel) { onNavigate(it) }
                     return
                 }
                 val alarmResponse = sendWithPrompt(context, response.content, "set_alarm", apiKey)

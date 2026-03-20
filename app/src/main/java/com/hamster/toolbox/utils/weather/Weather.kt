@@ -12,16 +12,14 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -39,6 +37,7 @@ import androidx.preference.PreferenceManager
 import com.google.gson.Gson
 import com.hamster.toolbox.R
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.util.Locale
 
@@ -62,6 +61,17 @@ fun Weather(
 
     var locationQuery by remember { mutableStateOf<String?>(null) }
     val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+
+    // 刷新触发器
+    var refreshTrigger by remember { mutableIntStateOf(0) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            val cacheExpirationMs = 300000L
+            delay(cacheExpirationMs + 1000L)
+
+            refreshTrigger++
+        }
+    }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -96,7 +106,7 @@ fun Weather(
         }
     }
 
-    LaunchedEffect(apiKey, apiHost, locationQuery) {
+    LaunchedEffect(apiKey, apiHost, locationQuery, refreshTrigger) {
         if (apiKey.isNullOrEmpty() || apiHost.isNullOrEmpty()) {
             isError = true
             isLoading = false
@@ -104,13 +114,12 @@ fun Weather(
         }
 
         if (locationQuery == null) {
-//            Log.d("debug", "no location")
             return@LaunchedEffect
         }
 
         isLoading = true
 
-        val cacheExpirationMs = 1800000L // 缓存有效期30分钟
+        val cacheExpirationMs = 300000L // 缓存有效期5分钟
         val lastFetchTime = prefs.getLong("weather_last_fetch_time", 0L)
         val currentTime = System.currentTimeMillis()
 

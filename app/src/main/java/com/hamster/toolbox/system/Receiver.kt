@@ -130,7 +130,7 @@ class Receiver : BroadcastReceiver() {
                             CLASS_ALARM -> {
                                 if (it.size > 1) {
                                     val alarm = Alarm()
-                                    alarm.setAlarm(context, it[1].toInt() - 1, 30, vibrate = true)
+                                    alarm.setAlarm(it[1].toInt() - 1, 30, vibrate = true)
                                 }
                             }
                         }

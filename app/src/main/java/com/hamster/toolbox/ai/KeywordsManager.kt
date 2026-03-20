@@ -66,7 +66,6 @@ object KeywordManager {
     }
 
     fun removeKeyword(context: Context, word: String) {
-        Log.d("fuck", "remove")
         val list = loadCustomKeywords(context)
         val removed = list.removeAll { it.word == word }
         if (removed) {
@@ -80,7 +79,6 @@ object KeywordManager {
         try {
             val file = File(context.filesDir, TARGET_FILE_NAME)
             file.writeText(gson.toJson(list))
-            Log.d("fuck", "save")
         } catch (e: Exception) {
             e.printStackTrace()
         }

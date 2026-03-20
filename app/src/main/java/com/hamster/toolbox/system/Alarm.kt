@@ -9,7 +9,6 @@ import com.google.gson.Gson
 class Alarm {
 
     fun setAlarm(
-        context: Context,
         hour: Int,
         minute: Int,
         days: ArrayList<Int>? = null,
@@ -33,9 +32,6 @@ class Alarm {
     }
 
     fun setAlarmFromJSON(context: Context, json: String?): Boolean {
-        Log.d("fuck", "alarm")
-        json?.let { Log.d("fuck", it) }
-
         if (json.isNullOrBlank()) {
             return false
         }
@@ -44,7 +40,7 @@ class Alarm {
             val gson = Gson()
             val data: AlarmData = gson.fromJson(json, AlarmData::class.java)
 
-            setAlarm(context, data.hour, data.minute, data.days, data.vibrate)
+            setAlarm(data.hour, data.minute, data.days, data.vibrate)
         } catch (e: Exception) {
             e.printStackTrace()
             return false
