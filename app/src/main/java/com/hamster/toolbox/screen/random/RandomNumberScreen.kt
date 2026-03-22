@@ -116,7 +116,7 @@ fun RandomNumberScreen() {
             WheelPickerComposable(
                 data = data,
                 selectedItemPosition = selectedMax,
-                onItemSelected = { picker, data, position ->
+                onItemSelected = { _, _, position ->
                     selectedMax = position },
                 modifier = Modifier.fillMaxHeight(),
                 factory = {

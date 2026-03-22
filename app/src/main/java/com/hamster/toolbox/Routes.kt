@@ -32,4 +32,7 @@ object RandomNumber : Route
 object Schedule : Route
 
 @Serializable
+object Tips : Route
+
+@Serializable
 object GameConsole : Route

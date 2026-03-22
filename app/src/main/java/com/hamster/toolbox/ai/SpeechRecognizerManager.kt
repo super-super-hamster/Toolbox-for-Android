@@ -6,6 +6,7 @@ import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.util.Log
+import com.hamster.toolbox.utils.FFT
 import com.k2fsa.sherpa.onnx.EndpointConfig
 import com.k2fsa.sherpa.onnx.EndpointRule
 import com.k2fsa.sherpa.onnx.FeatureConfig
@@ -17,14 +18,21 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlin.math.max
+import kotlin.math.sqrt
 
 class SpeechRecognizerManager(private val context: Context) {
     private var recognizer: OnlineRecognizer? = null
     private var audioRecord: AudioRecord? = null
-    var isRecording = false
+    private val _isRecordingFlow = MutableStateFlow(false)
+    val isRecordingFlow = _isRecordingFlow.asStateFlow()
+    val isRecording: Boolean
+        get() = _isRecordingFlow.value
     private var streamScope = CoroutineScope(Dispatchers.IO)
 
     //最终输出结果的数据流
@@ -38,6 +46,18 @@ class SpeechRecognizerManager(private val context: Context) {
     var onPartialResult: ((String) -> Unit)? = null
 
     private var recordingJob: Job? = null
+
+    // 频谱线数据流
+    private val _audioSpectrumFlow = MutableSharedFlow<FloatArray>(extraBufferCapacity = 1)
+    val audioSpectrumFlow = _audioSpectrumFlow.asSharedFlow()
+
+    private val numLines = 20
+    private val fftSize = 1024
+    private val fft = FFT(fftSize)
+    private val realBuffer = FloatArray(fftSize)
+    private val imagBuffer = FloatArray(fftSize)
+    private val magnitudes = FloatArray(fftSize / 2)
+    private val mappedBars = FloatArray(numLines)
 
     fun initModel() {
         val modelDir = "sherpa_model"
@@ -115,7 +135,7 @@ class SpeechRecognizerManager(private val context: Context) {
         )
 
         audioRecord?.startRecording()
-        isRecording = true
+        _isRecordingFlow.value = true
 
         if (!KeywordManager.isNew) {
             updateKeywords()
@@ -161,6 +181,8 @@ class SpeechRecognizerManager(private val context: Context) {
                             }
                         }
                     }
+
+                    processAudio(floatData)
                 }
             }
 
@@ -175,12 +197,59 @@ class SpeechRecognizerManager(private val context: Context) {
         }
     }
 
+    private fun processAudio(audioData: FloatArray) {
+        val copyLength = minOf(audioData.size, fftSize)
+        System.arraycopy(audioData, 0, realBuffer, 0, copyLength)
+
+        for (i in copyLength until fftSize) {
+            realBuffer[i] = 0f
+        }
+        for (i in 0 until fftSize) {
+            imagBuffer[i] = 0f
+        }
+
+        fft.transform(realBuffer, imagBuffer)
+
+        var maxMag = 0f
+        for (i in 0 until fftSize / 2) {
+            val re = realBuffer[i]
+            val im = imagBuffer[i]
+            val mag = sqrt(re * re + im * im)
+            magnitudes[i] = mag
+            if (mag > maxMag) {
+                maxMag = mag
+            }
+        }
+
+        // 跳过直流偏移，从索引3开始算
+        val binSize = (fftSize / 2 - 3) / numLines
+
+        for (i in 0 until numLines) {
+            var sum = 0f
+            val startIndex = i * binSize
+            val endIndex = startIndex + binSize
+            for (j in startIndex until endIndex) {
+                sum += magnitudes[j]
+            }
+            // 底噪门槛
+            val noiseThreshold = 0.15f
+
+            var barValue = (sum / binSize) * 5.0f
+            barValue = max(0f, barValue - noiseThreshold)
+
+            mappedBars[i] = barValue.coerceIn(0f, 1f)
+        }
+
+        // 拷贝 防止并发修改
+        _audioSpectrumFlow.tryEmit(mappedBars.copyOf())
+    }
+
     fun stopListening() {
         if (!isRecording) {
             return
         }
 
-        isRecording = false
+        _isRecordingFlow.value = false
         audioRecord?.stop()
         audioRecord?.release()
         audioRecord = null
@@ -200,7 +269,7 @@ class SpeechRecognizerManager(private val context: Context) {
     }
 
     fun release() {
-        isRecording = false
+        _isRecordingFlow.value = false
         audioRecord?.stop()
         audioRecord?.release()
         audioRecord = null

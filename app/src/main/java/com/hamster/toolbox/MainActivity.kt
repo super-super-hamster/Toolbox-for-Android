@@ -17,8 +17,10 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
@@ -60,7 +62,6 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -70,16 +71,15 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.preference.PreferenceManager
-import com.airbnb.lottie.Lottie
 import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.animateLottieCompositionAsState
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.hamster.toolbox.ai.AI
-import com.hamster.toolbox.ai.AiResponse
 import com.hamster.toolbox.ai.Message
 import com.hamster.toolbox.ai.SpeechRecognizerManager
+import com.hamster.toolbox.main.AudioSpectrumVisualizer
 import com.hamster.toolbox.main.ExpandedBottomMenu
 import com.hamster.toolbox.main.MainViewModel
 import com.hamster.toolbox.screen.gameConsole.GameConsoleScreen
@@ -87,11 +87,15 @@ import com.hamster.toolbox.screen.random.RandomNumberScreen
 import com.hamster.toolbox.screen.ruler.RulerScreen
 import com.hamster.toolbox.screen.schedule.ScheduleScreen
 import com.hamster.toolbox.screen.settings.settingsGraph
-import com.hamster.toolbox.system.Alarm
+import com.hamster.toolbox.screen.tips.TipsScreen
 import com.hamster.toolbox.utils.compose.AnimationButton
 import com.hamster.toolbox.utils.compose.ButtonPro
 import com.hamster.toolbox.utils.compose.squircleShape
 import com.hamster.toolbox.utils.prompt.PromptLoader
+import com.hamster.toolbox.utils.scaleInPopEnter
+import com.hamster.toolbox.utils.scaleOutExit
+import com.hamster.toolbox.utils.slideInWithScaleEnter
+import com.hamster.toolbox.utils.slideOutWithScalePopExit
 import com.hamster.toolbox.utils.weather.Weather
 import com.hamster.toolbox.utils.weather.WeatherData
 import com.kyant.backdrop.backdrops.layerBackdrop
@@ -153,11 +157,6 @@ class MainActivity : ComponentActivity() {
 
             // 录音
             var showRecording by remember { mutableStateOf(false) }
-            val recordingComposition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.audio_wave_anim))
-            val recordingProgress by animateLottieCompositionAsState(
-                composition = recordingComposition,
-                iterations = LottieConstants.IterateForever
-            )
 
             var isMenuExpanded by remember { mutableStateOf(false) }
             val navController = rememberNavController()
@@ -186,6 +185,7 @@ class MainActivity : ComponentActivity() {
                 currentDestination?.hasRoute<SetKeywords>() == true -> "热词管理"
                 currentDestination?.hasRoute<ImportCurriculum>() == true -> "导入课程表"
                 currentDestination?.hasRoute<WeatherSettings>() == true -> "天气"
+                currentDestination?.hasRoute<Tips>() == true -> "Tips"
                 else -> "ToolBox"
             }
 
@@ -243,29 +243,58 @@ class MainActivity : ComponentActivity() {
                             Box(modifier = Modifier.fillMaxSize()) {
                                 NavHost(
                                     navController = navController,
-                                    startDestination = SettingsGraph,
+                                    startDestination = Schedule,
                                     modifier = Modifier
                                         .layerBackdrop(backdrop) // 应用玻璃效果
                                         .hazeSource(state = hazeState)
                                         .fillMaxSize()
                                 ) {
                                     // 课程表
-                                    composable<Schedule> {
+                                    composable<Schedule>(
+                                        enterTransition = { slideInWithScaleEnter() },
+                                        exitTransition = { scaleOutExit() },
+                                        popEnterTransition = { scaleInPopEnter() },
+                                        popExitTransition = { slideOutWithScalePopExit() }
+                                    ) {
                                         ScheduleScreen()
                                     }
 
                                     // 随机数
-                                    composable<RandomNumber> {
+                                    composable<RandomNumber>(
+                                        enterTransition = { slideInWithScaleEnter() },
+                                        exitTransition = { scaleOutExit() },
+                                        popEnterTransition = { scaleInPopEnter() },
+                                        popExitTransition = { slideOutWithScalePopExit() }
+                                    ) {
                                         RandomNumberScreen()
                                     }
 
                                     // 尺子
-                                    composable<Ruler> {
+                                    composable<Ruler>(
+                                        enterTransition = { slideInWithScaleEnter() },
+                                        exitTransition = { scaleOutExit() },
+                                        popEnterTransition = { scaleInPopEnter() },
+                                        popExitTransition = { slideOutWithScalePopExit() }
+                                    ) {
                                         RulerScreen()
                                     }
 
+                                    composable<Tips> (
+                                        enterTransition = { slideInWithScaleEnter() },
+                                        exitTransition = { scaleOutExit() },
+                                        popEnterTransition = { scaleInPopEnter() },
+                                        popExitTransition = { slideOutWithScalePopExit() }
+                                    ) {
+                                        TipsScreen()
+                                    }
+
                                     // 游戏机
-                                    composable<GameConsole> {
+                                    composable<GameConsole>(
+                                        enterTransition = { slideInWithScaleEnter() },
+                                        exitTransition = { scaleOutExit() },
+                                        popEnterTransition = { scaleInPopEnter() },
+                                        popExitTransition = { slideOutWithScalePopExit() }
+                                    ) {
                                         GameConsoleScreen()
                                     }
 
@@ -349,7 +378,7 @@ class MainActivity : ComponentActivity() {
                                                         .fillMaxSize()
                                                         .padding(horizontal = 48.dp)
                                                 ) {
-                                                    // 搜索按钮
+                                                    // 助手按钮
                                                     Box(
                                                         modifier = Modifier
                                                             .size(48.dp)
@@ -364,7 +393,7 @@ class MainActivity : ComponentActivity() {
                                                             ),
                                                         contentAlignment = Alignment.Center
                                                     ) {
-                                                        Icon(painterResource(R.drawable.ic_search), null, tint = Color.Gray)
+                                                        Icon(painterResource(R.drawable.ic_assistant), null, tint = Color.Gray)
                                                     }
 
                                                     // 通用按钮
@@ -376,7 +405,8 @@ class MainActivity : ComponentActivity() {
                                                                     mainViewModel.isShowAddKeywordDialog = true
                                                                 } },
                                                             onLongPressStart = {
-                                                                if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                                                                if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED && isModelReady) {
+//                                                                    performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                                                                     showRecording = true
                                                                     speechManager.startListening()
                                                                 } else {
@@ -384,9 +414,14 @@ class MainActivity : ComponentActivity() {
                                                                 } },
                                                             onLongPressEnd = {
                                                                 showRecording = false
-                                                                selectedIndex = 0
-                                                                isMenuExpanded = true
-                                                                inputText = mainViewModel.speechFinalResult
+
+                                                                if (mainViewModel.speechFinalResult != "") {
+                                                                    selectedIndex = 0
+                                                                    isMenuExpanded = true
+                                                                    inputText = mainViewModel.speechFinalResult
+                                                                    mainViewModel.setSpeechFinalResult("")
+                                                                }
+
                                                                 speechManager.stopListening()
                                                             }
                                                         )
@@ -490,11 +525,20 @@ class MainActivity : ComponentActivity() {
                                             ) { },
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        LottieAnimation(
-                                            composition = recordingComposition,
-                                            progress = { recordingProgress },
-                                            modifier = Modifier.size(196.dp)
-                                        )
+                                        AnimatedVisibility(
+                                            visible = speechManager.isRecording,
+                                            enter = fadeIn() + expandVertically(),
+                                            exit = fadeOut() + shrinkVertically()
+                                        ) {
+                                            AudioSpectrumVisualizer(
+                                                spectrumFlow = speechManager.audioSpectrumFlow,
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .height(256.dp),
+                                                numLines = 20,
+                                                lineColor = colorResource(R.color.audio_spectrum)
+                                            )
+                                        }
                                     }
                                 }
                             }

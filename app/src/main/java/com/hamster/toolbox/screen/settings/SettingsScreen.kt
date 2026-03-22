@@ -36,19 +36,20 @@ import com.hamster.toolbox.R
 import com.hamster.toolbox.Route
 import com.hamster.toolbox.SetKeywords
 import com.hamster.toolbox.WeatherSettings
+import com.hamster.toolbox.main.MainViewModel
 import com.hamster.toolbox.system.Receiver
+import com.hamster.toolbox.utils.ScrollTarget
 import com.hamster.toolbox.utils.compose.ClickItem
 import com.hamster.toolbox.utils.compose.DatePicker
 import com.hamster.toolbox.utils.compose.EditTextItem
 import com.hamster.toolbox.utils.compose.InquiryDialog
 import com.hamster.toolbox.utils.compose.ItemGroup
 import com.hamster.toolbox.utils.compose.PageColumn
-import com.hamster.toolbox.utils.ScrollTarget
 import com.hamster.toolbox.utils.compose.SwitchItem
-import com.hamster.toolbox.utils.convertDateToMillis
 import com.hamster.toolbox.utils.compose.rememberBooleanPreference
 import com.hamster.toolbox.utils.compose.rememberSharedTiltState
 import com.hamster.toolbox.utils.compose.rememberStringPreference
+import com.hamster.toolbox.utils.convertDateToMillis
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -58,13 +59,10 @@ import java.io.FileOutputStream
 import java.time.Instant
 import java.time.ZoneOffset
 
-// TODO:高光
-
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SettingsScreen(
-    triggerTime: Long? = null,
-    jumpTargetId: String? = null,
+    mainViewModel: MainViewModel,
     onNavigate: (Route) -> Unit,
     setLoading: (Boolean) -> Unit
 ) {
@@ -74,16 +72,15 @@ fun SettingsScreen(
 
     val sharedTiltState = rememberSharedTiltState()
     val targets = remember { mutableMapOf<String, ScrollTarget>() }
-    var currentAvatarType by remember { mutableStateOf("user") }
 
     val avatarPickMedia = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia()
     ) { uri ->
         if (uri != null) {
             scope.launch {
-                val path = SettingsUtils.saveImageToInternalStorage(context, uri, currentAvatarType)
+                val path = SettingsUtils.saveImageToInternalStorage(context, uri)
                 if (path != null) {
-                    prefs.edit { putString(currentAvatarType + "_avatar_path", path) }
+                    prefs.edit { putString("user_avatar_path", path) }
                     Toast.makeText(context, "头像已更新", Toast.LENGTH_SHORT).show()
                 } else {
                     Toast.makeText(context, "更新头像失败", Toast.LENGTH_SHORT).show()
@@ -105,26 +102,21 @@ fun SettingsScreen(
         }
     }
 
-    LaunchedEffect(triggerTime) {
-        scrollTo(jumpTargetId)
+    LaunchedEffect(mainViewModel.settingsScrollTrigger) {
+        scrollTo(mainViewModel.settingsScrollTarget)
     }
 
     var nickname by rememberStringPreference("nickname", stringResource(R.string.anonymous))
     var signature by rememberStringPreference("signature", stringResource(R.string.user_signature))
     var assistantNickname by rememberStringPreference("assistant_nickname", stringResource(R.string.assistant))
     var semesterStartDate by rememberStringPreference("semester_start_date", "未设置")
-    var curriculumImportState by rememberStringPreference("curriculum_json", "未设置")
+    var curriculumImportState by rememberStringPreference("schedule_json", "")
     var apiKey by rememberStringPreference("api_key", "")
     var isClassRemindEnabled by rememberBooleanPreference("class_notification")
     var isAlarmRemindEnabled by rememberBooleanPreference("alarm_notification")
 
     var showUserAvatarOptionsDialog by remember { mutableStateOf(false) }
-    var showAssistantAvatarOptionsDialog by remember { mutableStateOf(false) }
     var showDatePickerDialog by remember { mutableStateOf(false) }
-
-    if (curriculumImportState != "未设置") {
-        curriculumImportState = "已设置"
-    }
 
     val classRemindRequestPostNotificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -163,7 +155,6 @@ fun SettingsScreen(
         ItemGroup(titleState = sharedTiltState) {
             ClickItem(title = "用户头像", icon = R.drawable.ic_user_avatar) {
                 showUserAvatarOptionsDialog = true
-                currentAvatarType = "user"
             }
             EditTextItem(
                 modifier = getModifier("nickname"),
@@ -211,7 +202,7 @@ fun SettingsScreen(
             ClickItem(
                 modifier = getModifier("import_curriculum_options"),
                 title = "导入课程表",
-                summary = curriculumImportState,
+                summary = if (curriculumImportState.isBlank()) "未设置" else "已设置",
                 icon = R.drawable.ic_curriculum
             ) {
                 if (prefs.getString("semester_start_date", null)?.isEmpty() == true) {
@@ -223,7 +214,7 @@ fun SettingsScreen(
             SwitchItem(
                 modifier = getModifier("class_notification"),
                 title = "上课提醒",
-                summary = "开启后将在上课前发送通知",
+                summary = "上课前发送通知",
                 checked = isClassRemindEnabled,
                 icon = R.drawable.ic_message,
                 onCheckedChange = { isChecked ->
@@ -249,7 +240,7 @@ fun SettingsScreen(
             SwitchItem(
                 modifier = getModifier("alarm_notification"),
                 title = "上课闹钟设置提醒",
-                summary = "开启后将自动发送设置闹钟的通知",
+                summary = "发送设置闹钟通知",
                 checked = isAlarmRemindEnabled,
                 icon = R.drawable.ic_alarm,
                 onCheckedChange = { isChecked ->
@@ -277,14 +268,6 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(8.dp))
 
         ItemGroup(titleState = sharedTiltState) {
-            ClickItem(
-                modifier = getModifier("assistant_avatar"),
-                title = "助手头像",
-                icon = R.drawable.ic_assistant
-            ) {
-                showAssistantAvatarOptionsDialog = true
-                currentAvatarType = "assistant"
-            }
             EditTextItem(
                 modifier = getModifier("assistant_nickname"),
                 title = "助手昵称",
@@ -336,7 +319,7 @@ fun SettingsScreen(
         }
     }
 
-    if (showUserAvatarOptionsDialog || showAssistantAvatarOptionsDialog) {
+    if (showUserAvatarOptionsDialog) {
         InquiryDialog(
             title = "修改头像",
             content = "",
@@ -344,18 +327,16 @@ fun SettingsScreen(
             confirmText = "相册中选择",
             onCancel = {
                 try {
-                    val file = File(context.filesDir, "$currentAvatarType.png")
+                    val file = File(context.filesDir, "user_avatar.png")
                     if (file.exists()) {
                         file.delete()
                     }
-                    prefs.edit { remove(currentAvatarType + "_avatar_path") }
+                    prefs.edit { remove( "user_avatar_path") }
                     Toast.makeText(context, "已恢复默认头像", Toast.LENGTH_SHORT).show()
                 } catch (e: Exception) {
                     e.printStackTrace()
                 } },
-            onDismissRequest = {
-                showUserAvatarOptionsDialog = false
-                showAssistantAvatarOptionsDialog = false },
+            onDismissRequest = { showUserAvatarOptionsDialog = false },
             onConfirm = {
                 avatarPickMedia.launch(
                     PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
@@ -387,7 +368,6 @@ fun SettingsScreen(
     }
 }
 
-// TODO:改
 object SettingsUtils {
     fun cropBitmapToSquare(bitmap: Bitmap): Bitmap {
         val width = bitmap.width
@@ -411,8 +391,7 @@ object SettingsUtils {
         return Bitmap.createBitmap(bitmap, 0, 0, width, height, matrix, true)
     }
 
-    // 挂起函数：保存图片 (移除了 UI 线程阻塞)
-    suspend fun saveImageToInternalStorage(context: Context, uri: Uri, type: String): String? {
+    suspend fun saveImageToInternalStorage(context: Context, uri: Uri): String? {
         return withContext(Dispatchers.IO) {
             try {
                 val inputStream = context.contentResolver.openInputStream(uri) ?: return@withContext null
@@ -420,9 +399,9 @@ object SettingsUtils {
                 inputStream.close()
 
                 val squareBitmap = cropBitmapToSquare(bitmap)
-                val resizedBitmap = resizeBitmap(squareBitmap, 256) // 默认 256
+                val resizedBitmap = resizeBitmap(squareBitmap, 256)
 
-                val file = File(context.filesDir, "$type.png")
+                val file = File(context.filesDir, "user_avatar.png")
                 val fos = FileOutputStream(file)
                 resizedBitmap.compress(Bitmap.CompressFormat.PNG, 90, fos)
                 fos.close()

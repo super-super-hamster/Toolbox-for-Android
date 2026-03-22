@@ -1,6 +1,5 @@
 package com.hamster.toolbox.screen.schedule
 
-import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -56,10 +55,10 @@ import com.hamster.toolbox.utils.compose.PageColumn
 import com.hamster.toolbox.utils.compose.SharedTiltState
 import com.hamster.toolbox.utils.compose.StandardDialog
 import com.hamster.toolbox.utils.compose.applySharedTilt
-import com.hamster.toolbox.utils.getSchedule
 import com.hamster.toolbox.utils.compose.rememberSharedTiltState
-import com.hamster.toolbox.utils.saveSchedule
 import com.hamster.toolbox.utils.compose.squircleShape
+import com.hamster.toolbox.utils.getSchedule
+import com.hamster.toolbox.utils.saveSchedule
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
@@ -423,7 +422,7 @@ fun CourseEditDialog(
                         tint = Color.Red.copy(alpha = 0.7f),
                         modifier = Modifier
                             .size(20.dp)
-                            .align(Alignment.CenterStart)
+                            .align(Alignment.TopStart)
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null

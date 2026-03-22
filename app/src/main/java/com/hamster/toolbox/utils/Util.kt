@@ -70,7 +70,6 @@ class ScrollTarget {
 
 //通过现实时间获取时间戳
 //@RequiresApi(Build.VERSION_CODES.O)注解标记的代码只能在Android 8+ 的系统运行
-@RequiresApi(Build.VERSION_CODES.O)
 fun timeToMillis(time: LocalDateTime, hour: Int? = null, minute: Int? = null, second: Int? = null, nano: Int? = null) : Long {
     hour?.let { time.withHour(it) }
     minute?.let { time.withMinute(it) }
@@ -115,7 +114,6 @@ fun convertMillisToDate(millis: Long): String {
 }
 
 // 将"yyyy-MM-dd"转为毫秒数
-@RequiresApi(Build.VERSION_CODES.O)
 fun convertDateToMillis(dateStr: String?): Long {
     if (dateStr.isNullOrEmpty()) return System.currentTimeMillis()
     return try {

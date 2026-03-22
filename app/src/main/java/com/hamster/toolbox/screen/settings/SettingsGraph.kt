@@ -4,13 +4,12 @@ import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.navigation
-import androidx.navigation.toRoute
 import com.hamster.toolbox.ImportCurriculum
-import com.hamster.toolbox.main.MainViewModel
 import com.hamster.toolbox.SetKeywords
 import com.hamster.toolbox.Settings
 import com.hamster.toolbox.SettingsGraph
 import com.hamster.toolbox.WeatherSettings
+import com.hamster.toolbox.main.MainViewModel
 import com.hamster.toolbox.utils.scaleInPopEnter
 import com.hamster.toolbox.utils.scaleOutExit
 import com.hamster.toolbox.utils.slideInWithScaleEnter
@@ -27,13 +26,9 @@ fun NavGraphBuilder.settingsGraph(
             exitTransition = { scaleOutExit() },
             popEnterTransition = { scaleInPopEnter() },
             popExitTransition = { slideOutWithScalePopExit() }
-        ) { backStackEntry ->
-            // ???
-            val args = backStackEntry.toRoute<Settings>()
-
+        ) { _ ->
             SettingsScreen(
-                triggerTime = args.trigger,
-                jumpTargetId = args.jumpTarget,
+                mainViewModel = mainViewModel,
                 onNavigate = { route ->
                     navController.navigate(route)
                 },

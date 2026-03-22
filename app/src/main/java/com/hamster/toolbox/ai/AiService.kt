@@ -39,9 +39,9 @@ interface AiService {
         private val client = OkHttpClient.Builder()
             // 连接超时：与服务器建立连接的时间
             .connectTimeout(30, TimeUnit.SECONDS)
-            // 读取超时：服务器生成并返回数据的时间 (AI 也就是这一步慢)
+            // 读取超时：服务器生成并返回数据的时间
             .readTimeout(60, TimeUnit.SECONDS)
-            // 写入超时：你发送数据给服务器的时间
+            // 写入超时：发送数据给服务器的时间
             .writeTimeout(30, TimeUnit.SECONDS)
             .build()
 

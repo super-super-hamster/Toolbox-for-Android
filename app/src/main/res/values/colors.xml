@@ -60,4 +60,7 @@
     <color name="tabs_selected_text">#1D1D1D</color>
 
     <color name="user_bubble">#F5F5F5</color>
+    <color name="assistant_bubble">#7AC4BF</color>
+
+    <color name="audio_spectrum">#0089A7</color>
 </resources>

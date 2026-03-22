@@ -1,5 +1,7 @@
 package com.hamster.toolbox.main
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,11 +10,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -22,15 +27,23 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.intl.Locale
+import androidx.compose.ui.text.intl.LocaleList
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.hamster.toolbox.GameConsole
 import com.hamster.toolbox.R
 import com.hamster.toolbox.RandomNumber
@@ -38,14 +51,17 @@ import com.hamster.toolbox.Route
 import com.hamster.toolbox.Ruler
 import com.hamster.toolbox.Schedule
 import com.hamster.toolbox.SettingsGraph
+import com.hamster.toolbox.Tips
 import com.hamster.toolbox.ai.AI
 import com.hamster.toolbox.ai.Message
 import com.hamster.toolbox.utils.compose.TabItem
 import com.hamster.toolbox.utils.compose.Tabs
 import com.hamster.toolbox.utils.compose.assistantBubbleShape
+import com.hamster.toolbox.utils.compose.rememberStringPreference
 import com.hamster.toolbox.utils.compose.squircleShape
 import com.hamster.toolbox.utils.compose.userBubbleShape
 import kotlinx.coroutines.launch
+import java.io.File
 
 @Composable
 fun ExpandedBottomMenu(
@@ -76,7 +92,7 @@ fun ExpandedBottomMenu(
         color = Color.Transparent,
         modifier = Modifier
             .fillMaxSize()
-            .padding(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 12.dp)
+            .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 12.dp)
     ) {
         Tabs(
             tabs = tabsList,
@@ -128,6 +144,10 @@ private fun Menu(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
+            // Tips
+            IconButton(onClick = { onNavigate(Tips) }) {
+                Icon(painterResource(R.drawable.ic_tips), null, tint = Color.Gray)
+            }
             // 设置
             IconButton(onClick = { onNavigate(SettingsGraph) }) {
                 Icon(painterResource(R.drawable.ic_settings), null, tint = Color.Gray)
@@ -160,13 +180,18 @@ fun Assistant(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
     ) {
         LazyColumn(
             state = listState,
             modifier = Modifier
                 .weight(1f)
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .border(
+                    width = 2.dp,
+                    color = Color.Gray,
+                    shape = squircleShape
+                )
+                .padding(horizontal = 8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(AI.chatHistory) { message ->
@@ -179,7 +204,7 @@ fun Assistant(
         Spacer(modifier = Modifier.height(12.dp))
 
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().height(56.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             OutlinedTextField(
@@ -189,6 +214,10 @@ fun Assistant(
                 placeholder = { Text("输入消息...") },
                 maxLines = 3,
                 shape = squircleShape,
+                keyboardOptions = KeyboardOptions(
+                    // 默认中文输入法
+                    hintLocales = LocaleList(Locale("zh"))
+                ),
                 colors = OutlinedTextFieldDefaults.colors(
                     // 边框颜色
                     focusedBorderColor = colorResource(R.color.text),
@@ -234,15 +263,32 @@ fun Assistant(
 fun ChatBubble(message: Message) {
     val isUser = message.role == "user"
 
+    val density = LocalDensity.current
+    val windowInfo = LocalWindowInfo.current
+    val maxBubbleWidth = with(density) {
+        (windowInfo.containerSize.width * 0.6f).toDp()
+    }
+
+    val userAvatarPath by rememberStringPreference("user_avatar_path", "")
+
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start
+        horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
+        verticalAlignment = Alignment.Top
     ) {
+        if (!isUser) {
+            Icon(
+                modifier = Modifier.size(48.dp).clip(CircleShape).padding(end = 8.dp),
+                painter = painterResource(R.drawable.ic_assistant_chat),
+                contentDescription = null
+            )
+        }
+
         Surface(
             color = if (isUser) colorResource(R.color.user_bubble) else colorResource(R.color.mikuGreen),
             shape = if (isUser) userBubbleShape else assistantBubbleShape,
             modifier = Modifier
-                .widthIn(max = 280.dp)
+                .widthIn(max = maxBubbleWidth)
                 .shadow(
                     elevation = 6.dp,
                     shape = if (isUser) userBubbleShape else assistantBubbleShape,
@@ -257,5 +303,38 @@ fun ChatBubble(message: Message) {
                 color = colorResource(R.color.text)
             )
         }
+
+        if (isUser) {
+            UserAvatar(avatarPath = userAvatarPath)
+        }
+    }
+
+    Spacer(modifier = Modifier.height(8.dp))
+}
+
+@Composable
+fun UserAvatar(avatarPath: String?) {
+    val hasCustomAvatar = !avatarPath.isNullOrEmpty() && File(avatarPath).exists()
+
+    if (hasCustomAvatar) {
+        AsyncImage(
+            model = avatarPath,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .padding(start = 8.dp)
+        )
+    } else {
+        Image(
+            painter = painterResource(id = R.drawable.default_avatar),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .padding(start = 8.dp)
+        )
     }
 }
