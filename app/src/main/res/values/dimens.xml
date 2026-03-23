@@ -2,6 +2,7 @@
 <resources>
     <dimen name="top_padding">92.dp</dimen>
     <dimen name="bottom_padding">84.dp</dimen>
+    <dimen name="item_group_gap">8.dp</dimen>
 
     <item name="dialog_width" type="fraction">85%</item>
 </resources>

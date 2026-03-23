@@ -1,77 +1,59 @@
-package com.hamster.toolbox.screen.settings
+package com.hamster.toolbox.screen.tips
 
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.navigation
-import com.hamster.toolbox.ImportCurriculum
-import com.hamster.toolbox.SetKeywords
-import com.hamster.toolbox.Settings
-import com.hamster.toolbox.SettingsGraph
-import com.hamster.toolbox.WeatherSettings
-import com.hamster.toolbox.main.MainViewModel
+import com.hamster.toolbox.AssistantTips
+import com.hamster.toolbox.ScheduleTips
+import com.hamster.toolbox.Tips
+import com.hamster.toolbox.TipsGraph
+import com.hamster.toolbox.WeatherTips
 import com.hamster.toolbox.utils.scaleInPopEnter
 import com.hamster.toolbox.utils.scaleOutExit
 import com.hamster.toolbox.utils.slideInWithScaleEnter
 import com.hamster.toolbox.utils.slideOutWithScalePopExit
 
-fun NavGraphBuilder.settingsGraph(
-    navController: NavController,
-    mainViewModel: MainViewModel,
-    setLoading: (Boolean) -> Unit
+fun NavGraphBuilder.tipsGraph(
+    navController: NavController
 ) {
-    navigation<SettingsGraph>(startDestination = Settings) {
-        composable<Settings>(
-            enterTransition = { slideInWithScaleEnter() },
-            exitTransition = { scaleOutExit() },
-            popEnterTransition = { scaleInPopEnter() },
-            popExitTransition = { slideOutWithScalePopExit() }
-        ) { _ ->
-            SettingsScreen(
-                mainViewModel = mainViewModel,
-                onNavigate = { route ->
-                    navController.navigate(route)
-                },
-                setLoading = { isLoading ->
-                    setLoading(isLoading)
-                }
-            )
-        }
-
-        composable<ImportCurriculum>(
+    navigation<TipsGraph>(startDestination = Tips) {
+        composable<Tips>(
             enterTransition = { slideInWithScaleEnter() },
             exitTransition = { scaleOutExit() },
             popEnterTransition = { scaleInPopEnter() },
             popExitTransition = { slideOutWithScalePopExit() }
         ) {
-            ImportCurriculumScreen(
-                onShowLoading = { isShowLoading ->
-                    // TODO: 显示加载动画
-                },
-                onNavigateToSettings = {
-                    // TODO：导航回settings
-                },
+            TipsScreen(
+                onNavigate = { navController.navigate(it) }
             )
         }
 
-        composable<SetKeywords>(
+        composable<WeatherTips>(
             enterTransition = { slideInWithScaleEnter() },
             exitTransition = { scaleOutExit() },
             popEnterTransition = { scaleInPopEnter() },
             popExitTransition = { slideOutWithScalePopExit() }
         ) {
-            SetKeywordsScreen(
-                mainViewModel = mainViewModel
-            )
+            WeatherTipsScreen()
         }
 
-        composable<WeatherSettings>(
+        composable<ScheduleTips>(
             enterTransition = { slideInWithScaleEnter() },
             exitTransition = { scaleOutExit() },
             popEnterTransition = { scaleInPopEnter() },
             popExitTransition = { slideOutWithScalePopExit() }
         ) {
-            WeatherSettings()
+            ScheduleTipsScreen()
+        }
+
+        composable<AssistantTips>(
+            enterTransition = { slideInWithScaleEnter() },
+            exitTransition = { scaleOutExit() },
+            popEnterTransition = { scaleInPopEnter() },
+            popExitTransition = { slideOutWithScalePopExit() }
+        ) {
+            AssistantTipsScreen()
         }
     }
 }

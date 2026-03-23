@@ -221,8 +221,8 @@ class SpeechRecognizerManager(private val context: Context) {
             }
         }
 
-        // 跳过直流偏移，从索引3开始算
-        val binSize = (fftSize / 2 - 3) / numLines
+        // 跳过直流偏移，从索引5开始算
+        val binSize = (fftSize / 2 - 5) / numLines
 
         for (i in 0 until numLines) {
             var sum = 0f
@@ -232,9 +232,9 @@ class SpeechRecognizerManager(private val context: Context) {
                 sum += magnitudes[j]
             }
             // 底噪门槛
-            val noiseThreshold = 0.15f
+            val noiseThreshold = 0.25f
 
-            var barValue = (sum / binSize) * 5.0f
+            var barValue = (sum / binSize) * 2.5f
             barValue = max(0f, barValue - noiseThreshold)
 
             mappedBars[i] = barValue.coerceIn(0f, 1f)

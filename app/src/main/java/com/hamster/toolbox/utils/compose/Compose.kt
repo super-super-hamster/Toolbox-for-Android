@@ -599,15 +599,15 @@ fun ExplanationItem(
 @Composable
 fun PageColumn(
     modifier: Modifier = Modifier,
+    hasPadding: Boolean = true,
     sharedTiltState: SharedTiltState,
     content: @Composable ColumnScope.() -> Unit //@Composable ColumnScope.() 让content知道自己的父组件是column
 ) {
-    Box(modifier = Modifier.fillMaxSize().tiltGestureContainer(sharedTiltState)) {
+    Box(modifier = Modifier.fillMaxSize().background(colorResource(id = R.color.background)).tiltGestureContainer(sharedTiltState)) {
         Column(
             modifier = modifier
                 .fillMaxSize()
-                .background(colorResource(id = R.color.background))
-                .padding(12.dp)
+                .padding(all = if (hasPadding) 12.dp else 0.dp)
         ) {
             Spacer(modifier = Modifier.height(dimensionResource(R.dimen.top_padding)))
 

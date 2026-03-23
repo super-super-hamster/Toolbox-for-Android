@@ -76,6 +76,7 @@ import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.animateLottieCompositionAsState
 import com.airbnb.lottie.compose.rememberLottieComposition
+import com.google.android.datatransport.runtime.scheduling.Scheduler
 import com.hamster.toolbox.ai.AI
 import com.hamster.toolbox.ai.Message
 import com.hamster.toolbox.ai.SpeechRecognizerManager
@@ -87,7 +88,7 @@ import com.hamster.toolbox.screen.random.RandomNumberScreen
 import com.hamster.toolbox.screen.ruler.RulerScreen
 import com.hamster.toolbox.screen.schedule.ScheduleScreen
 import com.hamster.toolbox.screen.settings.settingsGraph
-import com.hamster.toolbox.screen.tips.TipsScreen
+import com.hamster.toolbox.screen.tips.tipsGraph
 import com.hamster.toolbox.utils.compose.AnimationButton
 import com.hamster.toolbox.utils.compose.ButtonPro
 import com.hamster.toolbox.utils.compose.squircleShape
@@ -186,6 +187,8 @@ class MainActivity : ComponentActivity() {
                 currentDestination?.hasRoute<ImportCurriculum>() == true -> "导入课程表"
                 currentDestination?.hasRoute<WeatherSettings>() == true -> "天气"
                 currentDestination?.hasRoute<Tips>() == true -> "Tips"
+                currentDestination?.hasRoute<ScheduleTips>() == true -> "课程表Tips"
+                currentDestination?.hasRoute<WeatherTips>() == true -> "天气Tips"
                 else -> "ToolBox"
             }
 
@@ -279,14 +282,10 @@ class MainActivity : ComponentActivity() {
                                         RulerScreen()
                                     }
 
-                                    composable<Tips> (
-                                        enterTransition = { slideInWithScaleEnter() },
-                                        exitTransition = { scaleOutExit() },
-                                        popEnterTransition = { scaleInPopEnter() },
-                                        popExitTransition = { slideOutWithScalePopExit() }
-                                    ) {
-                                        TipsScreen()
-                                    }
+                                    // Tips
+                                    tipsGraph(
+                                        navController = navController
+                                    )
 
                                     // 游戏机
                                     composable<GameConsole>(
@@ -358,7 +357,9 @@ class MainActivity : ComponentActivity() {
                                                         setSelectedIndex = { selectedIndex = it },
                                                         inputText = inputText,
                                                         setInputText = { inputText = it },
-                                                        onNavigate = { navController.expandMenuNavigate(it) })
+                                                        onNavigate = { navController.expandMenuNavigate(it) },
+                                                        onDragDown = { isMenuExpanded = false }
+                                                    )
                                                 }
                                             }
 

@@ -62,6 +62,8 @@ import com.hamster.toolbox.utils.saveSchedule
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
+// TODO: 侧边有padding？
+
 @Composable
 fun ScheduleScreen() {
     val context = LocalContext.current
@@ -750,7 +752,7 @@ fun generateColor(string: String): Color {
 }
 
 fun calculateCurrentWeekIndex(startDateStr: String?, totalWeeks: Int): Int {
-    if (startDateStr == null || startDateStr == "未设置") return 0
+    if (startDateStr == null || startDateStr == "") return 0
 
     return try {
         val startDate = LocalDate.parse(startDateStr)
@@ -762,7 +764,6 @@ fun calculateCurrentWeekIndex(startDateStr: String?, totalWeeks: Int): Int {
             0
         } else {
             val weekIndex = (daysBetween / 7).toInt()
-
             weekIndex.coerceIn(0, totalWeeks - 1)
         }
     } catch (_: Exception) {

@@ -26,6 +26,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -109,7 +110,7 @@ fun SettingsScreen(
     var nickname by rememberStringPreference("nickname", stringResource(R.string.anonymous))
     var signature by rememberStringPreference("signature", stringResource(R.string.user_signature))
     var assistantNickname by rememberStringPreference("assistant_nickname", stringResource(R.string.assistant))
-    var semesterStartDate by rememberStringPreference("semester_start_date", "未设置")
+    var semesterStartDate by rememberStringPreference("semester_start_date", "")
     var curriculumImportState by rememberStringPreference("schedule_json", "")
     var apiKey by rememberStringPreference("api_key", "")
     var isClassRemindEnabled by rememberBooleanPreference("class_notification")
@@ -141,16 +142,16 @@ fun SettingsScreen(
     }
 
     PageColumn(modifier = Modifier.verticalScroll(rememberScrollState()), sharedTiltState = sharedTiltState) {
-        ItemGroup(titleState = sharedTiltState) {
-            ClickItem(title = "通知测试") {
-                val receiver = Receiver()
-                receiver.showNotification(context, "test", "test", "test", null)
-            }
-
-            ClickItem(title = "加载动画测试") {
-                setLoading(true)
-            }
-        }
+//        ItemGroup(titleState = sharedTiltState) {
+//            ClickItem(title = "通知测试") {
+//                val receiver = Receiver()
+//                receiver.showNotification(context, "test", "test", "test", null)
+//            }
+//
+//            ClickItem(title = "加载动画测试") {
+//                setLoading(true)
+//            }
+//        }
 
         ItemGroup(titleState = sharedTiltState) {
             ClickItem(title = "用户头像", icon = R.drawable.ic_user_avatar) {
@@ -188,13 +189,13 @@ fun SettingsScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(dimensionResource(R.dimen.item_group_gap)))
 
         ItemGroup(titleState = sharedTiltState) {
             ClickItem(
                 modifier = getModifier("semester_start_date"),
                 title = "学期开始日期",
-                summary = semesterStartDate,
+                summary = if (semesterStartDate == "") "未设置" else semesterStartDate,
                 icon = R.drawable.ic_calendar
             ) {
                 showDatePickerDialog = true
@@ -265,7 +266,7 @@ fun SettingsScreen(
 
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(dimensionResource(R.dimen.item_group_gap)))
 
         ItemGroup(titleState = sharedTiltState) {
             EditTextItem(
@@ -312,7 +313,7 @@ fun SettingsScreen(
             ClickItem(
                 modifier = getModifier("weather"),
                 title = "天气",
-                icon = R.drawable.ic_characters
+                icon = R.drawable.ic_weather
             ) {
                 onNavigate(WeatherSettings)
             }
@@ -349,7 +350,7 @@ fun SettingsScreen(
         DatePicker(
             title = "选择开学日期",
             initialSelectedDateMillis = convertDateToMillis(
-                if (semesterStartDate == "未设置") null else semesterStartDate
+                if (semesterStartDate == "") null else semesterStartDate
             ),
             onDateSelected = { millis ->
                 if (millis != null) {

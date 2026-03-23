@@ -45,7 +45,7 @@
     <color name="item_group_card_shadow">#393939</color>
     <color name="bg_dialog">#FFFFFFFF</color>
     <color name="bg_bottom_sheet">#FFFFFFFF</color>
-    <color name="explanation_text">#828284</color>
+    <color name="explanation_text">#393939</color>
     <color name="bg_explanation">#E6E6E8</color>
     <color name="dialog_border_up">#F0F0F0</color>
     <color name="dialog_border_down">#C4C4C4</color>

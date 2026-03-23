@@ -1,7 +1,10 @@
 package com.hamster.toolbox.main
 
+import androidx.collection.mutableFloatSetOf
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -28,12 +31,18 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -71,8 +80,11 @@ fun ExpandedBottomMenu(
     setSelectedIndex: (Int) -> Unit,
     inputText: String,
     setInputText: (String) -> Unit,
-    onNavigate: (route: Route) -> Unit
+    onNavigate: (route: Route) -> Unit,
+    onDragDown: () -> Unit
 ) {
+    var dragOffset by remember { mutableFloatStateOf(0f) }
+
     val tabsList = listOf(
         TabItem(title = "助手") {
             Assistant(
@@ -93,6 +105,23 @@ fun ExpandedBottomMenu(
         modifier = Modifier
             .fillMaxSize()
             .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 12.dp)
+            .pointerInput(Unit) {
+                detectVerticalDragGestures(
+                    onDragStart = {
+                        dragOffset = 0f
+                    },
+                    onVerticalDrag = { change, dragAmount ->
+                        // 消耗事件，防止滑动事件穿透给底部组件
+                        change.consume()
+                        dragOffset += dragAmount
+                    },
+                    onDragEnd = {
+                        if (dragOffset >= 150f) {
+                            onDragDown()
+                        }
+                    }
+                )
+            }
     ) {
         Tabs(
             tabs = tabsList,
@@ -278,7 +307,7 @@ fun ChatBubble(message: Message) {
     ) {
         if (!isUser) {
             Icon(
-                modifier = Modifier.size(48.dp).clip(CircleShape).padding(end = 8.dp),
+                modifier = Modifier.padding(end = 8.dp).size(48.dp).clip(CircleShape),
                 painter = painterResource(R.drawable.ic_assistant_chat),
                 contentDescription = null
             )
@@ -322,9 +351,9 @@ fun UserAvatar(avatarPath: String?) {
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier
+                .padding(start = 8.dp)
                 .size(48.dp)
                 .clip(CircleShape)
-                .padding(start = 8.dp)
         )
     } else {
         Image(
@@ -332,9 +361,9 @@ fun UserAvatar(avatarPath: String?) {
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier
+                .padding(start = 8.dp)
                 .size(48.dp)
                 .clip(CircleShape)
-                .padding(start = 8.dp)
         )
     }
 }

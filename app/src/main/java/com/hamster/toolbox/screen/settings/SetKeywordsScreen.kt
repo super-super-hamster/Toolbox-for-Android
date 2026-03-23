@@ -1,6 +1,9 @@
 package com.hamster.toolbox.screen.settings
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
@@ -41,7 +44,7 @@ fun SetKeywordsScreen(
         return targets.getOrPut(id) { ScrollTarget() }.modifier
     }
 
-    PageColumn(sharedTiltState = sharedTiltState) {
+    PageColumn(modifier = Modifier.verticalScroll(rememberScrollState()),sharedTiltState = sharedTiltState) {
         ItemGroup(titleState = sharedTiltState) {
             keywordsList.forEachIndexed { index, keyword ->
                 InquiryItem(

@@ -199,18 +199,15 @@ class Receiver : BroadcastReceiver() {
     private fun scheduleCheck(context: Context) {
         val allCourses = getSchedule(context)
 
-        Log.d("debug", "schedule check")
-
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
         val startDay = prefs.getString("semester_start_date", null) ?: return
 
-        val currentDate = LocalDate.now()
+        val tomorrowDate = LocalDate.now().plusDays(1)
         val startDate = LocalDate.parse(startDay, DateTimeFormatter.ofPattern("yyyy-M-d"))
 
-        val weekNumber = ChronoUnit.DAYS.between(startDate, currentDate) / 7 + 1
+        val weekNumber = ChronoUnit.DAYS.between(startDate, tomorrowDate) / 7 + 1
         if (weekNumber <= 0) return
 
-        val tomorrowDate = currentDate.plusDays(1)
         val tomorrowDayOfWeek = tomorrowDate.dayOfWeek.value
 
         val coursesThisWeek = allCourses.filter { weekNumber.toInt() in it.activeWeeks }
