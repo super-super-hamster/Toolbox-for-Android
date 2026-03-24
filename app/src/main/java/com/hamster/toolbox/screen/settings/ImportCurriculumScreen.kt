@@ -84,11 +84,5 @@ fun ImportCurriculumScreen(
                 copyCurriculumJSONPrompt(context)
             }
         }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        ItemGroup(titleState = sharedTiltState) {
-            ExplanationItem("JSON 是一种通用的数据文本格式,通过“标签 : 内容”的形式来准确描述数据。\n“复制课程表提示词中包含对需求格式的描述，若无API建议使用外部AI生成。”")
-        }
     }
 }

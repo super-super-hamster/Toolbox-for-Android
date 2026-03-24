@@ -117,5 +117,6 @@ dependencies {
     implementation("dev.aige.pub:WheelPicker:1.2.0")
     implementation("io.github.kyant0:backdrop:1.0.4")
     implementation("io.coil-kt:coil-compose:2.7.0")
-    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar", "*.aar"))))
+    implementation(files("libs/sherpa-onnx.aar"))
+//    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar", "*.aar"))))
 }

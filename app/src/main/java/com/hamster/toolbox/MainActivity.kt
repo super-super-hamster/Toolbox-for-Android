@@ -80,6 +80,7 @@ import com.google.android.datatransport.runtime.scheduling.Scheduler
 import com.hamster.toolbox.ai.AI
 import com.hamster.toolbox.ai.Message
 import com.hamster.toolbox.ai.SpeechRecognizerManager
+import com.hamster.toolbox.ai.TTS
 import com.hamster.toolbox.main.AudioSpectrumVisualizer
 import com.hamster.toolbox.main.ExpandedBottomMenu
 import com.hamster.toolbox.main.MainViewModel
@@ -111,7 +112,9 @@ import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -122,7 +125,10 @@ import kotlinx.coroutines.withContext
 // TODO: preferencesDataStore
 
 class MainActivity : ComponentActivity() {
+    // 跟随应用生命周期的协程作用域
+    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private lateinit var speechManager: SpeechRecognizerManager
+    private lateinit var tts: TTS
     private var isModelReady = false
     private val mainViewModel: MainViewModel by viewModels()
 
@@ -135,7 +141,14 @@ class MainActivity : ComponentActivity() {
     @RequiresApi(Build.VERSION_CODES.R)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        initSpeechManager()
+
+        tts = TTS.getInstance(applicationContext)
+
+        applicationScope.launch {
+            initSpeechManager()
+            TTS.getInstance(this@MainActivity).initModel()
+            Log.d("fuck", "finish")
+        }
 
         enableEdgeToEdge()
 
@@ -358,7 +371,8 @@ class MainActivity : ComponentActivity() {
                                                         inputText = inputText,
                                                         setInputText = { inputText = it },
                                                         onNavigate = { navController.expandMenuNavigate(it) },
-                                                        onDragDown = { isMenuExpanded = false }
+                                                        onDragDown = { isMenuExpanded = false },
+                                                        tts = tts
                                                     )
                                                 }
                                             }
@@ -386,8 +400,16 @@ class MainActivity : ComponentActivity() {
                                                             .align(Alignment.CenterStart)
                                                             .clickable(
                                                                 onClick = {
-                                                                    selectedIndex = 0
-                                                                    isMenuExpanded = !isMenuExpanded
+                                                                    if (!isMenuExpanded) {
+                                                                        selectedIndex = 0
+                                                                        isMenuExpanded = true
+                                                                    } else {
+                                                                        if (selectedIndex == 0) {
+                                                                            isMenuExpanded = false
+                                                                        } else {
+                                                                            selectedIndex = 0
+                                                                        }
+                                                                    }
                                                                 },
                                                                 indication = null,
                                                                 interactionSource = remember { MutableInteractionSource() } // 必须配合 interactionSource 使用
@@ -558,6 +580,7 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         speechManager.release()
+        tts.release()
     }
 
     private fun initSpeechManager() {

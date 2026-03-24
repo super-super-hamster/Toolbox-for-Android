@@ -564,12 +564,16 @@ fun InquiryDialog(
 
 @Composable
 fun ExplanationItem(
+    modifier: Modifier = Modifier,
+    title: String,
     content: String,
+    buttonContent: String? = null,
+    onButtonClick: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         shape = squircleShape,
-        colors = CardDefaults.cardColors(containerColor = colorResource(id = R.color.bg_explanation)),
+        colors = CardDefaults.cardColors(containerColor = colorResource(id = R.color.bg_dialog)),
         elevation = CardDefaults.cardElevation(8.dp)
     ) {
         Column (
@@ -577,21 +581,47 @@ fun ExplanationItem(
                 .fillMaxWidth()
                 .padding(16.dp),
         ) {
-            Icon(
-                painter = painterResource(id = R.drawable.question),
-                contentDescription = "tip",
-                modifier = Modifier.size(20.dp),
-                tint = colorResource(R.color.explanation_text)
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(42.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_tips),
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp).padding(end = 8.dp)
+                )
 
-            Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = title,
+                    fontSize = 24.sp,
+                    lineHeight = 32.sp,
+                    color = colorResource(id = R.color.text)
+                )
+            }
+
 
             Text(
                 text = content,
                 fontSize = 14.sp,
                 lineHeight = 20.sp,
-                color = colorResource(id = R.color.explanation_text)
+                color = colorResource(id = R.color.explanation_text),
+                modifier = Modifier.padding(4.dp)
             )
+
+            buttonContent?.let {
+                Button(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp),
+                    shape = squircleShape,
+                    colors = ButtonDefaults.textButtonColors(colorResource(R.color.btn_confirm).copy(alpha = 0.8f)),
+                    onClick = onButtonClick,
+                ) {
+                    Text(text = it, color = colorResource(R.color.text))
+                }
+            }
         }
     }
 }

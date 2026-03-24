@@ -23,21 +23,21 @@ fun AssistantTipsScreen() {
 
     PageColumn(modifier = Modifier.verticalScroll(rememberScrollState()), sharedTiltState = sharedTiltState) {
         ItemGroup(titleState = sharedTiltState) {
-            ExplanationItem("使用助手功能前，请在“设置 -> 大模型 API”中填写 API Key。（当前仅适配 DeepSeek）")
-        }
-
-        Spacer(modifier = Modifier.height(dimensionResource(R.dimen.item_group_gap)))
-
-        ItemGroup(titleState = sharedTiltState) {
-            ExplanationItem("在 “设置 -> 热词” 中添加热词的可以让助手更容易识别")
-        }
-
-        Spacer(modifier = Modifier.height(dimensionResource(R.dimen.item_group_gap)))
-
-        ItemGroup(titleState = sharedTiltState) {
-            ClickItem(title = "前往 Deep Seek 开放平台", icon = R.drawable.ic_tips) {
+            ExplanationItem(
+                title = "API KEY",
+                content = "使用助手功能前，请在“设置 -> 大模型 API”中填写 API Key。（当前仅适配 DeepSeek）",
+                buttonContent = "前往 Deep Seek 开放平台"
+            ) {
                 uriHandler.openUri("https://platform.deepseek.com/api_keys")
             }
+        }
+
+        Spacer(modifier = Modifier.height(dimensionResource(R.dimen.item_group_gap)))
+
+        ItemGroup(titleState = sharedTiltState) {
+            ExplanationItem(
+                title = "热词",
+                content = "在 “设置 -> 热词” 中添加热词的可以让助手更容易识别") { }
         }
     }
 }

@@ -1,9 +1,9 @@
 package com.hamster.toolbox.main
 
-import androidx.collection.mutableFloatSetOf
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -32,8 +32,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -62,7 +60,9 @@ import com.hamster.toolbox.Schedule
 import com.hamster.toolbox.SettingsGraph
 import com.hamster.toolbox.Tips
 import com.hamster.toolbox.ai.AI
+import com.hamster.toolbox.ai.AudioPlayer
 import com.hamster.toolbox.ai.Message
+import com.hamster.toolbox.ai.TTS
 import com.hamster.toolbox.utils.compose.TabItem
 import com.hamster.toolbox.utils.compose.Tabs
 import com.hamster.toolbox.utils.compose.assistantBubbleShape
@@ -74,6 +74,7 @@ import java.io.File
 
 @Composable
 fun ExpandedBottomMenu(
+    tts: TTS,
     apiKey: String?,
     selectedIndex: Int,
     mainViewModel: MainViewModel,
@@ -92,7 +93,8 @@ fun ExpandedBottomMenu(
                 inputText = inputText,
                 setInputText = { setInputText(it) },
                 onNavigate = { onNavigate(it) },
-                apiKey = apiKey
+                apiKey = apiKey,
+                tts = tts
             )
         },
         TabItem(title = "菜单") {
@@ -187,6 +189,7 @@ private fun Menu(
 
 @Composable
 fun Assistant(
+    tts: TTS,
     inputText: String,
     mainViewModel: MainViewModel,
     setInputText: (String) -> Unit,
@@ -225,7 +228,7 @@ fun Assistant(
         ) {
             items(AI.chatHistory) { message ->
                 if (message.role != "system") {
-                    ChatBubble(message = message)
+                    ChatBubble(message = message, tts = tts)
                 }
             }
         }
@@ -289,7 +292,10 @@ fun Assistant(
 }
 
 @Composable
-fun ChatBubble(message: Message) {
+fun ChatBubble(
+    tts: TTS,
+    message: Message
+) {
     val isUser = message.role == "user"
 
     val density = LocalDensity.current
@@ -299,6 +305,8 @@ fun ChatBubble(message: Message) {
     }
 
     val userAvatarPath by rememberStringPreference("user_avatar_path", "")
+
+    val coroutineScope = rememberCoroutineScope()
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -324,6 +332,24 @@ fun ChatBubble(message: Message) {
                     clip = false,
                     spotColor = colorResource(id = R.color.item_group_card_shadow),
                     ambientColor = colorResource(id = R.color.item_group_card_shadow)
+                )
+                .clickable(
+                    enabled = !isUser,
+                    onClick = {
+                        Log.d("Fuck", "clicked")
+                        Log.d("fuck", tts.isInitialized.toString())
+                        if (!tts.isInitialized) {
+                            return@clickable
+                        }
+
+                        coroutineScope.launch {
+                            val result = tts.generateAudio(message.content)
+
+                            if (result != null) {
+                                AudioPlayer.play(result.first, result.second)
+                            }
+                        }
+                    }
                 )
         ) {
             Text(

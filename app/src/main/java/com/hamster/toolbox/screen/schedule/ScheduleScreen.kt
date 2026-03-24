@@ -62,8 +62,6 @@ import com.hamster.toolbox.utils.saveSchedule
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
-// TODO: 侧边有padding？
-
 @Composable
 fun ScheduleScreen() {
     val context = LocalContext.current
@@ -108,7 +106,7 @@ fun ScheduleScreen() {
         }
     }
 
-    PageColumn(sharedTiltState = sharedTiltState) {
+    PageColumn(sharedTiltState = sharedTiltState, hasPadding = false) {
         HorizontalPager(
             modifier = Modifier.weight(1f),
             state = pagerState,

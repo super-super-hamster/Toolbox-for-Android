@@ -23,27 +23,26 @@ fun WeatherTipsScreen() {
 
     PageColumn(modifier = Modifier.verticalScroll(rememberScrollState()), sharedTiltState = sharedTiltState) {
         ItemGroup(titleState = sharedTiltState) {
-            ExplanationItem("获取和风天气API KEY：\n " +
-                    "  1. 登录 和风天气控制台;\n" +
+            ExplanationItem(
+                title = "获取和风天气API KEY",
+                content = "  1. 登录 和风天气控制台;\n" +
                     "  2. 进入“我的项目管理” -> 点击“创建项目” -> 填写名称并保存;\n" +
                     "  3. 点击“创建凭据” -> 填写凭据名称，身份认证方式选择 API KEY，保存后复制。" +
-                    "注意：在应用限制部分，请不要选择“不限制”和“网站”以外的选项，否则请求将无法响应。")
-        }
-
-        Spacer(modifier = Modifier.height(dimensionResource(R.dimen.item_group_gap)))
-
-        ItemGroup(titleState = sharedTiltState) {
-            ExplanationItem("获取和风天气API Host：在 和风天气控制栏设置 页面中复制")
-        }
-
-        Spacer(modifier = Modifier.height(dimensionResource(R.dimen.item_group_gap)))
-
-        ItemGroup(titleState = sharedTiltState) {
-            ClickItem(title = "前往 和风天气控制台", icon = R.drawable.ic_tips) {
-                uriHandler.openUri("https://platform.deepseek.com/api_keys")
+                    "注意：在应用限制部分，请不要选择“不限制”和“网站”以外的选项，否则请求将无法响应。",
+                buttonContent = "前往 和风天气控制台"
+            ) {
+                uriHandler.openUri("https://console.qweather.com/home")
             }
+        }
 
-            ClickItem(title = "前往 和风天气控制台设置", icon = R.drawable.ic_tips) {
+        Spacer(modifier = Modifier.height(dimensionResource(R.dimen.item_group_gap)))
+
+        ItemGroup(titleState = sharedTiltState) {
+            ExplanationItem(
+                title = "获取和风天气API Host",
+                content = "在 和风天气控制栏设置 页面中复制",
+                buttonContent = "前往 和风天气控制台设置"
+            ) {
                 uriHandler.openUri("https://console.qweather.com/setting")
             }
         }
