@@ -51,6 +51,7 @@ fun NavGraphBuilder.settingsGraph(
                 onNavigateToSettings = {
                     // TODO：导航回settings
                 },
+                onNavigate = { navController.navigate(it) },
             )
         }
 
@@ -61,7 +62,8 @@ fun NavGraphBuilder.settingsGraph(
             popExitTransition = { slideOutWithScalePopExit() }
         ) {
             SetKeywordsScreen(
-                mainViewModel = mainViewModel
+                mainViewModel = mainViewModel,
+                onNavigate = { navController.navigate(it) }
             )
         }
 
@@ -71,7 +73,9 @@ fun NavGraphBuilder.settingsGraph(
             popEnterTransition = { scaleInPopEnter() },
             popExitTransition = { slideOutWithScalePopExit() }
         ) {
-            WeatherSettings()
+            WeatherSettings(
+                onNavigate = { navController.navigate(it) }
+            )
         }
     }
 }

@@ -59,3 +59,7 @@ object AssistantTips : Route
 // 游戏机
 @Serializable
 object GameConsole : Route
+
+// 时间
+@Serializable
+object Time : Route

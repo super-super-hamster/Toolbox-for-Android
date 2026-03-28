@@ -1,7 +1,9 @@
 package com.hamster.toolbox.screen.settings
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -10,6 +12,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.dimensionResource
+import com.hamster.toolbox.AssistantTips
+import com.hamster.toolbox.R
+import com.hamster.toolbox.Route
 import com.hamster.toolbox.main.MainViewModel
 import com.hamster.toolbox.ai.KeywordManager
 import com.hamster.toolbox.ai.KeywordsData
@@ -18,15 +24,15 @@ import com.hamster.toolbox.utils.compose.InquiryItem
 import com.hamster.toolbox.utils.compose.ItemGroup
 import com.hamster.toolbox.utils.compose.PageColumn
 import com.hamster.toolbox.utils.ScrollTarget
+import com.hamster.toolbox.utils.compose.ClickItem
 import com.hamster.toolbox.utils.compose.rememberSharedTiltState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-//TODO:搜索
-
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SetKeywordsScreen(
+    onNavigate: (Route) -> Unit,
     mainViewModel: MainViewModel
 ) {
     val context = LocalContext.current
@@ -68,6 +74,15 @@ fun SetKeywordsScreen(
                 )
             }
         }
+
+        Spacer(modifier = Modifier.height(dimensionResource(R.dimen.item_group_gap)))
+
+        ItemGroup(titleState = sharedTiltState) {
+            ClickItem(title = "助手 Tips", icon = R.drawable.ic_tips) {
+                onNavigate(AssistantTips)
+            }
+        }
+
         // 添加热词的 Dialog
         if (mainViewModel.isShowAddKeywordDialog) {
             EditTextDialog(

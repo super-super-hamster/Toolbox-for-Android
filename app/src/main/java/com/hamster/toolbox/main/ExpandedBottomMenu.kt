@@ -1,9 +1,7 @@
 package com.hamster.toolbox.main
 
-import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -58,11 +56,10 @@ import com.hamster.toolbox.Route
 import com.hamster.toolbox.Ruler
 import com.hamster.toolbox.Schedule
 import com.hamster.toolbox.SettingsGraph
+import com.hamster.toolbox.Time
 import com.hamster.toolbox.Tips
 import com.hamster.toolbox.ai.AI
-import com.hamster.toolbox.ai.AudioPlayer
 import com.hamster.toolbox.ai.Message
-import com.hamster.toolbox.ai.TTS
 import com.hamster.toolbox.utils.compose.TabItem
 import com.hamster.toolbox.utils.compose.Tabs
 import com.hamster.toolbox.utils.compose.assistantBubbleShape
@@ -74,7 +71,6 @@ import java.io.File
 
 @Composable
 fun ExpandedBottomMenu(
-    tts: TTS,
     apiKey: String?,
     selectedIndex: Int,
     mainViewModel: MainViewModel,
@@ -94,7 +90,6 @@ fun ExpandedBottomMenu(
                 setInputText = { setInputText(it) },
                 onNavigate = { onNavigate(it) },
                 apiKey = apiKey,
-                tts = tts
             )
         },
         TabItem(title = "菜单") {
@@ -175,6 +170,10 @@ private fun Menu(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
+            // 时间
+            IconButton(onClick = { onNavigate(Time) }) {
+                Icon(painterResource(R.drawable.ic_time), null, tint = Color.Gray)
+            }
             // Tips
             IconButton(onClick = { onNavigate(Tips) }) {
                 Icon(painterResource(R.drawable.ic_tips), null, tint = Color.Gray)
@@ -189,7 +188,6 @@ private fun Menu(
 
 @Composable
 fun Assistant(
-    tts: TTS,
     inputText: String,
     mainViewModel: MainViewModel,
     setInputText: (String) -> Unit,
@@ -228,7 +226,7 @@ fun Assistant(
         ) {
             items(AI.chatHistory) { message ->
                 if (message.role != "system") {
-                    ChatBubble(message = message, tts = tts)
+                    ChatBubble(message = message)
                 }
             }
         }
@@ -293,7 +291,6 @@ fun Assistant(
 
 @Composable
 fun ChatBubble(
-    tts: TTS,
     message: Message
 ) {
     val isUser = message.role == "user"
@@ -305,8 +302,6 @@ fun ChatBubble(
     }
 
     val userAvatarPath by rememberStringPreference("user_avatar_path", "")
-
-    val coroutineScope = rememberCoroutineScope()
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -332,24 +327,6 @@ fun ChatBubble(
                     clip = false,
                     spotColor = colorResource(id = R.color.item_group_card_shadow),
                     ambientColor = colorResource(id = R.color.item_group_card_shadow)
-                )
-                .clickable(
-                    enabled = !isUser,
-                    onClick = {
-                        Log.d("Fuck", "clicked")
-                        Log.d("fuck", tts.isInitialized.toString())
-                        if (!tts.isInitialized) {
-                            return@clickable
-                        }
-
-                        coroutineScope.launch {
-                            val result = tts.generateAudio(message.content)
-
-                            if (result != null) {
-                                AudioPlayer.play(result.first, result.second)
-                            }
-                        }
-                    }
                 )
         ) {
             Text(

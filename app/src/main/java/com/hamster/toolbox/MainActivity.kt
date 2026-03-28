@@ -76,11 +76,9 @@ import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.animateLottieCompositionAsState
 import com.airbnb.lottie.compose.rememberLottieComposition
-import com.google.android.datatransport.runtime.scheduling.Scheduler
 import com.hamster.toolbox.ai.AI
 import com.hamster.toolbox.ai.Message
 import com.hamster.toolbox.ai.SpeechRecognizerManager
-import com.hamster.toolbox.ai.TTS
 import com.hamster.toolbox.main.AudioSpectrumVisualizer
 import com.hamster.toolbox.main.ExpandedBottomMenu
 import com.hamster.toolbox.main.MainViewModel
@@ -89,6 +87,7 @@ import com.hamster.toolbox.screen.random.RandomNumberScreen
 import com.hamster.toolbox.screen.ruler.RulerScreen
 import com.hamster.toolbox.screen.schedule.ScheduleScreen
 import com.hamster.toolbox.screen.settings.settingsGraph
+import com.hamster.toolbox.screen.time.TimeScreen
 import com.hamster.toolbox.screen.tips.tipsGraph
 import com.hamster.toolbox.utils.compose.AnimationButton
 import com.hamster.toolbox.utils.compose.ButtonPro
@@ -117,6 +116,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.random.Random
 
 // TODO: 天气,向下滑动天气透明度逐渐降低
 // TODO: tips页面
@@ -128,7 +128,6 @@ class MainActivity : ComponentActivity() {
     // 跟随应用生命周期的协程作用域
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private lateinit var speechManager: SpeechRecognizerManager
-    private lateinit var tts: TTS
     private var isModelReady = false
     private val mainViewModel: MainViewModel by viewModels()
 
@@ -142,11 +141,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        tts = TTS.getInstance(applicationContext)
 
         applicationScope.launch {
             initSpeechManager()
-            TTS.getInstance(this@MainActivity).initModel()
             Log.d("fuck", "finish")
         }
 
@@ -202,6 +199,7 @@ class MainActivity : ComponentActivity() {
                 currentDestination?.hasRoute<Tips>() == true -> "Tips"
                 currentDestination?.hasRoute<ScheduleTips>() == true -> "课程表Tips"
                 currentDestination?.hasRoute<WeatherTips>() == true -> "天气Tips"
+                currentDestination?.hasRoute<Time>() == true -> "应用使用时间"
                 else -> "ToolBox"
             }
 
@@ -227,6 +225,7 @@ class MainActivity : ComponentActivity() {
             }
 
             val isSetKeyWordsScreen = currentDestination?.hierarchy?.any { it.hasRoute<SetKeywords>() } == true
+            val isScheduleScreen = currentDestination?.hierarchy?.any { it.hasRoute<Schedule>() } == true
 
             // 拦截返回事件
             if (isMenuExpanded || showLoading) {
@@ -259,7 +258,7 @@ class MainActivity : ComponentActivity() {
                             Box(modifier = Modifier.fillMaxSize()) {
                                 NavHost(
                                     navController = navController,
-                                    startDestination = Schedule,
+                                    startDestination = RandomNumber,
                                     modifier = Modifier
                                         .layerBackdrop(backdrop) // 应用玻璃效果
                                         .hazeSource(state = hazeState)
@@ -293,6 +292,16 @@ class MainActivity : ComponentActivity() {
                                         popExitTransition = { slideOutWithScalePopExit() }
                                     ) {
                                         RulerScreen()
+                                    }
+
+                                    // 时间
+                                    composable<Time>(
+                                        enterTransition = { slideInWithScaleEnter() },
+                                        exitTransition = { scaleOutExit() },
+                                        popEnterTransition = { scaleInPopEnter() },
+                                        popExitTransition = { slideOutWithScalePopExit() }
+                                    ) {
+                                        TimeScreen()
                                     }
 
                                     // Tips
@@ -372,7 +381,6 @@ class MainActivity : ComponentActivity() {
                                                         setInputText = { inputText = it },
                                                         onNavigate = { navController.expandMenuNavigate(it) },
                                                         onDragDown = { isMenuExpanded = false },
-                                                        tts = tts
                                                     )
                                                 }
                                             }
@@ -426,9 +434,12 @@ class MainActivity : ComponentActivity() {
                                                             onTap = {
                                                                 if (isSetKeyWordsScreen) {
                                                                     mainViewModel.isShowAddKeywordDialog = true
-                                                                } },
+                                                                } else if (isScheduleScreen) {
+                                                                    navController.expandMenuNavigate(ImportCurriculum)
+                                                                }},
                                                             onLongPressStart = {
                                                                 if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED && isModelReady) {
+                                                                    // TODO:震动
 //                                                                    performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                                                                     showRecording = true
                                                                     speechManager.startListening()
@@ -580,7 +591,6 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         speechManager.release()
-        tts.release()
     }
 
     private fun initSpeechManager() {

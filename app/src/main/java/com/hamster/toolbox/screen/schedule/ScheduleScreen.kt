@@ -48,6 +48,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.preference.PreferenceManager
 import com.hamster.toolbox.R
@@ -106,7 +107,7 @@ fun ScheduleScreen() {
         }
     }
 
-    PageColumn(sharedTiltState = sharedTiltState, hasPadding = false) {
+    PageColumn(sharedTiltState = sharedTiltState) {
         HorizontalPager(
             modifier = Modifier.weight(1f),
             state = pagerState,
@@ -282,7 +283,7 @@ fun WeekScheduleCard(
                                     Column(
                                         modifier = Modifier
                                             .fillMaxSize()
-                                            .padding(2.dp),
+                                            .padding(horizontal = 4.dp, vertical = 12.dp),
                                         verticalArrangement = Arrangement.SpaceBetween,
                                         horizontalAlignment = Alignment.CenterHorizontally
                                     ) {
@@ -292,6 +293,7 @@ fun WeekScheduleCard(
                                             fontWeight = FontWeight.Bold,
                                             textAlign = TextAlign.Center,
                                             maxLines = 2,
+                                            lineHeight = 1.4.em,
                                             overflow = TextOverflow.Ellipsis
                                         )
 
@@ -300,11 +302,11 @@ fun WeekScheduleCard(
                                             fontSize = 10.sp,
                                             fontWeight = FontWeight.Normal,
                                             textAlign = TextAlign.Center,
-                                            overflow = TextOverflow.Ellipsis
+                                            overflow = TextOverflow.Ellipsis,
+                                            lineHeight = 1.4.em
                                         )
                                     }
                                 } else if (isSlotActive) {
-                                    // 🌟 渲染加号
                                     Icon(
                                         painter = painterResource(R.drawable.ic_add),
                                         contentDescription = "添加课程",
@@ -377,6 +379,8 @@ fun CourseEditDialog(
     val dayTextList = listOf("周" + daysList[validDayIndex])
     val periodTextList = listOf(selectedPeriod.toString())
 
+    var toDelete by remember { mutableStateOf(false) }
+
     StandardDialog(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
@@ -427,137 +431,141 @@ fun CourseEditDialog(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null
                             ) {
-                                onDelete(initialCourse)
+                                toDelete = !toDelete
                             }
                     )
                 }
             }
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("教室：", fontSize = 18.sp)
-                BasicTextField(
-                    value = location,
-                    onValueChange = { location = it },
-                    textStyle = TextStyle(fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface),
-                    modifier = Modifier.weight(1f)
-                )
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("教师：", fontSize = 18.sp)
-                BasicTextField(
-                    value = teacher,
-                    onValueChange = { teacher = it },
-                    textStyle = TextStyle(fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface),
-                    modifier = Modifier.weight(1f)
-                )
-            }
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                Text("时间：在第 ", fontSize = 18.sp)
-                MdCodeText(textList = weeksTextList)
-                Text(" 周", fontSize = 18.sp)
-                Spacer(modifier = Modifier.weight(1f))
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_edit),
-                    contentDescription = "修改周次",
-                    modifier = Modifier
-                        .size(24.dp)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = {
-                                expandedPanel = if (expandedPanel == "WEEKS") "NONE" else "WEEKS"
-                            })
-                )
-            }
-            if (expandedPanel == "WEEKS") {
-                MultiSelectGrid(range = 1..20, selectedItems = activeWeeks, columns = 5) { clicked ->
-                    activeWeeks = toggleSetItem(activeWeeks, clicked)
+            if (!toDelete) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("教室：", fontSize = 18.sp)
+                    BasicTextField(
+                        value = location,
+                        onValueChange = { location = it },
+                        textStyle = TextStyle(fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface),
+                        modifier = Modifier.weight(1f)
+                    )
                 }
-            }
-            Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("教师：", fontSize = 18.sp)
+                    BasicTextField(
+                        value = teacher,
+                        onValueChange = { teacher = it },
+                        textStyle = TextStyle(fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                Spacer(modifier = Modifier.height(24.dp))
 
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                Spacer(modifier = Modifier.width(52.dp))
-                Text("的 ", fontSize = 18.sp)
-                MdCodeText(textList = dayTextList)
-                Spacer(modifier = Modifier.weight(1f))
-                Icon(
-                    painter = painterResource(R.drawable.ic_edit),
-                    contentDescription = "修改星期",
-                    modifier = Modifier
-                        .size(24.dp)
-                        .clickable (
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = {
-                                expandedPanel = if (expandedPanel == "DAYS") "NONE" else "DAYS"
-                            })
-                )
-            }
-            if (expandedPanel == "DAYS") {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 52.dp, top = 12.dp, bottom = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    daysList.forEachIndexed { index, day ->
-                        val dayValue = index + 1
-                        val isSelected = (selectedDay == dayValue)
-                        Box(
-                            modifier = Modifier
-                                .size(30.dp)
-                                .clip(squircleShape)
-                                .background(
-                                    if (isSelected) colorResource(R.color.mikuGreen) else Color.Gray.copy(
-                                        alpha = 0.1f
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                    Text("时间：在第 ", fontSize = 18.sp)
+                    MdCodeText(textList = weeksTextList)
+                    Text(" 周", fontSize = 18.sp)
+                    Spacer(modifier = Modifier.weight(1f))
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_edit),
+                        contentDescription = "修改周次",
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = {
+                                    expandedPanel = if (expandedPanel == "WEEKS") "NONE" else "WEEKS"
+                                })
+                    )
+                }
+                if (expandedPanel == "WEEKS") {
+                    MultiSelectGrid(range = 1..20, selectedItems = activeWeeks, columns = 5) { clicked ->
+                        activeWeeks = toggleSetItem(activeWeeks, clicked)
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                    Spacer(modifier = Modifier.width(52.dp))
+                    Text("的 ", fontSize = 18.sp)
+                    MdCodeText(textList = dayTextList)
+                    Spacer(modifier = Modifier.weight(1f))
+                    Icon(
+                        painter = painterResource(R.drawable.ic_edit),
+                        contentDescription = "修改星期",
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clickable (
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = {
+                                    expandedPanel = if (expandedPanel == "DAYS") "NONE" else "DAYS"
+                                })
+                    )
+                }
+                if (expandedPanel == "DAYS") {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 52.dp, top = 12.dp, bottom = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        daysList.forEachIndexed { index, day ->
+                            val dayValue = index + 1
+                            val isSelected = (selectedDay == dayValue)
+                            Box(
+                                modifier = Modifier
+                                    .size(30.dp)
+                                    .clip(squircleShape)
+                                    .background(
+                                        if (isSelected) colorResource(R.color.mikuGreen) else Color.Gray.copy(
+                                            alpha = 0.1f
+                                        )
                                     )
+                                    .clickable { selectedDay = dayValue }, // 单选直接赋值
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = day, fontSize = 14.sp,
+                                    color = if (isSelected) Color.White else Color.DarkGray,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                 )
-                                .clickable { selectedDay = dayValue }, // 单选直接赋值
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = day, fontSize = 14.sp,
-                                color = if (isSelected) Color.White else Color.DarkGray,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                            )
+                            }
                         }
                     }
                 }
-            }
-            Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                Spacer(modifier = Modifier.width(52.dp))
-                Text("的第 ", fontSize = 18.sp)
-                MdCodeText(textList = periodTextList)
-                Text(" 节", fontSize = 18.sp)
-                Spacer(modifier = Modifier.weight(1f))
-                Icon(
-                    painter = painterResource(R.drawable.ic_edit),
-                    contentDescription = "修改节次",
-                    modifier = Modifier
-                        .size(24.dp)
-                        .clickable (
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = {
-                                expandedPanel = if (expandedPanel == "PERIODS") "NONE" else "PERIODS"
-                            })
-                )
-            }
-            if (expandedPanel == "PERIODS") {
-                SingleSelectGrid(
-                    range = 1..12,
-                    selectedItem = selectedPeriod,
-                    columns = 6,
-                    modifier = Modifier.padding(start = 52.dp)
-                ) { clicked ->
-                    selectedPeriod = clicked
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                    Spacer(modifier = Modifier.width(52.dp))
+                    Text("的第 ", fontSize = 18.sp)
+                    MdCodeText(textList = periodTextList)
+                    Text(" 节", fontSize = 18.sp)
+                    Spacer(modifier = Modifier.weight(1f))
+                    Icon(
+                        painter = painterResource(R.drawable.ic_edit),
+                        contentDescription = "修改节次",
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clickable (
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = {
+                                    expandedPanel = if (expandedPanel == "PERIODS") "NONE" else "PERIODS"
+                                })
+                    )
                 }
+                if (expandedPanel == "PERIODS") {
+                    SingleSelectGrid(
+                        range = 1..12,
+                        selectedItem = selectedPeriod,
+                        columns = 6,
+                        modifier = Modifier.padding(start = 52.dp)
+                    ) { clicked ->
+                        selectedPeriod = clicked
+                    }
+                }
+            } else {
+                Text(text = "确定要删除吗？", fontSize = 18.sp)
             }
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -569,27 +577,40 @@ fun CourseEditDialog(
                 horizontalArrangement = Arrangement.spacedBy(24.dp)
             ) {
                 Button(
-                    onClick = onDismiss,
+                    onClick = {
+                        if (toDelete) {
+                            toDelete = false
+                        } else {
+                            onDismiss()
+                        }
+                    },
                     modifier = Modifier
                         .weight(1f)
                         .height(42.dp),
                     shape = squircleShape,
                     colors = ButtonDefaults.buttonColors(containerColor = Color.LightGray)
                 ) {
-                    Text("我知道了", color = Color.Black)
+                    Text(
+                        text = if (toDelete) "取消" else "我知道了",
+                        color = Color.Black
+                    )
                 }
 
                 Button(
                     onClick = {
-                        val updatedCourse = course.copy(
-                            name = courseName.ifEmpty { "未命名课程" },
-                            location = location,
-                            teacher = teacher,
-                            activeWeeks = activeWeeks.toList().sorted(),
-                            dayOfWeek = selectedDay,
-                            startTime = selectedPeriod
-                        )
-                        onConfirm(initialCourse, updatedCourse)
+                        if (toDelete) {
+                            initialCourse?.let { onDelete(it) }
+                        } else {
+                            val updatedCourse = course.copy(
+                                name = courseName.ifEmpty { "未命名课程" },
+                                location = location,
+                                teacher = teacher,
+                                activeWeeks = activeWeeks.toList().sorted(),
+                                dayOfWeek = selectedDay,
+                                startTime = selectedPeriod
+                            )
+                            onConfirm(initialCourse, updatedCourse)
+                        }
                     },
                     modifier = Modifier
                         .weight(1f)
@@ -598,7 +619,7 @@ fun CourseEditDialog(
                     colors = ButtonDefaults.buttonColors(containerColor = colorResource(R.color.btn_confirm))
                 ) {
                     Text(
-                        text = if (initialCourse == null) "添加课程" else "保存修改",
+                        text = if (toDelete) "确认" else (if (initialCourse == null) "添加课程" else "保存修改"),
                         color = colorResource(R.color.text)
                     )
                 }

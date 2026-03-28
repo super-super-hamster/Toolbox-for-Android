@@ -1,13 +1,20 @@
 package com.hamster.toolbox.screen.settings
 
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.dimensionResource
 import androidx.core.content.edit
 import androidx.preference.PreferenceManager
 import com.hamster.toolbox.R
+import com.hamster.toolbox.Route
+import com.hamster.toolbox.WeatherTips
+import com.hamster.toolbox.utils.compose.ClickItem
 import com.hamster.toolbox.utils.compose.EditTextItem
 import com.hamster.toolbox.utils.compose.ItemGroup
 import com.hamster.toolbox.utils.compose.PageColumn
@@ -15,7 +22,9 @@ import com.hamster.toolbox.utils.compose.rememberSharedTiltState
 import com.hamster.toolbox.utils.compose.rememberStringPreference
 
 @Composable
-fun WeatherSettings() {
+fun WeatherSettings(
+    onNavigate: (Route) -> Unit,
+) {
     val sharedTiltState = rememberSharedTiltState()
 
     val context = LocalContext.current
@@ -57,6 +66,14 @@ fun WeatherSettings() {
                     true
                 }
             )
+        }
+
+        Spacer(modifier = Modifier.height(dimensionResource(R.dimen.item_group_gap)))
+
+        ItemGroup(titleState = sharedTiltState) {
+            ClickItem(title = "天气 Tips", icon = R.drawable.ic_tips) {
+                onNavigate(WeatherTips)
+            }
         }
     }
 }

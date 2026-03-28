@@ -12,24 +12,27 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.dimensionResource
 import androidx.preference.PreferenceManager
 import com.hamster.toolbox.ai.AI
 import com.hamster.toolbox.utils.compose.ClickItem
 import com.hamster.toolbox.utils.compose.EditTextItem
-import com.hamster.toolbox.utils.compose.ExplanationItem
 import com.hamster.toolbox.utils.compose.ItemGroup
 import com.hamster.toolbox.utils.compose.PageColumn
-import com.hamster.toolbox.utils.copyCurriculumJSONPrompt
 import com.hamster.toolbox.utils.compose.rememberSharedTiltState
 import com.hamster.toolbox.utils.compose.rememberStringPreference
+import com.hamster.toolbox.utils.copyCurriculumJSONPrompt
 import com.hamster.toolbox.utils.validateAndSaveJson
 import kotlinx.coroutines.launch
+import com.hamster.toolbox.R
+import com.hamster.toolbox.Route
+import com.hamster.toolbox.ScheduleTips
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ImportCurriculumScreen(
     onShowLoading: (Boolean) -> Unit,
+    onNavigate: (Route) -> Unit,
     onNavigateToSettings: (String) -> Unit,
 ) {
     val context = LocalContext.current
@@ -82,6 +85,14 @@ fun ImportCurriculumScreen(
             )
             ClickItem(title = "复制提示词", summary = "通过外部AI生成符合要求的JSON文本") {
                 copyCurriculumJSONPrompt(context)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(dimensionResource(R.dimen.item_group_gap)))
+
+        ItemGroup(titleState = sharedTiltState) {
+            ClickItem(title = "课程表 Tips", icon = R.drawable.ic_tips) {
+                onNavigate(ScheduleTips)
             }
         }
     }

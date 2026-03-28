@@ -163,7 +163,7 @@ fun Weather(
                         currentCity = if (loc.adm2 == loc.name) {
                             loc.name
                         } else {
-                            "${loc.adm2} ${loc.name}"
+                            "${loc.adm2}-${loc.name}"
                         }
                         WeatherData.editLocation(currentCity)
                     }
@@ -174,7 +174,6 @@ fun Weather(
                             .putString("weather_cached_city", currentCity)
                     }
 
-//                    Log.d("debug", currentCity)
                 }
             }
         } catch (e: Exception) {
@@ -197,7 +196,7 @@ fun Weather(
             )
     ) {
         val content = if (isLoading || isError) {
-            Pair(R.drawable.ic_weather_152, "10°C")
+            Pair(R.drawable.ic_weather_152, "--°C")
         } else {
             weatherData?.let { getQWeatherIconResId(context, it.icon) to "${it.temp}°C" }
         }

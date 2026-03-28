@@ -145,7 +145,7 @@ fun ItemGroup(
     Column {
         Card(
             modifier = Modifier
-                .padding(start = 8.dp, end = 8.dp, top = 1.dp, bottom = 1.dp)
+                .padding(start = 20.dp, end = 20.dp, top = 1.dp, bottom = 1.dp)
                 .applySharedTilt(titleState)
                 .shadow(
                     elevation = 2.dp,
@@ -161,6 +161,32 @@ fun ItemGroup(
                 content()
             }
         }
+    }
+}
+
+@Composable
+fun ItemCard(
+    modifier: Modifier = Modifier,
+    horizontalPadding: Dp = 20.dp,
+    verticalPadding: Dp = 1.dp,
+    titleState: SharedTiltState,
+    content: @Composable () -> Unit
+) {
+    Card(
+        modifier = modifier
+            .padding(horizontal = horizontalPadding, vertical = verticalPadding)
+            .applySharedTilt(titleState)
+            .shadow(
+                elevation = 2.dp,
+                shape = squircleShape,
+                clip = false,
+                spotColor = colorResource(id = R.color.item_group_card_shadow),
+                ambientColor = colorResource(id = R.color.item_group_card_shadow)
+            ),
+        colors = CardDefaults.cardColors(containerColor = colorResource(R.color.item_group_card)),
+        shape = squircleShape,
+    ) {
+        content()
     }
 }
 
@@ -629,7 +655,6 @@ fun ExplanationItem(
 @Composable
 fun PageColumn(
     modifier: Modifier = Modifier,
-    hasPadding: Boolean = true,
     sharedTiltState: SharedTiltState,
     content: @Composable ColumnScope.() -> Unit //@Composable ColumnScope.() 让content知道自己的父组件是column
 ) {
@@ -637,7 +662,6 @@ fun PageColumn(
         Column(
             modifier = modifier
                 .fillMaxSize()
-                .padding(all = if (hasPadding) 12.dp else 0.dp)
         ) {
             Spacer(modifier = Modifier.height(dimensionResource(R.dimen.top_padding)))
 
