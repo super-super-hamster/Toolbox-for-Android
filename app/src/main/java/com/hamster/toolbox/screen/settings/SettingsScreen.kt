@@ -37,6 +37,7 @@ import com.hamster.toolbox.Route
 import com.hamster.toolbox.SetKeywords
 import com.hamster.toolbox.WeatherSettings
 import com.hamster.toolbox.main.MainViewModel
+import com.hamster.toolbox.system.Alarm
 import com.hamster.toolbox.system.Receiver
 import com.hamster.toolbox.utils.ScrollTarget
 import com.hamster.toolbox.utils.compose.ClickItem
@@ -141,17 +142,6 @@ fun SettingsScreen(
     }
 
     PageColumn(modifier = Modifier.verticalScroll(rememberScrollState()), sharedTiltState = sharedTiltState) {
-//        ItemGroup(titleState = sharedTiltState) {
-//            ClickItem(title = "通知测试") {
-//                val receiver = Receiver()
-//                receiver.showNotification(context, "test", "test", "test", null)
-//            }
-//
-//            ClickItem(title = "加载动画测试") {
-//                setLoading(true)
-//            }
-//        }
-
         ItemGroup(titleState = sharedTiltState) {
             ClickItem(title = "用户头像", icon = R.drawable.ic_user_avatar) {
                 showUserAvatarOptionsDialog = true

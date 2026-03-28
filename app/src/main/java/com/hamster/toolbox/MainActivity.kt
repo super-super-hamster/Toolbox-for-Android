@@ -82,6 +82,7 @@ import com.hamster.toolbox.ai.SpeechRecognizerManager
 import com.hamster.toolbox.main.AudioSpectrumVisualizer
 import com.hamster.toolbox.main.ExpandedBottomMenu
 import com.hamster.toolbox.main.MainViewModel
+import com.hamster.toolbox.screen.debug.DebugScreen
 import com.hamster.toolbox.screen.gameConsole.GameConsoleScreen
 import com.hamster.toolbox.screen.random.RandomNumberScreen
 import com.hamster.toolbox.screen.ruler.RulerScreen
@@ -119,7 +120,6 @@ import kotlinx.coroutines.withContext
 import kotlin.random.Random
 
 // TODO: 天气,向下滑动天气透明度逐渐降低
-// TODO: tips页面
 // TODO: 通知栏字体颜色适配
 // TODO: 测距
 // TODO: preferencesDataStore
@@ -140,7 +140,6 @@ class MainActivity : ComponentActivity() {
     @RequiresApi(Build.VERSION_CODES.R)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
 
         applicationScope.launch {
             initSpeechManager()
@@ -200,6 +199,7 @@ class MainActivity : ComponentActivity() {
                 currentDestination?.hasRoute<ScheduleTips>() == true -> "课程表Tips"
                 currentDestination?.hasRoute<WeatherTips>() == true -> "天气Tips"
                 currentDestination?.hasRoute<Time>() == true -> "应用使用时间"
+                currentDestination?.hasRoute<Debug>() == true -> "Debug"
                 else -> "ToolBox"
             }
 
@@ -258,7 +258,7 @@ class MainActivity : ComponentActivity() {
                             Box(modifier = Modifier.fillMaxSize()) {
                                 NavHost(
                                     navController = navController,
-                                    startDestination = RandomNumber,
+                                    startDestination = Schedule,
                                     modifier = Modifier
                                         .layerBackdrop(backdrop) // 应用玻璃效果
                                         .hazeSource(state = hazeState)
@@ -327,6 +327,15 @@ class MainActivity : ComponentActivity() {
                                             setLoading(isLoading)
                                         }
                                     )
+
+                                    composable<Debug>(
+                                        enterTransition = { slideInWithScaleEnter() },
+                                        exitTransition = { scaleOutExit() },
+                                        popEnterTransition = { scaleInPopEnter() },
+                                        popExitTransition = { slideOutWithScalePopExit() }
+                                    ) {
+                                        DebugScreen()
+                                    }
                                 }
 
                                 // 高斯模糊层

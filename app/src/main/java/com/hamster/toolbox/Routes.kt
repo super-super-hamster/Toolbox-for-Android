@@ -4,6 +4,9 @@ import kotlinx.serialization.Serializable
 
 sealed interface Route
 
+@Serializable
+object Debug : Route
+
 // 设置导航
 @Serializable
 object SettingsGraph : Route

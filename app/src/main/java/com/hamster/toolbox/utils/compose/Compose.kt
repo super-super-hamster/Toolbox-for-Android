@@ -167,14 +167,16 @@ fun ItemGroup(
 @Composable
 fun ItemCard(
     modifier: Modifier = Modifier,
-    horizontalPadding: Dp = 20.dp,
-    verticalPadding: Dp = 1.dp,
+    startPadding: Dp = 20.dp,
+    endPadding: Dp = 20.dp,
+    topPadding: Dp = 1.dp,
+    bottomPadding: Dp = 1.dp,
     titleState: SharedTiltState,
     content: @Composable () -> Unit
 ) {
     Card(
         modifier = modifier
-            .padding(horizontal = horizontalPadding, vertical = verticalPadding)
+            .padding(start = startPadding, end = endPadding, top = topPadding, bottom = bottomPadding)
             .applySharedTilt(titleState)
             .shadow(
                 elevation = 2.dp,

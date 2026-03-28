@@ -30,6 +30,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -48,7 +49,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.intl.LocaleList
 import androidx.compose.ui.unit.dp
+import androidx.preference.PreferenceManager
 import coil.compose.AsyncImage
+import com.hamster.toolbox.Debug
 import com.hamster.toolbox.GameConsole
 import com.hamster.toolbox.R
 import com.hamster.toolbox.RandomNumber
@@ -132,6 +135,11 @@ fun ExpandedBottomMenu(
 private fun Menu(
     onNavigate: (route: Route) -> Unit
 ) {
+    val context = LocalContext.current
+    val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
+
+    val userName by rememberStringPreference("nickname", "")
+
     Column(
         modifier = Modifier.padding(16.dp).fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -182,6 +190,12 @@ private fun Menu(
             IconButton(onClick = { onNavigate(SettingsGraph) }) {
                 Icon(painterResource(R.drawable.ic_settings), null, tint = Color.Gray)
             }
+
+            if (userName == "SuperHamster") {
+                IconButton(onClick = { onNavigate(Debug) }) {
+                    Icon(painterResource(R.drawable.ic_debug), null, tint = Color.Gray)
+                }
+            }
         }
     }
 }
@@ -200,6 +214,8 @@ fun Assistant(
 
     val listState = rememberLazyListState()
     val chatSize = AI.chatHistory.size
+
+    val userAvatarPath by rememberStringPreference("user_avatar_path", "")
 
     LaunchedEffect(chatSize) {
         if (chatSize > 0) {
@@ -226,7 +242,7 @@ fun Assistant(
         ) {
             items(AI.chatHistory) { message ->
                 if (message.role != "system") {
-                    ChatBubble(message = message)
+                    ChatBubble(message = message, userAvatarPath = userAvatarPath)
                 }
             }
         }
@@ -291,7 +307,8 @@ fun Assistant(
 
 @Composable
 fun ChatBubble(
-    message: Message
+    message: Message,
+    userAvatarPath: String,
 ) {
     val isUser = message.role == "user"
 
@@ -300,8 +317,6 @@ fun ChatBubble(
     val maxBubbleWidth = with(density) {
         (windowInfo.containerSize.width * 0.6f).toDp()
     }
-
-    val userAvatarPath by rememberStringPreference("user_avatar_path", "")
 
     Row(
         modifier = Modifier.fillMaxWidth(),
