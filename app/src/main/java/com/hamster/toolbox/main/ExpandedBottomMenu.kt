@@ -135,9 +135,6 @@ fun ExpandedBottomMenu(
 private fun Menu(
     onNavigate: (route: Route) -> Unit
 ) {
-    val context = LocalContext.current
-    val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
-
     val userName by rememberStringPreference("nickname", "")
 
     Column(
@@ -200,6 +197,7 @@ private fun Menu(
     }
 }
 
+// TODO: 发送动画
 @Composable
 fun Assistant(
     inputText: String,
