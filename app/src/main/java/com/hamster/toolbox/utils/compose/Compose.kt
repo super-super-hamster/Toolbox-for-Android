@@ -138,11 +138,12 @@ val assistantBubbleShape = SquircleShape(
 
 @Composable
 fun ItemGroup(
+    modifier: Modifier = Modifier,
     titleState: SharedTiltState,
     color: Color = colorResource(id = R.color.item_group_card),
     content: @Composable ColumnScope.() -> Unit
 ) {
-    Column {
+    Column(modifier = modifier) {
         Card(
             modifier = Modifier
                 .padding(start = 20.dp, end = 20.dp, top = 1.dp, bottom = 1.dp)
@@ -156,7 +157,7 @@ fun ItemGroup(
                 ),
             colors = CardDefaults.cardColors(containerColor = color),
             shape = squircleShape
-            ) {
+        ) {
             Column(modifier = Modifier.fillMaxWidth()) {
                 content()
             }

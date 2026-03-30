@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.compose.compiler)
     id("org.jetbrains.kotlin.plugin.serialization") version "2.3.0"
+    kotlin("kapt")
 }
 
 android {
@@ -62,6 +63,7 @@ android {
     }
     buildFeatures {
         viewBinding = true
+        compose = true
     }
     applicationVariants.all {
         val variant = this
@@ -117,6 +119,10 @@ dependencies {
     implementation("dev.aige.pub:WheelPicker:1.2.0")
     implementation("io.github.kyant0:backdrop:1.0.4")
     implementation("io.coil-kt:coil-compose:2.7.0")
+    implementation("androidx.room:room-runtime:2.8.4")
+    implementation("androidx.room:room-ktx:2.8.4")
+    kapt("androidx.room:room-compiler:2.8.4")
+    implementation("com.google.accompanist:accompanist-drawablepainter:0.37.3")
     implementation(files("libs/sherpa-onnx.aar"))
 //    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar", "*.aar"))))
 }

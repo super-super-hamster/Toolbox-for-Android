@@ -10,6 +10,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.ActivityResultCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
@@ -62,6 +63,7 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -88,7 +90,10 @@ import com.hamster.toolbox.screen.random.RandomNumberScreen
 import com.hamster.toolbox.screen.ruler.RulerScreen
 import com.hamster.toolbox.screen.schedule.ScheduleScreen
 import com.hamster.toolbox.screen.settings.settingsGraph
+import com.hamster.toolbox.screen.time.AppUsageDatabase
 import com.hamster.toolbox.screen.time.TimeScreen
+import com.hamster.toolbox.screen.time.TimeViewModel
+import com.hamster.toolbox.screen.time.provideTimeViewModelFactory
 import com.hamster.toolbox.screen.tips.tipsGraph
 import com.hamster.toolbox.utils.compose.AnimationButton
 import com.hamster.toolbox.utils.compose.ButtonPro
@@ -131,9 +136,21 @@ class MainActivity : ComponentActivity() {
     private var isModelReady = false
     private val mainViewModel: MainViewModel by viewModels()
 
+//    private val requestAudioPermissionLauncher = registerForActivityResult(
+//        ActivityResultContracts.RequestPermission()
+//    ) { isGranted: Boolean ->
+//        Log.d("fuck", isGranted.toString())
+//    }
+
     private val requestAudioPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { _: Boolean -> }
+        ActivityResultContracts.RequestPermission(),
+        // ✅ 彻底避开 SAM 转换 Bug 的写法
+        object : ActivityResultCallback<Boolean> {
+            override fun onActivityResult(isGranted: Boolean) {
+                // 这里即使空着什么都不写，编译器也不会崩溃了
+            }
+        }
+    )
 
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     @OptIn(ExperimentalMaterial3Api::class, ExperimentalHazeMaterialsApi::class)
@@ -143,7 +160,6 @@ class MainActivity : ComponentActivity() {
 
         applicationScope.launch {
             initSpeechManager()
-            Log.d("fuck", "finish")
         }
 
         enableEdgeToEdge()
@@ -177,6 +193,13 @@ class MainActivity : ComponentActivity() {
                 label = "blur"
             )
 
+            // 时间数据库
+            val database = remember { AppUsageDatabase.getDatabase(context) }
+            val usageStatsDao = database.usageStatsDao()
+            val timeViewModel: TimeViewModel = viewModel(
+                factory = provideTimeViewModelFactory(usageStatsDao)
+            )
+
             var showWeatherDetail by remember { mutableStateOf(false) }
 
             val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -185,6 +208,7 @@ class MainActivity : ComponentActivity() {
             val universalButtonIconId = when {
                 currentDestination?.hasRoute<Schedule>() == true -> R.drawable.ic_add
                 currentDestination?.hasRoute<SetKeywords>() == true -> R.drawable.ic_add
+                currentDestination?.hasRoute<Time>() == true -> R.drawable.ic_refresh
                 else -> R.drawable.ic_microphone
             }
 
@@ -226,6 +250,7 @@ class MainActivity : ComponentActivity() {
 
             val isSetKeyWordsScreen = currentDestination?.hierarchy?.any { it.hasRoute<SetKeywords>() } == true
             val isScheduleScreen = currentDestination?.hierarchy?.any { it.hasRoute<Schedule>() } == true
+            val isTimeScreen = currentDestination?.hierarchy?.any { it.hasRoute<Schedule>() } == true
 
             // 拦截返回事件
             if (isMenuExpanded || showLoading) {
@@ -258,7 +283,7 @@ class MainActivity : ComponentActivity() {
                             Box(modifier = Modifier.fillMaxSize()) {
                                 NavHost(
                                     navController = navController,
-                                    startDestination = Schedule,
+                                    startDestination = Time,
                                     modifier = Modifier
                                         .layerBackdrop(backdrop) // 应用玻璃效果
                                         .hazeSource(state = hazeState)
@@ -301,7 +326,13 @@ class MainActivity : ComponentActivity() {
                                         popEnterTransition = { scaleInPopEnter() },
                                         popExitTransition = { slideOutWithScalePopExit() }
                                     ) {
-                                        TimeScreen()
+                                        TimeScreen(
+                                            mainViewModel = mainViewModel,
+                                            viewModel = timeViewModel,
+                                            setLoading = { isLoading ->
+                                                setLoading(isLoading)
+                                            }
+                                        )
                                     }
 
                                     // Tips
@@ -445,6 +476,8 @@ class MainActivity : ComponentActivity() {
                                                                     mainViewModel.isShowAddKeywordDialog = true
                                                                 } else if (isScheduleScreen) {
                                                                     navController.expandMenuNavigate(ImportCurriculum)
+                                                                } else if (isTimeScreen) {
+                                                                    mainViewModel.updateAppSessionTrigger++
                                                                 }},
                                                             onLongPressStart = {
                                                                 if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED && isModelReady) {

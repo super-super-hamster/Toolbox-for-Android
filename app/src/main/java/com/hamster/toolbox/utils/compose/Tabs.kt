@@ -58,6 +58,8 @@ data class TabItem(
 
 @Composable
 fun Tabs(
+    tabHorizontalPadding: Dp = 0.dp,
+    tabVerticalPadding: Dp = 0.dp,
     tabs: List<TabItem>,
     selectedIndex: Int,
     setSelectedIndex: (Int) -> Unit,
@@ -85,16 +87,18 @@ fun Tabs(
         modifier = modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        SegmentedControl(
-            items = tabs.map { it.title },
-            pagerState = pagerState,
-            selectedIndex = selectedIndex,
-            onItemSelected = { index ->
-                coroutineScope.launch {
-                    pagerState.animateScrollToPage(index)
+        Box(modifier = Modifier.padding(horizontal = tabHorizontalPadding, vertical = tabVerticalPadding)) {
+            SegmentedControl(
+                items = tabs.map { it.title },
+                pagerState = pagerState,
+                selectedIndex = selectedIndex,
+                onItemSelected = { index ->
+                    coroutineScope.launch {
+                        pagerState.animateScrollToPage(index)
+                    }
                 }
-            }
-        )
+            )
+        }
 
         Spacer(modifier = Modifier.height(12.dp))
 
@@ -104,7 +108,7 @@ fun Tabs(
             verticalAlignment = Alignment.Top
         ) { pageIndex ->
             Box(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxWidth().weight(1f),
                 contentAlignment = Alignment.Center,
             ) {
                 tabs[pageIndex].screen()
