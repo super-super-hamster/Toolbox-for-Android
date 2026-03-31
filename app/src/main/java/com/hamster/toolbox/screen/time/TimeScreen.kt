@@ -1,21 +1,21 @@
 package com.hamster.toolbox.screen.time
 
-import androidx.annotation.DrawableRes
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -23,7 +23,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -32,25 +31,35 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.edit
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.preference.PreferenceManager
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.rememberLottieComposition
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
 import com.hamster.toolbox.R
 import com.hamster.toolbox.main.MainViewModel
+import com.hamster.toolbox.utils.compose.ClickItem
 import com.hamster.toolbox.utils.compose.ExplanationItem
 import com.hamster.toolbox.utils.compose.ItemGroup
 import com.hamster.toolbox.utils.compose.PageColumn
-import com.hamster.toolbox.utils.compose.SharedTiltState
 import com.hamster.toolbox.utils.compose.TabItem
 import com.hamster.toolbox.utils.compose.Tabs
 import com.hamster.toolbox.utils.compose.rememberSharedTiltState
+import com.hamster.toolbox.utils.compose.squircleShape
 
 // TODO: 热力图
+// TODO: 处理跨天数据
 
 @Composable
 fun TimeScreen(
@@ -60,10 +69,19 @@ fun TimeScreen(
 ) {
     val sharedTiltState = rememberSharedTiltState()
     val context = LocalContext.current
+    val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
 
     var selectedIndex by remember { mutableIntStateOf(1) }
 
     var hasPermission by remember { mutableStateOf(true) }
+
+    val invisibleAppsSet = prefs.getStringSet("invisible_apps", emptySet())?.toMutableSet() ?: mutableSetOf()
+    val hasInit = prefs.getBoolean("has_init_invisible_apps", false)
+    if (!hasInit) {
+        val initInvisibleSet = setOf("")
+        prefs.edit { putStringSet("invisible_apps", invisibleAppsSet + initInvisibleSet) }
+        prefs.edit { putBoolean("has_init_invisible_apps", true) }
+    }
 
     LaunchedEffect(mainViewModel.updateAppSessionTrigger) {
         if (hasPermission) {
@@ -81,16 +99,13 @@ fun TimeScreen(
         onPauseOrDispose { }
     }
 
-
-    val rawStats by viewModel.currentMonthStats.collectAsState(initial = emptyList())
+    // collectAsStateWithLifecycle 当应用在后台时停止计算
+    val rawStats by viewModel.currentMonthStats.collectAsStateWithLifecycle(initialValue = emptyList())
 
     // 实例化数据转换工厂
     val mapper = remember { AppUsageMapper(context) }
 
-    // ==========================================
-    // 核心优化点：在非主线程（由 derivedStateOf 触发并在 remember 中）进行数据转换
-    // 因为涉及聚合和 PM 查询，不能直接在 LazyColumn 的 item 里做
-    // ==========================================
+    // derivedStateOf 仅在最终计算结果不同时更新
     val usageStateList by remember(rawStats) {
         derivedStateOf {
             mapper.mapAndAggregate(rawStats)
@@ -98,15 +113,16 @@ fun TimeScreen(
     }
 
     val tabsList = listOf(
-        TabItem(title = "年") {
+        TabItem(title = "近12月") {
             YearView()
         },
-        TabItem(title = "月") {
+        TabItem(title = "近30天") {
             MonthView(
+                initialApps = invisibleAppsSet,
                 usageStateList = usageStateList
             )
         },
-        TabItem(title = "日") {
+        TabItem(title = "今天") {
             DayView()
         }
     )
@@ -125,7 +141,8 @@ fun TimeScreen(
         } else {
             Column(
                 modifier = Modifier
-                    .fillMaxWidth().weight(1f),
+                    .fillMaxWidth()
+                    .weight(1f),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -146,13 +163,46 @@ fun YearView() {
 
 @Composable
 fun MonthView(
+    initialApps: Set<String>,
     usageStateList: List<AppUsageState>
 ) {
-        LazyColumn {
-            items(usageStateList, key = { it.packageName}) {
-                UsageItem(appUsageState = it) { }
+    val context = LocalContext.current
+    val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
+
+    // 更新UI
+    var invisibleApps by remember { mutableStateOf(initialApps) }
+
+    var isEditVisible by remember { mutableStateOf(false) }
+
+    LazyColumn {
+        items(usageStateList, key = { it.packageName}) { app ->
+            if (isEditVisible) {
+                UsageSwitchItem(
+                    appUsageState = app,
+                    checked = invisibleApps.contains(app.packageName)
+                ) { isChecked ->
+                    val newSet = invisibleApps.toMutableSet()
+                    if (isChecked) {
+                        newSet.add(app.packageName)
+                    } else {
+                        newSet.remove(app.packageName)
+                    }
+                    invisibleApps = newSet
+                    prefs.edit { putStringSet("invisible_apps", invisibleApps) }
+                }
+            } else {
+                if (invisibleApps.contains(app.packageName)) {
+                    UsageItem(appUsageState = app) { }
+                }
             }
         }
+
+        item {
+            ClickItem(title = if (isEditVisible) "返回" else "编辑可见项", icon = R.drawable.ic_invisible) {
+                isEditVisible = !isEditVisible
+            }
+        }
+    }
 }
 
 @Composable
@@ -175,28 +225,100 @@ fun UsageItem(
         Image(
             painter = rememberDrawablePainter(drawable = appUsageState.icon),
             contentDescription = null,
-            modifier = Modifier.size(48.dp)
+            modifier = Modifier
+                .size(48.dp)
+                .clip(shape = squircleShape),
         )
+
+        Spacer(modifier = Modifier.width(16.dp))
 
         Column(
             modifier = Modifier
                 .weight(1f)
-                .padding(vertical = 4.dp)
+                .height(56.dp)
+                .padding(vertical = 4.dp),
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(text = appUsageState.name, fontSize = 16.sp, color = colorResource(id = R.color.text))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(text = appUsageState.name, fontSize = 16.sp, color = colorResource(R.color.text))
+                Text(text = appUsageState.duration, fontSize = 12.sp, color = colorResource(R.color.text))
+            }
             LinearProgressIndicator(
                 progress = { appUsageState.percentage },
-                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(6.dp)
+                    .padding(bottom = 4.dp),
                 color = colorResource(R.color.mikuGreen),
-                trackColor = Color.Gray,
+                trackColor = Color.Gray.copy(alpha = 0.5f),
             )
         }
+
+        Spacer(modifier = Modifier.width(16.dp))
 
         Icon(
             painter = painterResource(id = R.drawable.arrow_right_bold),
             contentDescription = null,
             modifier = Modifier.size(16.dp),
             tint = colorResource(R.color.icon)
+        )
+    }
+
+    HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
+}
+
+@Composable
+fun UsageSwitchItem(
+    appUsageState: AppUsageState,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.toggle_button_anim))
+
+    // 控制动画进度
+    val progress by animateFloatAsState(
+        targetValue = if (checked) 0.5f else 0f,
+        animationSpec = tween(durationMillis = 800),
+        label = "LottieProgress"
+    )
+
+    val interactionSource = remember { MutableInteractionSource() }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = { onCheckedChange(!checked) }
+            ),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Image(
+            painter = rememberDrawablePainter(drawable = appUsageState.icon),
+            contentDescription = null,
+            modifier = Modifier
+                .size(48.dp)
+                .clip(shape = squircleShape),
+        )
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        Text(
+            text = appUsageState.name,
+            modifier = Modifier.weight(1f),
+            fontSize = 16.sp,
+            color = colorResource(id = R.color.text)
+        )
+
+        LottieAnimation(
+            composition = composition,
+            progress = { progress },
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .height(40.dp)
+                .width(80.dp)
         )
     }
 

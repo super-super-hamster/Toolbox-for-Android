@@ -13,7 +13,9 @@ import com.hamster.toolbox.utils.compose.PageColumn
 import com.hamster.toolbox.utils.compose.rememberSharedTiltState
 
 @Composable
-fun DebugScreen() {
+fun DebugScreen(
+    setLoading: (Boolean) -> Unit
+) {
     val context = LocalContext.current
 
     val sharedTiltState = rememberSharedTiltState()
@@ -23,6 +25,10 @@ fun DebugScreen() {
             ClickItem(title = "通知测试") {
                 val receiver = Receiver()
                 receiver.showNotification(context, "标题", "内容", "按钮文字", null)
+            }
+
+            ClickItem(title = "加载动画测试") {
+                setLoading(true)
             }
 
             ClickItem(title = "设置闹钟测试") {

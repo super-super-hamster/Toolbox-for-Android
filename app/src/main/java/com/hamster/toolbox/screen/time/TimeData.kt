@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.Flow
 import android.content.Context
 import android.graphics.drawable.Drawable
 import androidx.room.Database
+import androidx.room.Index
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
@@ -35,11 +36,11 @@ data class AppUsageState(
 @Dao
 interface UsageStatsDao {
 
-    // 插入新的明细（忽略冲突，因为明细是不断追加的）
+    // 插入新的明细
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertSessions(sessions: List<AppSessionEntity>)
 
-    // 获取近 N 天的明细记录
+    // 获取明细记录
     @Query("SELECT * FROM app_sessions WHERE startTime >= :sinceTime ORDER BY startTime DESC")
     fun getSessionsSince(sinceTime: Long): Flow<List<AppSessionEntity>>
 
@@ -47,13 +48,13 @@ interface UsageStatsDao {
     @Query("DELETE FROM app_sessions WHERE endTime < :thresholdTime")
     suspend fun deleteOldSessions(thresholdTime: Long)
 
-    // 插入或更新每日汇总。如果当天已有该 App 的记录，则替换更新其总时长
+    // 更新每日时长
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrUpdateDailyStats(stats: List<AppDailyEntity>)
 
-    // 获取某个月的所有应用汇总数据（供 Compose 监听）
-    @Query("SELECT * FROM app_daily_stats WHERE yearMonth = :yearMonth ORDER BY totalDurationMillis DESC")
-    fun getDailyStatsByMonth(yearMonth: String): Flow<List<AppDailyEntity>>
+    // 获取近30天的明细数据
+    @Query("SELECT * FROM app_daily_stats WHERE month = :month ORDER BY totalDurationMillis DESC")
+    fun getDailyStatsByMonth(month: Int): Flow<List<AppDailyEntity>>
 
     // 查询某个特定应用过去 N 天的每日数据（用于绘制折线图/柱状图）
     @Query("SELECT * FROM app_daily_stats WHERE packageName = :pkgName AND dateStamp >= :sinceDate ORDER BY dateStamp ASC")
@@ -62,7 +63,7 @@ interface UsageStatsDao {
 
 @Database(
     entities = [AppSessionEntity::class, AppDailyEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppUsageDatabase : RoomDatabase() {
@@ -82,6 +83,7 @@ abstract class AppUsageDatabase : RoomDatabase() {
                 )
                     // 暂时允许在主线程进行少量查询（不推荐，最好全用协程，这里仅为方便开发初期调试）
                     // .allowMainThreadQueries()
+                    .fallbackToDestructiveMigration(true) // 数据库版本冲突时删除旧的数据库
                     .build()
                 INSTANCE = instance
                 instance
@@ -90,7 +92,12 @@ abstract class AppUsageDatabase : RoomDatabase() {
     }
 }
 
-@Entity(tableName = "app_sessions")
+@Entity(
+    tableName = "app_sessions",
+    indices = [
+        Index(value = ["packageName", "startTime"], unique = true) // 依据包名和开始时间去重
+    ]
+)
 data class AppSessionEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0, // 自增主键
@@ -107,6 +114,6 @@ data class AppSessionEntity(
 data class AppDailyEntity(
     val packageName: String,
     val dateStamp: Long,        // 当天凌晨 00:00:00 的时间戳
-    val yearMonth: String,      // 冗余字段，如 "2026-03"，方便按月快速查询
+    val month: Int,             // 冗余字段，方便按月快速查询
     val totalDurationMillis: Long
 )

@@ -14,12 +14,7 @@ import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 
 // 获取时间数据
-suspend fun fetchTime(
-    context: Context,
-    beginTime: Long,
-    endTime: Long
-): List<TimeData> = withContext(Dispatchers.IO) {
-
+suspend fun fetchTime(context: Context, beginTime: Long, endTime: Long): List<TimeData> = withContext(Dispatchers.IO) {
     val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
     val events = usageStatsManager.queryEvents(beginTime, endTime)
 
@@ -97,35 +92,19 @@ fun openSettings(context: Context) {
 class AppUsageMapper(context: Context) {
     val packageManager: PackageManager = context.packageManager
 
-    fun mapAndAggregate(entities: List<AppDailyEntity>): List<AppUsageState> {
+    fun mapAndAggregate(entities: List<AppSessionEntity>): List<AppUsageState> {
         val aggregatedMap = entities.groupBy { it.packageName }
             .mapValues { (_, dayList) ->
-                dayList.sumOf { it.totalDurationMillis }
+                dayList.sumOf { it.durationMillis }
             }
 
         val grandTotalDuration = aggregatedMap.values.sum()
 
-        // 使用 mapNotNull 自动过滤无效应用
         val uiStates = aggregatedMap.mapNotNull { (packageName, totalDuration) ->
             try {
-                // 如果这个包名没有桌面图标，由于 <queries> 限制，这里会直接抛出异常，跳到 catch 块
+                // 如果这个包名没有桌面图标，由于 <queries> 限制，这里会直接抛出异常
                 val info = packageManager.getApplicationInfo(packageName, 0)
 
-                // 可选：如果你连带桌面图标的预装系统应用（如系统日历、计算器）也想过滤掉，保留这段判断
-                val isSystemApp = (info.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0
-
-                // 白名单：如果你想保留某些系统应用，可以在这里放行（例如浏览器、相册）
-                val whiteList = listOf(
-                    "com.android.chrome",
-                    "com.google.android.apps.photos"
-                )
-
-                // 过滤不想统计的系统应用
-                if (isSystemApp && packageName !in whiteList) {
-                    return@mapNotNull null
-                }
-
-                // 获取应用名称和图标
                 val appName = packageManager.getApplicationLabel(info).toString()
                 val appIcon = packageManager.getApplicationIcon(info)
 
@@ -138,8 +117,8 @@ class AppUsageMapper(context: Context) {
                     percentage = if (grandTotalDuration > 0) totalDuration.toFloat() / grandTotalDuration else 0f
                 )
 
-            } catch (e: android.content.pm.PackageManager.NameNotFoundException) {
-                // 完美利用限制：看不到的应用（如底层服务）直接返回 null，不显示在列表中
+            } catch (_: PackageManager.NameNotFoundException) {
+                // 没有图标的应用，如底层服务将返回空
                 return@mapNotNull null
             }
         }
@@ -147,9 +126,7 @@ class AppUsageMapper(context: Context) {
         return uiStates.sortedByDescending { it.durationMillis }
     }
 
-    /**
-     * 辅助函数：将毫秒转换成“X小时 Y分钟”
-     */
+    // 毫秒转小时分钟
     private fun formatMillis(millis: Long): String {
         val hours = TimeUnit.MILLISECONDS.toHours(millis)
         val minutes = TimeUnit.MILLISECONDS.toMinutes(millis) - TimeUnit.HOURS.toMinutes(hours)

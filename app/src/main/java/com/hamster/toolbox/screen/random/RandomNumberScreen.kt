@@ -52,6 +52,8 @@ import kotlin.math.max
 import kotlin.math.min
 import android.graphics.Color as AndroidColor
 
+// TODO: 合并为一个卡片
+
 @Composable
 fun RandomNumberScreen() {
     val context = LocalContext.current

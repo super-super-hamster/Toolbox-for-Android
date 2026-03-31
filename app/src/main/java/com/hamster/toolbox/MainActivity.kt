@@ -250,7 +250,7 @@ class MainActivity : ComponentActivity() {
 
             val isSetKeyWordsScreen = currentDestination?.hierarchy?.any { it.hasRoute<SetKeywords>() } == true
             val isScheduleScreen = currentDestination?.hierarchy?.any { it.hasRoute<Schedule>() } == true
-            val isTimeScreen = currentDestination?.hierarchy?.any { it.hasRoute<Schedule>() } == true
+            val isTimeScreen = currentDestination?.hierarchy?.any { it.hasRoute<Time>() } == true
 
             // 拦截返回事件
             if (isMenuExpanded || showLoading) {
@@ -365,7 +365,9 @@ class MainActivity : ComponentActivity() {
                                         popEnterTransition = { scaleInPopEnter() },
                                         popExitTransition = { slideOutWithScalePopExit() }
                                     ) {
-                                        DebugScreen()
+                                        DebugScreen(
+                                            setLoading = { setLoading(it) }
+                                        )
                                     }
                                 }
 
