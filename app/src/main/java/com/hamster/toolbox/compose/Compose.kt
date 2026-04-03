@@ -1,4 +1,4 @@
-package com.hamster.toolbox.utils.compose
+package com.hamster.toolbox.compose
 
 import android.app.ActivityManager
 import android.content.Context

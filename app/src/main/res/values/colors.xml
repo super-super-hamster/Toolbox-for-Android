@@ -44,6 +44,7 @@
     <color name="item_group_card">#FFFFFFFF</color>
     <color name="item_group_card_shadow">#393939</color>
     <color name="bg_dialog">#FFFFFFFF</color>
+    <color name="bg_on_dialog">#F4F4F5</color>
     <color name="bg_bottom_sheet">#FFFFFFFF</color>
     <color name="explanation_text">#393939</color>
     <color name="bg_explanation">#E6E6E8</color>

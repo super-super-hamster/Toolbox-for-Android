@@ -30,7 +30,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -49,7 +48,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.intl.LocaleList
 import androidx.compose.ui.unit.dp
-import androidx.preference.PreferenceManager
 import coil.compose.AsyncImage
 import com.hamster.toolbox.Debug
 import com.hamster.toolbox.GameConsole
@@ -63,14 +61,18 @@ import com.hamster.toolbox.Time
 import com.hamster.toolbox.Tips
 import com.hamster.toolbox.ai.AI
 import com.hamster.toolbox.ai.Message
-import com.hamster.toolbox.utils.compose.TabItem
-import com.hamster.toolbox.utils.compose.Tabs
-import com.hamster.toolbox.utils.compose.assistantBubbleShape
-import com.hamster.toolbox.utils.compose.rememberStringPreference
-import com.hamster.toolbox.utils.compose.squircleShape
-import com.hamster.toolbox.utils.compose.userBubbleShape
+import com.hamster.toolbox.compose.TabItem
+import com.hamster.toolbox.compose.Tabs
+import com.hamster.toolbox.compose.assistantBubbleShape
+import com.hamster.toolbox.compose.rememberStringPreference
+import com.hamster.toolbox.compose.squircleShape
+import com.hamster.toolbox.compose.userBubbleShape
 import kotlinx.coroutines.launch
 import java.io.File
+
+// TODO: 优化菜单栏
+// TODO: 助手下滑关闭菜单栏
+// TODO: 上滑开启菜单栏
 
 @Composable
 fun ExpandedBottomMenu(

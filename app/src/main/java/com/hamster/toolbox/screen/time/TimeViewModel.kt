@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import java.time.Duration
 import java.time.Instant
@@ -43,7 +44,7 @@ class TimeViewModel(private val dao: UsageStatsDao) : ViewModel() {
 
             // 插入按天保存的数据
             val dailyStatsList = aggregateSessionsToDaily(rawSessions)
-            dao.insertOrUpdateDailyStats(dailyStatsList)
+            dao.updateDailyStats(dailyStatsList)
 
             // 清理30天前的详细时间数据
              calendar.timeInMillis = System.currentTimeMillis()
@@ -74,6 +75,23 @@ class TimeViewModel(private val dao: UsageStatsDao) : ViewModel() {
                 totalDurationMillis = totalDuration
             )
         }
+    }
+
+    // 获取过去30天的使用时长
+    fun getMonthUsageTime(packageName: String?): Flow<List<AppDailyEntity>> {
+        if (packageName == null) {
+            return flowOf(emptyList())
+        }
+
+        val calendar = Calendar.getInstance()
+        // 获取 30 天前凌晨 0 点的时间戳
+        calendar.add(Calendar.DAY_OF_YEAR, -30)
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+
+        return dao.getAppDailyStats(packageName, calendar.timeInMillis)
     }
 
     // 一天开始的时间戳

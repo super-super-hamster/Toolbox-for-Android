@@ -9,11 +9,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.dimensionResource
 import com.hamster.toolbox.R
-import com.hamster.toolbox.utils.compose.ClickItem
-import com.hamster.toolbox.utils.compose.ExplanationItem
-import com.hamster.toolbox.utils.compose.ItemGroup
-import com.hamster.toolbox.utils.compose.PageColumn
-import com.hamster.toolbox.utils.compose.rememberSharedTiltState
+import com.hamster.toolbox.compose.ExplanationItem
+import com.hamster.toolbox.compose.ItemGroup
+import com.hamster.toolbox.compose.PageColumn
+import com.hamster.toolbox.compose.rememberSharedTiltState
 
 @Composable
 fun AssistantTipsScreen() {

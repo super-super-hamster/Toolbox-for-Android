@@ -4,10 +4,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.hamster.toolbox.utils.compose.ExplanationItem
-import com.hamster.toolbox.utils.compose.ItemGroup
-import com.hamster.toolbox.utils.compose.PageColumn
-import com.hamster.toolbox.utils.compose.rememberSharedTiltState
+import com.hamster.toolbox.compose.ExplanationItem
+import com.hamster.toolbox.compose.ItemGroup
+import com.hamster.toolbox.compose.PageColumn
+import com.hamster.toolbox.compose.rememberSharedTiltState
 
 @Composable
 fun ScheduleTipsScreen() {

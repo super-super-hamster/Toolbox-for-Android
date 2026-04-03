@@ -7,7 +7,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -29,7 +28,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
@@ -43,16 +41,14 @@ import androidx.preference.PreferenceManager
 import com.aigestudio.wheelpicker.WheelPicker
 import com.aigestudio.wheelpicker.compose.WheelPickerComposable
 import com.hamster.toolbox.R
-import com.hamster.toolbox.utils.compose.ItemCard
-import com.hamster.toolbox.utils.compose.PageColumn
-import com.hamster.toolbox.utils.compose.rememberSharedTiltState
-import com.hamster.toolbox.utils.compose.squircleShape
+import com.hamster.toolbox.compose.ItemGroup
+import com.hamster.toolbox.compose.PageColumn
+import com.hamster.toolbox.compose.rememberSharedTiltState
+import com.hamster.toolbox.compose.squircleShape
 import kotlinx.coroutines.delay
 import kotlin.math.max
 import kotlin.math.min
 import android.graphics.Color as AndroidColor
-
-// TODO: 合并为一个卡片
 
 @Composable
 fun RandomNumberScreen() {
@@ -102,58 +98,49 @@ fun RandomNumberScreen() {
     val sharedTiltState = rememberSharedTiltState()
 
     PageColumn(sharedTiltState = sharedTiltState) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            ItemCard(titleState = sharedTiltState, modifier = Modifier.weight(1f), endPadding = 5.dp) {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    WheelPickerComposable(
-                        data = data,
-                        selectedItemPosition = selectedMin,
-                        onItemSelected = { _, _, position ->
-                            selectedMin = position },
-                        modifier = Modifier.fillMaxHeight(),
-                        factory = {
-                            isCurved = true // 3D效果
-                            isCyclic = true // 循环滚动
-                            visibleItemCount = 7
-                            selectedItemTextColor = AndroidColor.BLACK
-                            isAtmospheric = true // 边缘透明
-                            setOnWheelChangeListener(object : WheelPicker.OnWheelChangeListener {
-                                // 记录上一次的索引
-                                var lastIndex = 0
-                                override fun onWheelScrolled(offset: Int) {
-                                    val itemHeight = if (visibleItemCount > 0) height / visibleItemCount else 0
-                                    if (itemHeight > 0) {
-                                        val currentIndex = -offset / itemHeight
-                                        if (currentIndex != lastIndex) {
-                                            lastIndex = currentIndex
-                                            // 触发震动
-                                            performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                                        }
+        ItemGroup(titleState = sharedTiltState, modifier = Modifier.weight(1f)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                WheelPickerComposable(
+                    data = data,
+                    selectedItemPosition = selectedMin,
+                    onItemSelected = { _, _, position ->
+                        selectedMin = position },
+                    modifier = Modifier.fillMaxHeight().weight(1f),
+                    factory = {
+                        isCurved = true // 3D效果
+                        isCyclic = true // 循环滚动
+                        visibleItemCount = 7
+                        selectedItemTextColor = AndroidColor.BLACK
+                        isAtmospheric = true // 边缘透明
+                        setOnWheelChangeListener(object : WheelPicker.OnWheelChangeListener {
+                            // 记录上一次的索引
+                            var lastIndex = 0
+                            override fun onWheelScrolled(offset: Int) {
+                                val itemHeight = if (visibleItemCount > 0) height / visibleItemCount else 0
+                                if (itemHeight > 0) {
+                                    val currentIndex = -offset / itemHeight
+                                    if (currentIndex != lastIndex) {
+                                        lastIndex = currentIndex
+                                        // 触发震动
+                                        performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                                     }
                                 }
-                                override fun onWheelSelected(position: Int) {
-                                    selectedMax = max(selectedMax, selectedMin)
-                                }
-                                override fun onWheelScrollStateChanged(state: Int) {
-                                    canGenerate = state != WheelPicker.SCROLL_STATE_IDLE
-                                }
-                            })
-                        }
-                    )
-                }
-            }
+                            }
+                            override fun onWheelSelected(position: Int) {
+                                selectedMax = max(selectedMax, selectedMin)
+                            }
+                            override fun onWheelScrollStateChanged(state: Int) {
+                                canGenerate = state != WheelPicker.SCROLL_STATE_IDLE
+                            }
+                        })
+                    }
+                )
 
-            ItemCard(titleState = sharedTiltState, modifier = Modifier.weight(2.25f)) {
-                Box(modifier = Modifier.fillMaxSize()) {
+                Box(modifier = Modifier.fillMaxHeight().weight(1f)) {
                     Row(
                         modifier = Modifier
                             .align(Alignment.Center)
@@ -161,7 +148,7 @@ fun RandomNumberScreen() {
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
-                        Text("≤", fontSize = (36 * textScale).sp, modifier = Modifier.padding(start = 8.dp))
+                        Text("≤", fontSize = (36 * textScale).sp)
                         Text(
                             text = randomNumber.toString(),
                             fontSize = (54 * textScale).sp,
@@ -171,7 +158,7 @@ fun RandomNumberScreen() {
                             style = TextStyle(fontFeatureSettings = "tnum"), // 等宽字体
                             textAlign = TextAlign.Center
                         )
-                        Text("≤", fontSize = (36 * textScale).sp, modifier = Modifier.padding(end = 8.dp))
+                        Text("≤", fontSize = (36 * textScale).sp)
                     }
 
                     Button(
@@ -179,7 +166,7 @@ fun RandomNumberScreen() {
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .height(80.dp)
-                            .fillMaxWidth(0.9f)
+                            .fillMaxWidth()
                             .padding(bottom = 20.dp)
                             .graphicsLayer {
                                 scaleX = scale.value
@@ -208,46 +195,38 @@ fun RandomNumberScreen() {
                     }
 
                 }
-            }
 
-            ItemCard(titleState = sharedTiltState, modifier = Modifier.weight(1f), startPadding = 5.dp) {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    WheelPickerComposable(
-                        data = data,
-                        selectedItemPosition = selectedMax,
-                        onItemSelected = { _, _, position ->
-                            selectedMax = position },
-                        modifier = Modifier.fillMaxHeight(),
-                        factory = {
-                            isCurved = true
-                            isCyclic = true
-                            visibleItemCount = 7
-                            selectedItemTextColor = AndroidColor.BLACK
-                            isAtmospheric = true
-                            setOnWheelChangeListener(object : WheelPicker.OnWheelChangeListener {
-                                var lastIndex = 0
-                                override fun onWheelScrolled(offset: Int) {
-                                    val itemHeight = if (visibleItemCount > 0) height / visibleItemCount else 0
-                                    if (itemHeight > 0) {
-                                        val currentIndex = -offset / itemHeight
-                                        if (currentIndex != lastIndex) {
-                                            lastIndex = currentIndex
-                                            performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                                        }
+                WheelPickerComposable(
+                    data = data,
+                    selectedItemPosition = selectedMax,
+                    onItemSelected = { _, _, position ->
+                        selectedMax = position },
+                    modifier = Modifier.fillMaxHeight().weight(1f),
+                    factory = {
+                        isCurved = true
+                        isCyclic = true
+                        visibleItemCount = 7
+                        selectedItemTextColor = AndroidColor.BLACK
+                        isAtmospheric = true
+                        setOnWheelChangeListener(object : WheelPicker.OnWheelChangeListener {
+                            var lastIndex = 0
+                            override fun onWheelScrolled(offset: Int) {
+                                val itemHeight = if (visibleItemCount > 0) height / visibleItemCount else 0
+                                if (itemHeight > 0) {
+                                    val currentIndex = -offset / itemHeight
+                                    if (currentIndex != lastIndex) {
+                                        lastIndex = currentIndex
+                                        performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                                     }
                                 }
-                                override fun onWheelSelected(position: Int) {
-                                    selectedMin = min(selectedMin, selectedMax)
-                                }
-                                override fun onWheelScrollStateChanged(state: Int) {}
-                            })
-                        }
-                    )
-                }
+                            }
+                            override fun onWheelSelected(position: Int) {
+                                selectedMin = min(selectedMin, selectedMax)
+                            }
+                            override fun onWheelScrollStateChanged(state: Int) {}
+                        })
+                    }
+                )
             }
         }
     }

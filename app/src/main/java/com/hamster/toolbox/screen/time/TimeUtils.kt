@@ -69,7 +69,7 @@ fun permissionCheck(context: Context): Boolean {
     val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
         appOps.unsafeCheckOpNoThrow(
             AppOpsManager.OPSTR_GET_USAGE_STATS,
-            android.os.Process.myUid(),
+            Process.myUid(),
             context.packageName
         )
     } else {
@@ -125,16 +125,16 @@ class AppUsageMapper(context: Context) {
 
         return uiStates.sortedByDescending { it.durationMillis }
     }
+}
 
-    // 毫秒转小时分钟
-    private fun formatMillis(millis: Long): String {
-        val hours = TimeUnit.MILLISECONDS.toHours(millis)
-        val minutes = TimeUnit.MILLISECONDS.toMinutes(millis) - TimeUnit.HOURS.toMinutes(hours)
+// 毫秒转小时分钟
+fun formatMillis(millis: Long): String {
+    val hours = TimeUnit.MILLISECONDS.toHours(millis)
+    val minutes = TimeUnit.MILLISECONDS.toMinutes(millis) - TimeUnit.HOURS.toMinutes(hours)
 
-        return when {
-            hours > 0 -> "${hours}小时 ${minutes}分钟"
-            minutes > 0 -> "${minutes}分钟"
-            else -> "< 1分钟"
-        }
+    return when {
+        hours > 0 -> "${hours}小时 ${minutes}分钟"
+        minutes > 0 -> "${minutes}分钟"
+        else -> "< 1分钟"
     }
 }

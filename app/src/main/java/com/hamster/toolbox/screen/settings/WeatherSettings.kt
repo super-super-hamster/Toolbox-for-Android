@@ -14,12 +14,12 @@ import androidx.preference.PreferenceManager
 import com.hamster.toolbox.R
 import com.hamster.toolbox.Route
 import com.hamster.toolbox.WeatherTips
-import com.hamster.toolbox.utils.compose.ClickItem
-import com.hamster.toolbox.utils.compose.EditTextItem
-import com.hamster.toolbox.utils.compose.ItemGroup
-import com.hamster.toolbox.utils.compose.PageColumn
-import com.hamster.toolbox.utils.compose.rememberSharedTiltState
-import com.hamster.toolbox.utils.compose.rememberStringPreference
+import com.hamster.toolbox.compose.ClickItem
+import com.hamster.toolbox.compose.EditTextItem
+import com.hamster.toolbox.compose.ItemGroup
+import com.hamster.toolbox.compose.PageColumn
+import com.hamster.toolbox.compose.rememberSharedTiltState
+import com.hamster.toolbox.compose.rememberStringPreference
 
 @Composable
 fun WeatherSettings(

@@ -33,7 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hamster.toolbox.R
-import com.hamster.toolbox.utils.compose.squircleShape
+import com.hamster.toolbox.compose.squircleShape
 
 @Composable
 fun Handle (onInput: (ConsoleInput) -> Unit) {

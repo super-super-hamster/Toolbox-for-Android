@@ -24,13 +24,16 @@ data class TimeData(
     @SerializedName("durationMillis") val durationMillis: Long
 )
 
+// TODO: 验证是否开启代码混淆
+
+@Keep
 data class AppUsageState(
-    val packageName: String,
-    val name: String,
-    val icon: Drawable?,
-    val durationMillis: Long,
-    val duration: String,       // 格式化后的时间
-    val percentage: Float       // 总时长的百分比
+    @SerializedName("packageName") val packageName: String,
+    @SerializedName("name") val name: String,
+    @SerializedName("icon") val icon: Drawable?,
+    @SerializedName("durationMillis") val durationMillis: Long,
+    @SerializedName("duration") val duration: String,        // 格式化后的时间
+    @SerializedName("percentage") val percentage: Float      // 总时长的百分比
 )
 
 @Dao
@@ -50,15 +53,11 @@ interface UsageStatsDao {
 
     // 更新每日时长
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertOrUpdateDailyStats(stats: List<AppDailyEntity>)
+    suspend fun updateDailyStats(stats: List<AppDailyEntity>)
 
-    // 获取近30天的明细数据
-    @Query("SELECT * FROM app_daily_stats WHERE month = :month ORDER BY totalDurationMillis DESC")
-    fun getDailyStatsByMonth(month: Int): Flow<List<AppDailyEntity>>
-
-    // 查询某个特定应用过去 N 天的每日数据（用于绘制折线图/柱状图）
-    @Query("SELECT * FROM app_daily_stats WHERE packageName = :pkgName AND dateStamp >= :sinceDate ORDER BY dateStamp ASC")
-    fun getAppDailyTrend(pkgName: String, sinceDate: Long): Flow<List<AppDailyEntity>>
+    // 查询某个应用过去的每日数据
+    @Query("SELECT * FROM app_daily_stats WHERE packageName = :packageName AND dateStamp >= :sinceDate ORDER BY dateStamp ASC")
+    fun getAppDailyStats(packageName: String, sinceDate: Long): Flow<List<AppDailyEntity>>
 }
 
 @Database(

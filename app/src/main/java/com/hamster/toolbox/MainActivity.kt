@@ -10,7 +10,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.ActivityResultCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
@@ -95,9 +94,9 @@ import com.hamster.toolbox.screen.time.TimeScreen
 import com.hamster.toolbox.screen.time.TimeViewModel
 import com.hamster.toolbox.screen.time.provideTimeViewModelFactory
 import com.hamster.toolbox.screen.tips.tipsGraph
-import com.hamster.toolbox.utils.compose.AnimationButton
-import com.hamster.toolbox.utils.compose.ButtonPro
-import com.hamster.toolbox.utils.compose.squircleShape
+import com.hamster.toolbox.compose.AnimationButton
+import com.hamster.toolbox.compose.ButtonPro
+import com.hamster.toolbox.compose.squircleShape
 import com.hamster.toolbox.utils.prompt.PromptLoader
 import com.hamster.toolbox.utils.scaleInPopEnter
 import com.hamster.toolbox.utils.scaleOutExit
@@ -122,7 +121,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlin.random.Random
 
 // TODO: 天气,向下滑动天气透明度逐渐降低
 // TODO: 通知栏字体颜色适配
@@ -136,21 +134,21 @@ class MainActivity : ComponentActivity() {
     private var isModelReady = false
     private val mainViewModel: MainViewModel by viewModels()
 
-//    private val requestAudioPermissionLauncher = registerForActivityResult(
-//        ActivityResultContracts.RequestPermission()
-//    ) { isGranted: Boolean ->
-//        Log.d("fuck", isGranted.toString())
-//    }
-
     private val requestAudioPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission(),
-        // ✅ 彻底避开 SAM 转换 Bug 的写法
-        object : ActivityResultCallback<Boolean> {
-            override fun onActivityResult(isGranted: Boolean) {
-                // 这里即使空着什么都不写，编译器也不会崩溃了
-            }
-        }
-    )
+        ActivityResultContracts.RequestPermission()
+    ) { _: Boolean ->
+//        Log.d("fuck", isGranted.toString())
+    }
+
+//    private val requestAudioPermissionLauncher = registerForActivityResult(
+//        ActivityResultContracts.RequestPermission(),
+//        // ✅ 彻底避开 SAM 转换 Bug 的写法
+//        object : ActivityResultCallback<Boolean> {
+//            override fun onActivityResult(isGranted: Boolean) {
+//                // 这里即使空着什么都不写，编译器也不会崩溃了
+//            }
+//        }
+//    )
 
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     @OptIn(ExperimentalMaterial3Api::class, ExperimentalHazeMaterialsApi::class)

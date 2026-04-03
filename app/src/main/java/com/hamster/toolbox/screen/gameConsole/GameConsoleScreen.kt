@@ -26,8 +26,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.hamster.toolbox.R
-import com.hamster.toolbox.utils.compose.glow
-import com.hamster.toolbox.utils.compose.squircleShape
+import com.hamster.toolbox.compose.glow
+import com.hamster.toolbox.compose.squircleShape
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch

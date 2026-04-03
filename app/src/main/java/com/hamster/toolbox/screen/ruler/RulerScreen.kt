@@ -31,7 +31,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.sp
 import androidx.core.content.edit
 import androidx.preference.PreferenceManager
-import com.hamster.toolbox.utils.compose.EditTextDialog
+import com.hamster.toolbox.compose.EditTextDialog
 
 @Composable
 fun RulerScreen() {
