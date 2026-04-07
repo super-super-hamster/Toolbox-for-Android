@@ -46,10 +46,10 @@ fun NavGraphBuilder.settingsGraph(
         ) {
             ImportCurriculumScreen(
                 onShowLoading = { isShowLoading ->
-                    // TODO: 显示加载动画
+                    setLoading(isShowLoading)
                 },
                 onNavigateToSettings = {
-                    // TODO：导航回settings
+                    navController.navigate(Settings)
                 },
                 onNavigate = { navController.navigate(it) },
             )

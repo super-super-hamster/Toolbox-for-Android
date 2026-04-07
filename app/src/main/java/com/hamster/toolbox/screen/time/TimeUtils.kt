@@ -9,8 +9,12 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Process
 import android.provider.Settings
+import androidx.compose.ui.graphics.Color
+import com.hamster.toolbox.utils.drawableToBitmap
+import com.hamster.toolbox.utils.getMainColor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
 // 获取时间数据
@@ -92,13 +96,15 @@ fun openSettings(context: Context) {
 class AppUsageMapper(context: Context) {
     val packageManager: PackageManager = context.packageManager
 
-    fun mapAndAggregate(entities: List<AppSessionEntity>): List<AppUsageState> {
+    private val colorCache = mutableMapOf<String, Color>()
+
+    fun mapAndAggregate(entities: List<AppDailyEntity>): List<AppUsageState> {
         val aggregatedMap = entities.groupBy { it.packageName }
             .mapValues { (_, dayList) ->
-                dayList.sumOf { it.durationMillis }
+                dayList.sumOf { it.totalDurationMillis }
             }
 
-        val grandTotalDuration = aggregatedMap.values.sum()
+        val maxDuration = aggregatedMap.values.maxOrNull() ?: 0
 
         val uiStates = aggregatedMap.mapNotNull { (packageName, totalDuration) ->
             try {
@@ -114,7 +120,7 @@ class AppUsageMapper(context: Context) {
                     icon = appIcon,
                     durationMillis = totalDuration,
                     duration = formatMillis(totalDuration),
-                    percentage = if (grandTotalDuration > 0) totalDuration.toFloat() / grandTotalDuration else 0f
+                    percentage = if (maxDuration > 0) totalDuration.toFloat() / maxDuration else 0f
                 )
 
             } catch (_: PackageManager.NameNotFoundException) {
@@ -124,6 +130,46 @@ class AppUsageMapper(context: Context) {
         }
 
         return uiStates.sortedByDescending { it.durationMillis }
+    }
+
+    fun dailyMapAndAggregate(entities: List<AppSessionEntity>): List<DailyAppUsageState> {
+        val result = entities.mapNotNull { app ->
+            try {
+                if (app.durationMillis <= 60000) {
+                    return@mapNotNull null
+                }
+
+                val info = packageManager.getApplicationInfo(app.packageName, 0)
+
+                val appName = packageManager.getApplicationLabel(info).toString()
+                val appIcon = packageManager.getApplicationIcon(info)
+                val mainColor = colorCache[appName] ?: run {
+                    val bitmap = drawableToBitmap(appIcon)
+                    val extractedColor = getMainColor(bitmap)
+                    colorCache[appName] = extractedColor
+                    extractedColor
+                }
+
+                DailyAppUsageState(
+                    packageName = app.packageName,
+                    name = appName,
+                    icon = appIcon,
+                    durationMillis = app.durationMillis,
+                    duration = formatMillis(app.durationMillis),
+                    startTime = app.startTime - getStartOfDay(app.startTime),
+                    endTime = app.endTime - getStartOfDay(app.startTime),
+                    color = mainColor
+                )
+
+            } catch (_: PackageManager.NameNotFoundException) {
+                null
+            }
+        }
+
+        return result.sortedWith(
+            compareBy<DailyAppUsageState> { it.startTime }
+                .thenByDescending { it.endTime }
+        )
     }
 }
 
@@ -137,4 +183,16 @@ fun formatMillis(millis: Long): String {
         minutes > 0 -> "${minutes}分钟"
         else -> "< 1分钟"
     }
+}
+
+// 一天开始的时间戳
+fun getStartOfDay(timestamp: Long): Long {
+    val calendar = Calendar.getInstance().apply {
+        timeInMillis = timestamp
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }
+    return calendar.timeInMillis
 }

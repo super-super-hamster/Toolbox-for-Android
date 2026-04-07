@@ -4,10 +4,11 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Matrix
-import android.os.Build
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Drawable
 import android.widget.Toast
-import androidx.annotation.RequiresApi
 import androidx.compose.animation.Animatable
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
@@ -25,6 +26,8 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.core.graphics.ColorUtils
+import androidx.core.graphics.createBitmap
+import androidx.palette.graphics.Palette
 import androidx.preference.PreferenceManager
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -66,6 +69,37 @@ class ScrollTarget {
             e.printStackTrace()
         }
     }
+}
+
+fun getMainColor(bitmap: Bitmap): Color {
+    return try {
+        val palette = Palette.from(bitmap).generate()
+
+        val colorInt = palette.getVibrantColor(
+            palette.getDominantColor(android.graphics.Color.LTGRAY)
+        )
+
+        Color(colorInt)
+    } catch (_: Exception) {
+        Color.LightGray
+    }
+}
+
+fun drawableToBitmap(drawable: Drawable): Bitmap {
+    if (drawable is BitmapDrawable) {
+        return drawable.bitmap
+    }
+
+    // 处理 AdaptiveIconDrawable (Android 8.0+) 或 VectorDrawable
+    val width = if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth else 100
+    val height = if (drawable.intrinsicHeight > 0) drawable.intrinsicHeight else 100
+
+    val bitmap = createBitmap(width, height)
+    val canvas = Canvas(bitmap)
+    drawable.setBounds(0, 0, canvas.width, canvas.height)
+    drawable.draw(canvas)
+
+    return bitmap
 }
 
 //通过现实时间获取时间戳

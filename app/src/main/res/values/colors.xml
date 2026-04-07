@@ -64,4 +64,6 @@
     <color name="assistant_bubble">#7AC4BF</color>
 
     <color name="audio_spectrum">#0089A7</color>
+
+    <color name="heatmap_empty">#F5F5F5</color>
 </resources>

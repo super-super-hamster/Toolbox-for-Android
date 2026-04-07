@@ -123,6 +123,7 @@ dependencies {
     implementation("androidx.room:room-ktx:2.8.4")
     kapt("androidx.room:room-compiler:2.8.4")
     implementation("com.google.accompanist:accompanist-drawablepainter:0.37.3")
+    implementation("androidx.palette:palette-ktx:1.0.0")
     implementation(files("libs/sherpa-onnx.aar"))
 //    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar", "*.aar"))))
 }

@@ -166,34 +166,6 @@ fun ItemGroup(
 }
 
 @Composable
-fun ItemCard(
-    modifier: Modifier = Modifier,
-    startPadding: Dp = 20.dp,
-    endPadding: Dp = 20.dp,
-    topPadding: Dp = 1.dp,
-    bottomPadding: Dp = 1.dp,
-    titleState: SharedTiltState,
-    content: @Composable () -> Unit
-) {
-    Card(
-        modifier = modifier
-            .padding(start = startPadding, end = endPadding, top = topPadding, bottom = bottomPadding)
-            .applySharedTilt(titleState)
-            .shadow(
-                elevation = 2.dp,
-                shape = squircleShape,
-                clip = false,
-                spotColor = colorResource(id = R.color.item_group_card_shadow),
-                ambientColor = colorResource(id = R.color.item_group_card_shadow)
-            ),
-        colors = CardDefaults.cardColors(containerColor = colorResource(R.color.item_group_card)),
-        shape = squircleShape,
-    ) {
-        content()
-    }
-}
-
-@Composable
 fun ClickItem(
     modifier: Modifier = Modifier,
     title: String,

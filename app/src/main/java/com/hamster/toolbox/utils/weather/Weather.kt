@@ -41,8 +41,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.util.Locale
 
-// TODO: 显示当前位置，且可供修改
-
 @Composable
 fun Weather(
     onClick: () -> Unit

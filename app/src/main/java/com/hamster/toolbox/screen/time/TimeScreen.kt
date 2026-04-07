@@ -4,26 +4,32 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -38,9 +44,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.edit
@@ -52,9 +63,9 @@ import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
 import com.hamster.toolbox.R
-import com.hamster.toolbox.main.MainViewModel
 import com.hamster.toolbox.compose.ClickItem
 import com.hamster.toolbox.compose.ExplanationItem
+import com.hamster.toolbox.compose.Heatmap
 import com.hamster.toolbox.compose.HorizontalLine
 import com.hamster.toolbox.compose.ItemGroup
 import com.hamster.toolbox.compose.LineChart
@@ -64,12 +75,12 @@ import com.hamster.toolbox.compose.Tabs
 import com.hamster.toolbox.compose.rememberBooleanPreference
 import com.hamster.toolbox.compose.rememberSharedTiltState
 import com.hamster.toolbox.compose.squircleShape
+import com.hamster.toolbox.main.MainViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.roundToInt
 
-// TODO: 热力图
-// TODO: 处理跨天数据
 // TODO: 进入时卡顿
 
 @Composable
@@ -82,7 +93,7 @@ fun TimeScreen(
     val context = LocalContext.current
     val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
 
-    var selectedIndex by remember { mutableIntStateOf(1) }
+    var selectedIndex by remember { mutableIntStateOf(2) }
     var hasPermission by remember { mutableStateOf(true) }
 
     var showPackageName by rememberBooleanPreference("super_hamster_show_package_name", false)
@@ -107,6 +118,7 @@ fun TimeScreen(
             "com.vivo.smartshot")
         prefs.edit { putStringSet("invisible_apps", invisibleAppsSet + initInvisibleSet) }
         prefs.edit { putBoolean("has_init_invisible_apps", true) }
+        invisibleAppsSet += initInvisibleSet
     }
 
     LaunchedEffect(mainViewModel.updateAppSessionTrigger) {
@@ -126,32 +138,65 @@ fun TimeScreen(
     }
 
     // collectAsStateWithLifecycle 当应用在后台时停止计算
-    val rawStats by viewModel.currentMonthStats.collectAsStateWithLifecycle(initialValue = emptyList())
+    val monthRawStats by viewModel.currentMonthStats.collectAsStateWithLifecycle(initialValue = emptyList())
+    val yearRawStats by viewModel.currentYearStats.collectAsStateWithLifecycle(initialValue = emptyList())
+    val dayRowStats by viewModel.currentDayStats.collectAsStateWithLifecycle(initialValue = emptyList())
 
     // 实例化数据转换工厂
     val mapper = remember { AppUsageMapper(context) }
 
     // derivedStateOf 仅在最终计算结果不同时更新
-    val usageStateList by remember(rawStats) {
+    val monthUsageStateList by remember(monthRawStats) {
         derivedStateOf {
-            mapper.mapAndAggregate(rawStats)
+            mapper.mapAndAggregate(monthRawStats)
         }
+    }
+    val yearUsageStateList by remember(yearRawStats) {
+        derivedStateOf {
+            mapper.mapAndAggregate(yearRawStats)
+        }
+    }
+    val dayUsageStateList by remember(dayRowStats) {
+        derivedStateOf {
+            mapper.dailyMapAndAggregate(dayRowStats)
+        }
+    }
+
+    val maxMonthUsageDuration = remember(monthUsageStateList, invisibleAppsSet) {
+        monthUsageStateList
+            .filter { !invisibleAppsSet.contains(it.packageName) }
+            .maxOfOrNull { it.durationMillis } ?: 0L
+    }
+
+    val maxYearUsageDuration = remember(yearUsageStateList, invisibleAppsSet) {
+        yearUsageStateList
+            .filter { !invisibleAppsSet.contains(it.packageName) }
+            .maxOfOrNull { it.durationMillis } ?: 0L
     }
 
     val tabsList = listOf(
         TabItem(title = "近12月") {
-            YearView()
+            YearView(
+                viewModel = viewModel,
+                showPackageName = showPackageName,
+                initialApps = invisibleAppsSet,
+                usageStateList = yearUsageStateList,
+                maxDuration = maxYearUsageDuration
+            )
         },
         TabItem(title = "近30天") {
             MonthView(
                 viewModel = viewModel,
                 showPackageName = showPackageName,
                 initialApps = invisibleAppsSet,
-                usageStateList = usageStateList
+                usageStateList = monthUsageStateList,
+                maxDuration = maxMonthUsageDuration
             )
         },
         TabItem(title = "今天") {
-            DayView()
+            DayView(
+                usageStateList = dayUsageStateList
+            )
         }
     )
 
@@ -185,28 +230,117 @@ fun TimeScreen(
 }
 
 @Composable
-fun YearView() {
-
-}
-
-@Composable
-fun MonthView(
+fun YearView(
+    maxDuration: Long,
     viewModel: TimeViewModel,
     showPackageName: Boolean = false,
     initialApps: Set<String>,
     usageStateList: List<AppUsageState>
 ) {
-    val context = LocalContext.current
-    val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
+    var selectedApp by remember { mutableStateOf<AppUsageState?>(null) }
 
+    val yearData by remember(selectedApp) {
+        viewModel.getYearUsageTime(selectedApp?.packageName)
+    }.collectAsStateWithLifecycle(initialValue = emptyList())
+
+    val (heatmapData, dayCount) = remember(yearData) {
+        val result = mutableMapOf<Long, Int>()
+        var cnt = 0
+
+        for (data in yearData) {
+            result[data.dateStamp] = if (data.totalDurationMillis <= 600000) 0 else if (data.totalDurationMillis <= 3600000) 1 else 2
+            ++cnt
+        }
+
+        result to cnt
+    }
+
+    UsageRank(
+        selectedApp = selectedApp,
+        showPackageName = showPackageName,
+        initialApps = initialApps,
+        usageStateList = usageStateList,
+        maxDuration = maxDuration,
+        setSelectedApp = { selectedApp = it },
+        selectedContent = {
+            Column(modifier = Modifier.fillMaxSize().padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Image(
+                        painter = rememberDrawablePainter(drawable = selectedApp?.icon),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(shape = squircleShape),
+                    )
+
+                    Spacer(modifier = Modifier.width(24.dp))
+
+                    if (showPackageName) selectedApp?.packageName else selectedApp?.name?.let { Text(text = it, fontSize = 32.sp, color = colorResource(R.color.text)) }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    Text(
+                        text = "在最近的12个月中共使用了  ",
+                        fontSize = 16.sp,
+                        color = colorResource(R.color.text),
+                        modifier = Modifier.alignByBaseline() // 让文字按基线对齐
+                    )
+                    Text(
+                        text = "$dayCount",
+                        fontSize = 32.sp,
+                        color = colorResource(R.color.text),
+                        modifier = Modifier.alignByBaseline()
+                    )
+                    Text(
+                        text = "  天",
+                        fontSize = 16.sp,
+                        color = colorResource(R.color.text),
+                        modifier = Modifier.alignByBaseline()
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Box(
+                    modifier = Modifier
+                        .border(
+                            width = 2.dp,
+                            color = Color.Gray,
+                            shape = squircleShape
+                        )
+                        .padding(8.dp)
+                ) {
+                    Heatmap(
+                        modifier = Modifier.fillMaxWidth().height(600.dp),
+                        dataMap = heatmapData,
+                        levelColors = listOf(
+                            colorResource(R.color.mikuGreen).copy(alpha = 0.5f),
+                            colorResource(R.color.mikuGreen).copy(alpha = 0.75f),
+                            colorResource(R.color.mikuGreen)
+                        )
+                    )
+                }
+            }
+        }
+    )
+}
+
+@Composable
+fun MonthView(
+    viewModel: TimeViewModel,
+    maxDuration: Long,
+    showPackageName: Boolean = false,
+    initialApps: Set<String>,
+    usageStateList: List<AppUsageState>
+) {
     var selectedApp by remember { mutableStateOf<AppUsageState?>(null) }
 
     var monthSelectedApp by remember { mutableStateOf<AppDailyEntity?>(null) }
-
-    // 更新UI
-    var invisibleApps by remember { mutableStateOf(initialApps) }
-
-    var isEditVisible by remember { mutableStateOf(false) }
 
     val monthData by remember(selectedApp) {
         viewModel.getMonthUsageTime(selectedApp?.packageName)
@@ -228,59 +362,254 @@ fun MonthView(
         )
     }
 
+    UsageRank(
+        selectedApp = selectedApp,
+        showPackageName = showPackageName,
+        initialApps = initialApps,
+        usageStateList = usageStateList,
+        setSelectedApp = { selectedApp = it },
+        maxDuration = maxDuration,
+        selectedContent = {
+            Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Image(
+                        painter = rememberDrawablePainter(drawable = selectedApp?.icon),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(shape = squircleShape),
+                    )
+
+                    Spacer(modifier = Modifier.width(24.dp))
+
+                    val displayText = if (showPackageName) selectedApp?.packageName else selectedApp?.name
+
+                    displayText?.let { text ->
+                        Text(
+                            text = text,
+                            fontSize = 32.sp,
+                            lineHeight = 40.sp, //设置行高，解决多行拥挤问题
+                            color = colorResource(R.color.text)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Box(
+                    modifier = Modifier
+                    .border(
+                        width = 2.dp,
+                        color = Color.Gray,
+                        shape = squircleShape
+                    )
+                    .padding(8.dp)
+                ) {
+                    LineChart(
+                        data = monthData,
+                        modifier = Modifier.fillMaxWidth(),
+                        yValueMapper = {
+                            it.totalDurationMillis.toFloat()
+                        },
+                        xLabelMapper = { _, entity ->
+                            dateFormat.format(Date(entity.dateStamp))
+                        },
+                        isScrollable = true,
+                        horizontalLines = timeList,
+                        onPointClick = { _, item ->
+                            monthSelectedApp = item
+                        }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(32.dp),
+                    shape = squircleShape,
+                    colors = CardDefaults.cardColors(containerColor = colorResource(id = R.color.bg_on_dialog)),
+                ) {
+                    monthSelectedApp?.let { Text(
+                        text = "在 ${dateFormat.format(Date(it.dateStamp))} 使用了 ${formatMillis(it.totalDurationMillis)}",
+                        modifier = Modifier.padding(16.dp)
+                    ) }
+                }
+
+            }
+        }
+    )
+}
+
+@Composable
+fun DayView(
+    usageStateList: List<DailyAppUsageState>,
+    hourHeight: Dp = 240.dp
+) {
+    val positionedApps = remember(usageStateList) {
+        calculateAppPositions(usageStateList)
+    }
+
+    val scrollState = rememberScrollState()
+    val totalHours = 24
+
+    Row(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState)
+    ) {
+        Column(
+            modifier = Modifier
+                .width(50.dp)
+                .height(hourHeight * totalHours)
+        ) {
+            for (i in 0 until totalHours) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(hourHeight),
+                    contentAlignment = Alignment.TopCenter
+                ) {
+                    Text(
+                        text = String.format("%02d:00", i),
+                        fontSize = 12.sp,
+                        color = Color.Gray,
+                        // 稍微向上偏移，让文字中心对齐网格线
+                        modifier = Modifier.offset(y = (-8).dp)
+                    )
+                }
+            }
+        }
+
+        // 右侧：背景网格 + 应用使用块
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .height(hourHeight * totalHours)
+        ) {
+            // 绘制横向背景网格线
+            Column(modifier = Modifier.fillMaxSize()) {
+                for (i in 0 until totalHours) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(hourHeight)
+                            .border(width = 0.5.dp, color = Color.LightGray.copy(alpha = 0.5f))
+                    )
+                }
+            }
+
+            // 绘制应用时间块（绝对定位）
+            TimelineLayout(
+                positionedApps = positionedApps,
+                hourHeight = hourHeight,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+    }
+}
+
+@Composable
+fun TimelineLayout(
+    positionedApps: List<PositionedApp>,
+    hourHeight: Dp,
+    modifier: Modifier = Modifier
+) {
+    val dayMillis = 24 * 60 * 60 * 1000f // 一天的总毫秒数
+    val hourHeightPx = with(LocalDensity.current) { hourHeight.toPx() }
+
+    Layout(
+        content = {
+            // 生成所有的 UI 块
+            positionedApps.forEach { item ->
+                Surface(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 1.dp, vertical = 1.dp) // 留一点间隙，避免块挨得太紧
+                        .clip(squircleShape),
+                    color = item.appUsage.color,
+                    contentColor = Color.White
+                ) {
+                    Column(
+                        modifier = Modifier.padding(4.dp)
+                    ) {
+                        Text(
+                            text = item.appUsage.name,
+                            fontSize = 12.sp,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        // 可选：如果高度够，可以显示持续时间等信息
+                    }
+                }
+            }
+        },
+        modifier = modifier
+    ) { measurables, constraints ->
+        val totalHeightPx = (24 * hourHeightPx).roundToInt()
+        val totalWidthPx = constraints.maxWidth
+
+        // 测量每个应用的尺寸
+        val placeables = measurables.mapIndexed { index, measurable ->
+            val item = positionedApps[index]
+            val app = item.appUsage
+
+            // 宽度 = 总宽度 / 所在组的总列数
+            val itemWidth = totalWidthPx / item.totalColumns
+            // 高度 = (持续时间 / 全天时间) * 全天总像素高度
+            val itemHeight = ((app.endTime - app.startTime) / dayMillis * totalHeightPx).roundToInt()
+
+            measurable.measure(
+                Constraints.fixed(width = itemWidth, height = maxOf(0, itemHeight))
+            )
+        }
+
+        // 布局每个应用的绝对位置
+        layout(totalWidthPx, totalHeightPx) {
+            placeables.forEachIndexed { index, placeable ->
+                val item = positionedApps[index]
+                val app = item.appUsage
+
+                val itemWidth = totalWidthPx / item.totalColumns
+
+                // X 坐标 = 列索引 * 单个块的宽度
+                val xPosition = item.columnIndex * itemWidth
+                // Y 坐标 = (距离0点时间 / 全天时间) * 全天总像素高度
+                val yPosition = (app.startTime / dayMillis * totalHeightPx).roundToInt()
+
+                placeable.placeRelative(x = xPosition, y = yPosition)
+            }
+        }
+    }
+}
+
+@Composable
+fun UsageRank(
+    maxDuration: Long,
+    selectedApp: AppUsageState?,
+    showPackageName: Boolean = false,
+    initialApps: Set<String>,
+    usageStateList: List<AppUsageState>,
+    selectedContent: @Composable () -> Unit,
+    setSelectedApp: (AppUsageState?) -> Unit
+) {
+    val context = LocalContext.current
+    val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
+
+    // 更新UI
+    var invisibleApps by remember { mutableStateOf(initialApps) }
+
+    var isEditVisible by remember { mutableStateOf(false) }
+
     if (selectedApp != null || isEditVisible) {
         BackHandler {
-            selectedApp = null
+            setSelectedApp(null)
             isEditVisible = false
         }
     }
 
     if (selectedApp != null) {
-        Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Image(
-                    painter = rememberDrawablePainter(drawable = selectedApp?.icon),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(64.dp)
-                        .clip(shape = squircleShape),
-                )
-
-                Spacer(modifier = Modifier.width(24.dp))
-
-                if (showPackageName) selectedApp?.packageName else selectedApp?.name?.let { Text(text = it, fontSize = 32.sp, color = colorResource(R.color.text)) }
-            }
-
-            LineChart(
-                data = monthData,
-                modifier = Modifier.fillMaxWidth(),
-                yValueMapper = {
-                    it.totalDurationMillis.toFloat()
-                },
-                xLabelMapper = { _, entity ->
-                    dateFormat.format(Date(entity.dateStamp))
-                },
-                isScrollable = true,
-                horizontalLines = timeList,
-                onPointClick = { _, item ->
-                    monthSelectedApp = item
-                }
-            )
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(32.dp),
-                shape = squircleShape,
-                colors = CardDefaults.cardColors(containerColor = colorResource(id = R.color.bg_on_dialog)),
-            ) {
-                monthSelectedApp?.let { Text(
-                    text = "在 ${dateFormat.format(Date(it.dateStamp))} 使用了 ${formatMillis(it.totalDurationMillis)}",
-                    modifier = Modifier.padding(16.dp)
-                ) }
-            }
-
-        }
+        selectedContent()
     } else {
         Column(modifier = Modifier.fillMaxSize()) {
             LazyColumn(modifier = Modifier.weight(1f)) {
@@ -302,8 +631,8 @@ fun MonthView(
                         }
                     } else {
                         if (!invisibleApps.contains(app.packageName)) {
-                            UsageItem(appUsageState = app, showPackageName = showPackageName) {
-                                selectedApp = app
+                            UsageItem(appUsageState = app, maxDuration = maxDuration, showPackageName = showPackageName) {
+                                setSelectedApp(app)
                             }
                         }
                     }
@@ -318,13 +647,9 @@ fun MonthView(
 }
 
 @Composable
-fun DayView() {
-
-}
-
-@Composable
 fun UsageItem(
     showPackageName: Boolean = false,
+    maxDuration: Long,
     appUsageState: AppUsageState,
     onClick: () -> Unit
 ) {
@@ -357,7 +682,7 @@ fun UsageItem(
                 Text(text = appUsageState.duration, fontSize = 12.sp, color = colorResource(R.color.text))
             }
             LinearProgressIndicator(
-                progress = { appUsageState.percentage },
+                progress = { (if (maxDuration > 0) appUsageState.durationMillis.toFloat() / maxDuration.toFloat() else 0).toFloat() },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(6.dp)
@@ -437,4 +762,74 @@ fun UsageSwitchItem(
     }
 
     HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
+}
+
+data class PositionedApp(
+    val appUsage: DailyAppUsageState,
+    var columnIndex: Int = 0,
+    var totalColumns: Int = 1
+)
+
+fun calculateAppPositions(sortedUsageList: List<DailyAppUsageState>): List<PositionedApp> {
+    if (sortedUsageList.isEmpty()) return emptyList()
+
+    val clusters = mutableListOf<MutableList<PositionedApp>>()
+    var currentCluster = mutableListOf<PositionedApp>()
+    var clusterEndTime = 0L
+
+    // 1. 分组 (Clustering)
+    for (app in sortedUsageList) {
+        if (currentCluster.isEmpty()) {
+            currentCluster.add(PositionedApp(app))
+            clusterEndTime = app.endTime
+        } else {
+            if (app.startTime < clusterEndTime) {
+                // 有时间交集，加入当前组
+                currentCluster.add(PositionedApp(app))
+                clusterEndTime = maxOf(clusterEndTime, app.endTime)
+            } else {
+                // 无交集，开启新组
+                clusters.add(currentCluster)
+                currentCluster = mutableListOf(PositionedApp(app))
+                clusterEndTime = app.endTime
+            }
+        }
+    }
+    if (currentCluster.isNotEmpty()) {
+        clusters.add(currentCluster)
+    }
+
+    // 2. 分列 (Assign Columns)
+    for (cluster in clusters) {
+        val columnsEndTimes = mutableListOf<Long>() // 记录每一列当前最晚的结束时间
+
+        for (positionedApp in cluster) {
+            val app = positionedApp.appUsage
+            var placed = false
+
+            // 尝试放入已有的列
+            for (i in columnsEndTimes.indices) {
+                if (app.startTime >= columnsEndTimes[i]) {
+                    positionedApp.columnIndex = i
+                    columnsEndTimes[i] = app.endTime
+                    placed = true
+                    break
+                }
+            }
+
+            // 如果已有列都放不下（存在重叠），则开启新的一列
+            if (!placed) {
+                positionedApp.columnIndex = columnsEndTimes.size
+                columnsEndTimes.add(app.endTime)
+            }
+        }
+
+        // 3. 记录该组的最大重叠数（即总列数）
+        val totalCols = columnsEndTimes.size
+        for (positionedApp in cluster) {
+            positionedApp.totalColumns = totalCols
+        }
+    }
+
+    return clusters.flatten()
 }

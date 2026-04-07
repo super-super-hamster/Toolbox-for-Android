@@ -10,14 +10,27 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import java.time.Duration
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 import java.util.Calendar
 
 class TimeViewModel(private val dao: UsageStatsDao) : ViewModel() {
 
     // 数据流
-    val currentMonthStats: Flow<List<AppSessionEntity>> =
-        dao.getSessionsSince(Instant.now().minus(Duration.ofDays(30)).toEpochMilli())
+    val currentMonthStats: Flow<List<AppDailyEntity>> =
+        dao.getDailyUsageSince(Instant.now().minus(Duration.ofDays(30)).toEpochMilli())
+
+    val currentYearStats: Flow<List<AppDailyEntity>> =
+        dao.getDailyUsageSince(
+            LocalDate.now()
+            .minusMonths(11)
+            .withDayOfMonth(1)
+            .atStartOfDay(ZoneId.systemDefault())
+            .toInstant()
+            .toEpochMilli())
+
+    val currentDayStats: Flow<List<AppSessionEntity>> =
+        dao.getSessionsSince(getStartOfDay(System.currentTimeMillis()))
 
     // 更新数据
     fun syncUsageData(context: Context) {
@@ -94,16 +107,18 @@ class TimeViewModel(private val dao: UsageStatsDao) : ViewModel() {
         return dao.getAppDailyStats(packageName, calendar.timeInMillis)
     }
 
-    // 一天开始的时间戳
-    private fun getStartOfDay(timestamp: Long): Long {
-        val calendar = Calendar.getInstance().apply {
-            timeInMillis = timestamp
-            set(Calendar.HOUR_OF_DAY, 0)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
+    // 获取过去12个月的使用时长
+    fun getYearUsageTime(packageName: String?): Flow<List<AppDailyEntity>> {
+        if (packageName == null) {
+            return flowOf(emptyList())
         }
-        return calendar.timeInMillis
+
+        return dao.getAppDailyStats(packageName, LocalDate.now()
+            .minusMonths(11)
+            .withDayOfMonth(1)
+            .atStartOfDay(ZoneId.systemDefault())
+            .toInstant()
+            .toEpochMilli())
     }
 
     private fun getMonth(millis: Long): Int {

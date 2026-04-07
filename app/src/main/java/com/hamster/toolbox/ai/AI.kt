@@ -1,10 +1,8 @@
 package com.hamster.toolbox.ai
 
 import android.content.Context
-import android.os.Bundle
 import android.util.Log
 import androidx.compose.runtime.mutableStateListOf
-import androidx.preference.PreferenceManager
 import com.google.gson.Gson
 import com.hamster.toolbox.RandomNumber
 import com.hamster.toolbox.Route
@@ -17,7 +15,6 @@ import com.hamster.toolbox.utils.prompt.PromptLoader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-// TODO: 没有意图识别，不好做流式输出
 object AI {
     private val apiService = AiService.service
     val chatHistory = mutableStateListOf<Message>()

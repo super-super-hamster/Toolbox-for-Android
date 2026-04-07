@@ -126,6 +126,7 @@ import kotlinx.coroutines.withContext
 // TODO: 通知栏字体颜色适配
 // TODO: 测距
 // TODO: preferencesDataStore
+// TODO: 获取权限入口
 
 class MainActivity : ComponentActivity() {
     // 跟随应用生命周期的协程作用域

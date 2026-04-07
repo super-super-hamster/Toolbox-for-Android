@@ -1,39 +1,46 @@
 package com.hamster.toolbox.screen.time
 
-import androidx.annotation.Keep
-import androidx.room.Entity
-import androidx.room.PrimaryKey
-import com.google.gson.annotations.SerializedName
-import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
-import androidx.room.Query
-import kotlinx.coroutines.flow.Flow
 import android.content.Context
 import android.graphics.drawable.Drawable
+import androidx.compose.ui.graphics.Color
+import androidx.room.Dao
 import androidx.room.Database
+import androidx.room.Entity
 import androidx.room.Index
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.PrimaryKey
+import androidx.room.Query
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import kotlinx.coroutines.flow.Flow
 
-@Keep
 data class TimeData(
-    @SerializedName("packageName") val packageName: String,
-    @SerializedName("startTime") val startTime: Long,
-    @SerializedName("endTime") val endTime: Long,
-    @SerializedName("durationMillis") val durationMillis: Long
+    val packageName: String,
+    val startTime: Long,
+    val endTime: Long,
+    val durationMillis: Long
 )
 
-// TODO: 验证是否开启代码混淆
-
-@Keep
+// 不与外部字符串匹配，可以混淆
 data class AppUsageState(
-    @SerializedName("packageName") val packageName: String,
-    @SerializedName("name") val name: String,
-    @SerializedName("icon") val icon: Drawable?,
-    @SerializedName("durationMillis") val durationMillis: Long,
-    @SerializedName("duration") val duration: String,        // 格式化后的时间
-    @SerializedName("percentage") val percentage: Float      // 总时长的百分比
+    val packageName: String,
+    val name: String,
+    val icon: Drawable?,
+    val durationMillis: Long,
+    val duration: String,       // 格式化后的时间
+    val percentage: Float       // 总时长的百分比
+)
+
+data class DailyAppUsageState(
+    val packageName: String,
+    val name: String,
+    val icon: Drawable?,
+    val durationMillis: Long,
+    val duration: String,
+    val startTime: Long, // 相对于00:00的时间戳
+    val endTime: Long,
+    val color: Color
 )
 
 @Dao
@@ -46,6 +53,10 @@ interface UsageStatsDao {
     // 获取明细记录
     @Query("SELECT * FROM app_sessions WHERE startTime >= :sinceTime ORDER BY startTime DESC")
     fun getSessionsSince(sinceTime: Long): Flow<List<AppSessionEntity>>
+
+    // 获取每日使用时长
+    @Query("SELECT * FROM app_daily_stats WHERE dateStamp >= :sinceTime")
+    fun getDailyUsageSince(sinceTime: Long): Flow<List<AppDailyEntity>>
 
     // 清理过期数据
     @Query("DELETE FROM app_sessions WHERE endTime < :thresholdTime")
