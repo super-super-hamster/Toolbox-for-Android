@@ -66,3 +66,6 @@ object GameConsole : Route
 // 时间
 @Serializable
 object Time : Route
+
+@Serializable
+object ColorPicker : Route

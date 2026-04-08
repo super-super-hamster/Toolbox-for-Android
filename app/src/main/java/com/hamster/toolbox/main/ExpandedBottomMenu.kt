@@ -49,6 +49,7 @@ import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.intl.LocaleList
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.hamster.toolbox.ColorPicker
 import com.hamster.toolbox.Debug
 import com.hamster.toolbox.GameConsole
 import com.hamster.toolbox.R
@@ -164,8 +165,12 @@ private fun Menu(
                 Icon(painterResource(R.drawable.ic_numbers), null, tint = Color.Gray)
             }
             // 游戏
-            IconButton(onClick = { onNavigate(GameConsole) }) {
-                Icon(painterResource(R.drawable.ic_game_console), null, tint = Color.Gray)
+//            IconButton(onClick = { onNavigate(GameConsole) }) {
+//                Icon(painterResource(R.drawable.ic_game_console), null, tint = Color.Gray)
+//            }
+            // 取色器
+            IconButton(onClick = { onNavigate(ColorPicker) }) {
+                Icon(painterResource(R.drawable.ic_color_picker), null, tint = Color.Gray)
             }
         }
 

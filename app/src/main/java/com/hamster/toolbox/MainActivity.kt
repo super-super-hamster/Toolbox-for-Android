@@ -97,6 +97,7 @@ import com.hamster.toolbox.screen.tips.tipsGraph
 import com.hamster.toolbox.compose.AnimationButton
 import com.hamster.toolbox.compose.ButtonPro
 import com.hamster.toolbox.compose.squircleShape
+import com.hamster.toolbox.screen.colorPicker.ColorPickerScreen
 import com.hamster.toolbox.utils.prompt.PromptLoader
 import com.hamster.toolbox.utils.scaleInPopEnter
 import com.hamster.toolbox.utils.scaleOutExit
@@ -137,19 +138,7 @@ class MainActivity : ComponentActivity() {
 
     private val requestAudioPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { _: Boolean ->
-//        Log.d("fuck", isGranted.toString())
-    }
-
-//    private val requestAudioPermissionLauncher = registerForActivityResult(
-//        ActivityResultContracts.RequestPermission(),
-//        // ✅ 彻底避开 SAM 转换 Bug 的写法
-//        object : ActivityResultCallback<Boolean> {
-//            override fun onActivityResult(isGranted: Boolean) {
-//                // 这里即使空着什么都不写，编译器也不会崩溃了
-//            }
-//        }
-//    )
+    ) { _: Boolean -> }
 
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     @OptIn(ExperimentalMaterial3Api::class, ExperimentalHazeMaterialsApi::class)
@@ -222,6 +211,7 @@ class MainActivity : ComponentActivity() {
                 currentDestination?.hasRoute<ScheduleTips>() == true -> "课程表Tips"
                 currentDestination?.hasRoute<WeatherTips>() == true -> "天气Tips"
                 currentDestination?.hasRoute<Time>() == true -> "应用使用时间"
+                currentDestination?.hasRoute<ColorPicker>() == true -> "取色器"
                 currentDestination?.hasRoute<Debug>() == true -> "Debug"
                 else -> "ToolBox"
             }
@@ -282,7 +272,7 @@ class MainActivity : ComponentActivity() {
                             Box(modifier = Modifier.fillMaxSize()) {
                                 NavHost(
                                     navController = navController,
-                                    startDestination = Time,
+                                    startDestination = ColorPicker,
                                     modifier = Modifier
                                         .layerBackdrop(backdrop) // 应用玻璃效果
                                         .hazeSource(state = hazeState)
@@ -332,6 +322,15 @@ class MainActivity : ComponentActivity() {
                                                 setLoading(isLoading)
                                             }
                                         )
+                                    }
+
+                                    composable<ColorPicker>(
+                                        enterTransition = { slideInWithScaleEnter() },
+                                        exitTransition = { scaleOutExit() },
+                                        popEnterTransition = { scaleInPopEnter() },
+                                        popExitTransition = { slideOutWithScalePopExit() }
+                                    ) {
+                                        ColorPickerScreen()
                                     }
 
                                     // Tips

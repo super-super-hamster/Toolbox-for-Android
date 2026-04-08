@@ -73,13 +73,12 @@ class ScrollTarget {
 
 fun getMainColor(bitmap: Bitmap): Color {
     return try {
-        val palette = Palette.from(bitmap).generate()
+        val pixels = IntArray(bitmap.width * bitmap.height)
 
-        val colorInt = palette.getVibrantColor(
-            palette.getDominantColor(android.graphics.Color.LTGRAY)
-        )
 
+        val colorInt = 0
         Color(colorInt)
+
     } catch (_: Exception) {
         Color.LightGray
     }
