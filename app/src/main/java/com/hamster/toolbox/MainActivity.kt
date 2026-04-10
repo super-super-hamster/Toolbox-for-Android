@@ -185,7 +185,7 @@ class MainActivity : ComponentActivity() {
             val database = remember { AppUsageDatabase.getDatabase(context) }
             val usageStatsDao = database.usageStatsDao()
             val timeViewModel: TimeViewModel = viewModel(
-                factory = provideTimeViewModelFactory(usageStatsDao)
+                factory = provideTimeViewModelFactory(context, usageStatsDao)
             )
 
             var showWeatherDetail by remember { mutableStateOf(false) }

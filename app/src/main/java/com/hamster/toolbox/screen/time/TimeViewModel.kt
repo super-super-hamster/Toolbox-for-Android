@@ -5,7 +5,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import androidx.preference.PreferenceManager
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import java.time.Duration
@@ -13,28 +18,104 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.Calendar
+import androidx.core.content.edit
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 
-class TimeViewModel(private val dao: UsageStatsDao) : ViewModel() {
-
-    // 数据流
+class TimeViewModel(private val appContext: Context, private val dao: UsageStatsDao) : ViewModel() {
+    private val mapper = AppUsageMapper(appContext)
+    private val _invisibleApps = MutableStateFlow<Set<String>>(emptySet())
+    val invisibleApps: StateFlow<Set<String>> = _invisibleApps.asStateFlow()
     val currentMonthStats: Flow<List<AppDailyEntity>> =
         dao.getDailyUsageSince(Instant.now().minus(Duration.ofDays(30)).toEpochMilli())
-
     val currentYearStats: Flow<List<AppDailyEntity>> =
         dao.getDailyUsageSince(
             LocalDate.now()
-            .minusMonths(11)
-            .withDayOfMonth(1)
-            .atStartOfDay(ZoneId.systemDefault())
-            .toInstant()
-            .toEpochMilli())
+                .minusMonths(11)
+                .withDayOfMonth(1)
+                .atStartOfDay(ZoneId.systemDefault())
+                .toInstant()
+                .toEpochMilli())
 
     val currentDayStats: Flow<List<AppSessionEntity>> =
         dao.getSessionsSince(getStartOfDay(System.currentTimeMillis()))
 
+    init {
+        loadInvisibleApps(appContext)
+    }
+
+    fun loadInvisibleApps(context: Context) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+            val hasInit = prefs.getBoolean("has_init_invisible_apps", false)
+            val currentSet = prefs.getStringSet("invisible_apps", emptySet())?.toMutableSet() ?: mutableSetOf()
+
+            if (!hasInit) {
+                val initInvisibleSet = setOf(
+                    "com.android.settings",
+                    "com.google.android.deskclock",
+                    "com.android.BBKClock",
+                    "com.vivo.gallery",
+                    "com.vivo.weather",
+                    "com.android.camera",
+                    "com.android.bbkcalculator",
+                    "com.vivo.ai.copilot",
+                    "com.vivo.translator",
+                    "com.bbk.appstore",
+                    "com.vivo.space",
+                    "com.vivo.assistant",
+                    "com.bbk.calendar",
+                    "com.vivo.smartshot")
+                currentSet.addAll(initInvisibleSet)
+                prefs.edit {
+                    putStringSet(
+                        "invisible_apps",
+                        currentSet
+                    ).putBoolean("has_init_invisible_apps", true)
+                }
+            }
+            _invisibleApps.value = currentSet
+        }
+    }
+
+    fun updateInvisibleApps(newSet: Set<String>) {
+        _invisibleApps.value = newSet
+        viewModelScope.launch(Dispatchers.IO) {
+            PreferenceManager.getDefaultSharedPreferences(appContext).edit {
+                putStringSet(
+                    "invisible_apps",
+                    newSet
+                )
+            }
+        }
+    }
+
+    val monthUsageStateList: Flow<List<AppUsageState>> = currentMonthStats
+        .map { mapper.mapAndAggregate(it) }
+        .flowOn(Dispatchers.Default)
+
+    val maxMonthUsageDuration: Flow<Long> = combine(monthUsageStateList, invisibleApps) { usageList, invisible ->
+        usageList.filter { !invisible.contains(it.packageName) }
+            .maxOfOrNull { it.durationMillis } ?: 0L
+    }.flowOn(Dispatchers.Default)
+
+    val yearUsageStateList: Flow<List<AppUsageState>> = currentYearStats
+        .map { mapper.mapAndAggregate(it) }
+        .flowOn(Dispatchers.Default)
+
+    val maxYearUsageDuration: Flow<Long> = combine(yearUsageStateList, invisibleApps) { usageList, invisible ->
+        usageList.filter { !invisible.contains(it.packageName) }
+            .maxOfOrNull { it.durationMillis } ?: 0L
+    }.flowOn(Dispatchers.Default)
+
+    val dayUsageStateList: Flow<List<DailyAppUsageState>> = currentDayStats
+        .map { mapper.dailyMapAndAggregate(it) }
+        .flowOn(Dispatchers.Default)
+
     // 更新数据
     fun syncUsageData(context: Context) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             // 过去7天到现在的时间窗口
             val calendar = Calendar.getInstance()
             val endTime = calendar.timeInMillis
@@ -128,8 +209,8 @@ class TimeViewModel(private val dao: UsageStatsDao) : ViewModel() {
     }
 }
 
-fun provideTimeViewModelFactory(dao: UsageStatsDao) = viewModelFactory {
+fun provideTimeViewModelFactory(context: Context, dao: UsageStatsDao) = viewModelFactory {
     initializer {
-        TimeViewModel(dao)
+        TimeViewModel(context.applicationContext, dao)
     }
 }

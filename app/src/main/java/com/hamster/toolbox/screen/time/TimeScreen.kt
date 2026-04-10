@@ -33,7 +33,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -54,10 +53,8 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.edit
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.preference.PreferenceManager
 import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.rememberLottieComposition
@@ -81,8 +78,6 @@ import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
 
-// TODO: 进入时卡顿
-
 @Composable
 fun TimeScreen(
     viewModel: TimeViewModel,
@@ -91,35 +86,13 @@ fun TimeScreen(
 ) {
     val sharedTiltState = rememberSharedTiltState()
     val context = LocalContext.current
-    val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
 
     var selectedIndex by remember { mutableIntStateOf(2) }
     var hasPermission by remember { mutableStateOf(true) }
 
     var showPackageName by rememberBooleanPreference("super_hamster_show_package_name", false)
 
-    val invisibleAppsSet = prefs.getStringSet("invisible_apps", emptySet())?.toMutableSet() ?: mutableSetOf()
-    val hasInit = prefs.getBoolean("has_init_invisible_apps", false)
-    if (!hasInit) {
-        val initInvisibleSet = setOf(
-            "com.android.settings",
-            "com.google.android.deskclock",
-            "com.android.BBKClock",
-            "com.vivo.gallery",
-            "com.vivo.weather",
-            "com.android.camera",
-            "com.android.bbkcalculator",
-            "com.vivo.ai.copilot",
-            "com.vivo.translator",
-            "com.bbk.appstore",
-            "com.vivo.space",
-            "com.vivo.assistant",
-            "com.bbk.calendar",
-            "com.vivo.smartshot")
-        prefs.edit { putStringSet("invisible_apps", invisibleAppsSet + initInvisibleSet) }
-        prefs.edit { putBoolean("has_init_invisible_apps", true) }
-        invisibleAppsSet += initInvisibleSet
-    }
+    val invisibleAppsSet by viewModel.invisibleApps.collectAsStateWithLifecycle()
 
     LaunchedEffect(mainViewModel.updateAppSessionTrigger) {
         if (hasPermission) {
@@ -137,42 +110,13 @@ fun TimeScreen(
         onPauseOrDispose { }
     }
 
-    // collectAsStateWithLifecycle 当应用在后台时停止计算
-    val monthRawStats by viewModel.currentMonthStats.collectAsStateWithLifecycle(initialValue = emptyList())
-    val yearRawStats by viewModel.currentYearStats.collectAsStateWithLifecycle(initialValue = emptyList())
-    val dayRowStats by viewModel.currentDayStats.collectAsStateWithLifecycle(initialValue = emptyList())
+    val monthUsageStateList by viewModel.monthUsageStateList.collectAsStateWithLifecycle(initialValue = emptyList())
+    val maxMonthUsageDuration by viewModel.maxMonthUsageDuration.collectAsStateWithLifecycle(initialValue = 0L)
 
-    // 实例化数据转换工厂
-    val mapper = remember { AppUsageMapper(context) }
+    val yearUsageStateList by viewModel.yearUsageStateList.collectAsStateWithLifecycle(initialValue = emptyList())
+    val maxYearUsageDuration by viewModel.maxYearUsageDuration.collectAsStateWithLifecycle(initialValue = 0L)
 
-    // derivedStateOf 仅在最终计算结果不同时更新
-    val monthUsageStateList by remember(monthRawStats) {
-        derivedStateOf {
-            mapper.mapAndAggregate(monthRawStats)
-        }
-    }
-    val yearUsageStateList by remember(yearRawStats) {
-        derivedStateOf {
-            mapper.mapAndAggregate(yearRawStats)
-        }
-    }
-    val dayUsageStateList by remember(dayRowStats) {
-        derivedStateOf {
-            mapper.dailyMapAndAggregate(dayRowStats)
-        }
-    }
-
-    val maxMonthUsageDuration = remember(monthUsageStateList, invisibleAppsSet) {
-        monthUsageStateList
-            .filter { !invisibleAppsSet.contains(it.packageName) }
-            .maxOfOrNull { it.durationMillis } ?: 0L
-    }
-
-    val maxYearUsageDuration = remember(yearUsageStateList, invisibleAppsSet) {
-        yearUsageStateList
-            .filter { !invisibleAppsSet.contains(it.packageName) }
-            .maxOfOrNull { it.durationMillis } ?: 0L
-    }
+    val dayUsageStateList by viewModel.dayUsageStateList.collectAsStateWithLifecycle(initialValue = emptyList())
 
     val tabsList = listOf(
         TabItem(title = "近12月") {
@@ -256,6 +200,7 @@ fun YearView(
     }
 
     UsageRank(
+        viewModel = viewModel,
         selectedApp = selectedApp,
         showPackageName = showPackageName,
         initialApps = initialApps,
@@ -363,6 +308,7 @@ fun MonthView(
     }
 
     UsageRank(
+        viewModel = viewModel,
         selectedApp = selectedApp,
         showPackageName = showPackageName,
         initialApps = initialApps,
@@ -585,6 +531,7 @@ fun TimelineLayout(
 
 @Composable
 fun UsageRank(
+    viewModel: TimeViewModel,
     maxDuration: Long,
     selectedApp: AppUsageState?,
     showPackageName: Boolean = false,
@@ -593,9 +540,6 @@ fun UsageRank(
     selectedContent: @Composable () -> Unit,
     setSelectedApp: (AppUsageState?) -> Unit
 ) {
-    val context = LocalContext.current
-    val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
-
     // 更新UI
     var invisibleApps by remember { mutableStateOf(initialApps) }
 
@@ -626,8 +570,7 @@ fun UsageRank(
                             } else {
                                 newSet.add(app.packageName)
                             }
-                            invisibleApps = newSet
-                            prefs.edit { putStringSet("invisible_apps", invisibleApps) }
+                            viewModel.updateInvisibleApps(newSet)
                         }
                     } else {
                         if (!invisibleApps.contains(app.packageName)) {

@@ -41,7 +41,6 @@ fun ColorPickerScreen() {
             bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 val source = ImageDecoder.createSource(context.contentResolver, it)
                  ImageDecoder.decodeBitmap(source) { decoder, _, _ -> decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE }
-//                ImageDecoder.decodeBitmap(source)
             } else {
                 @Suppress("DEPRECATION")
                 MediaStore.Images.Media.getBitmap(context.contentResolver, it)
@@ -65,7 +64,7 @@ fun ColorPickerScreen() {
     }
 
     PageColumn(sharedTiltState = sharedTiltState) {
-        ItemGroup(titleState = sharedTiltState) {
+        ItemGroup(titleState = sharedTiltState, modifier = Modifier.weight(1f)) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()

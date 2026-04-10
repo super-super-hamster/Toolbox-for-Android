@@ -11,8 +11,8 @@ import kotlin.math.sqrt
 
 suspend fun getColors(
     bitmap: Bitmap,
-    radius: Float,
-    mergeRadius: Float,
+    radius: Float = 20f,
+    mergeRadius: Float = 10f,
     count: Int,
     mergeSimilarColor: Boolean = true,
     ignoreBackground: Boolean = false
@@ -121,6 +121,16 @@ suspend fun getColors(
     }
 
     result
+}
+
+suspend fun getColor(bitmap: Bitmap,
+                     radius: Float = 20f,
+                     mergeRadius: Float = 10f,
+                     mergeSimilarColor: Boolean = true,
+                     ignoreBackground: Boolean = false
+):Int {
+    val color = getColors(bitmap, radius, mergeRadius, 1, mergeSimilarColor, ignoreBackground)
+    return if (color.isEmpty()) 0 else color.first()
 }
 
 fun mergeCheck(groupNode: GroupNode, radius: Float, radiusSq: Float, l: Float, a: Float, b: Float): Boolean {

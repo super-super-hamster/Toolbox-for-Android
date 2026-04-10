@@ -10,8 +10,8 @@ import android.os.Build
 import android.os.Process
 import android.provider.Settings
 import androidx.compose.ui.graphics.Color
+import com.hamster.toolbox.utils.color.getColor
 import com.hamster.toolbox.utils.drawableToBitmap
-import com.hamster.toolbox.utils.getMainColor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Calendar
@@ -132,7 +132,7 @@ class AppUsageMapper(context: Context) {
         return uiStates.sortedByDescending { it.durationMillis }
     }
 
-    fun dailyMapAndAggregate(entities: List<AppSessionEntity>): List<DailyAppUsageState> {
+    suspend fun dailyMapAndAggregate(entities: List<AppSessionEntity>): List<DailyAppUsageState> {
         val result = entities.mapNotNull { app ->
             try {
                 if (app.durationMillis <= 60000) {
@@ -145,9 +145,10 @@ class AppUsageMapper(context: Context) {
                 val appIcon = packageManager.getApplicationIcon(info)
                 val mainColor = colorCache[appName] ?: run {
                     val bitmap = drawableToBitmap(appIcon)
-                    val extractedColor = getMainColor(bitmap)
-                    colorCache[appName] = extractedColor
-                    extractedColor
+                    val extractedColor = getColor(bitmap)
+                    val colorObj = Color(extractedColor)
+                    colorCache[appName] = colorObj
+                    colorObj
                 }
 
                 DailyAppUsageState(
