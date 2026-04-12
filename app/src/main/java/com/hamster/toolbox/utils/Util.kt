@@ -5,7 +5,6 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.graphics.Matrix
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.widget.Toast
@@ -27,7 +26,6 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.createBitmap
-import androidx.palette.graphics.Palette
 import androidx.preference.PreferenceManager
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -35,13 +33,10 @@ import com.hamster.toolbox.R
 import com.hamster.toolbox.screen.schedule.Course
 import com.hamster.toolbox.utils.prompt.PromptLoader
 import kotlinx.coroutines.delay
-import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZoneOffset
-import java.util.Date
-import java.util.Locale
 
 class ScrollTarget {
     val requester = BringIntoViewRequester()
@@ -71,19 +66,6 @@ class ScrollTarget {
     }
 }
 
-fun getMainColor(bitmap: Bitmap): Color {
-    return try {
-        val pixels = IntArray(bitmap.width * bitmap.height)
-
-
-        val colorInt = 0
-        Color(colorInt)
-
-    } catch (_: Exception) {
-        Color.LightGray
-    }
-}
-
 fun drawableToBitmap(drawable: Drawable): Bitmap {
     if (drawable is BitmapDrawable) {
         return drawable.bitmap
@@ -101,8 +83,7 @@ fun drawableToBitmap(drawable: Drawable): Bitmap {
     return bitmap
 }
 
-//通过现实时间获取时间戳
-//@RequiresApi(Build.VERSION_CODES.O)注解标记的代码只能在Android 8+ 的系统运行
+// 通过现实时间获取时间戳
 fun timeToMillis(time: LocalDateTime, hour: Int? = null, minute: Int? = null, second: Int? = null, nano: Int? = null) : Long {
     hour?.let { time.withHour(it) }
     minute?.let { time.withMinute(it) }
@@ -140,12 +121,6 @@ fun saveSchedule(context: Context, newCourseList: List<Course>) {
     prefs.edit { putString("schedule_json", jsonString) }
 }
 
-// 将毫秒数转为"yyyy-MM-dd"
-fun convertMillisToDate(millis: Long): String {
-    val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-    return formatter.format(Date(millis))
-}
-
 // 将"yyyy-MM-dd"转为毫秒数
 fun convertDateToMillis(dateStr: String?): Long {
     if (dateStr.isNullOrEmpty()) return System.currentTimeMillis()
@@ -154,7 +129,7 @@ fun convertDateToMillis(dateStr: String?): Long {
             .atStartOfDay(ZoneOffset.UTC)
             .toInstant()
             .toEpochMilli()
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         System.currentTimeMillis()
     }
 }
@@ -255,18 +230,4 @@ fun slideOutWithScalePopExit(): ExitTransition {
         targetScale = 0.9f,
         animationSpec = floatSpec
     )
-}
-
-fun cropBitmapToSquare(bitmap: Bitmap): Bitmap {
-    val size = minOf(bitmap.width, bitmap.height)
-    val x = (bitmap.width - size) / 2
-    val y = (bitmap.height - size) / 2
-    return Bitmap.createBitmap(bitmap, x, y, size, size)
-}
-
-fun resizeBitmap(bitmap: Bitmap, size: Int): Bitmap {
-    if (bitmap.width == size && bitmap.height == size) return bitmap
-    val matrix = Matrix()
-    matrix.postScale(size.toFloat() / bitmap.width, size.toFloat() / bitmap.height)
-    return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
 }

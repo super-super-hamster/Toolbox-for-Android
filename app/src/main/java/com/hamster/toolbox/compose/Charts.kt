@@ -2,15 +2,32 @@ package com.hamster.toolbox.compose
 
 import androidx.annotation.Keep
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -25,7 +42,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -34,7 +53,8 @@ import com.hamster.toolbox.R
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
-import java.time.ZoneId // 必须有这个导入
+import java.time.ZoneId
+import kotlin.math.ceil
 
 @Composable
 fun <T> LineChart(
@@ -47,7 +67,7 @@ fun <T> LineChart(
     textColor: Color = colorResource(R.color.text),
     maxYValue: Float? = null,
     isScrollable: Boolean = false,
-    pointSpacing: Dp = 64.dp, // 开启左右滑动后的点水平间距
+    pointSpacing: Dp = 64.dp,
     horizontalLines: List<HorizontalLine> = emptyList(),
     onPointClick: ((index: Int, item: T) -> Unit)? = null
 ) {
@@ -57,7 +77,6 @@ fun <T> LineChart(
     val textStyle = TextStyle(color = textColor, fontSize = 10.sp)
     val labelStyle = TextStyle(color = textColor.copy(alpha = 0.6f), fontSize = 9.sp)
 
-    // 动态计算 Y 轴最大值
     val computedMaxY = remember(data, maxYValue, horizontalLines) {
         val dataMax = data.maxOfOrNull { yValueMapper(it) } ?: 0f
         val linesMax = horizontalLines.maxOfOrNull { it.value } ?: 0f
@@ -67,8 +86,6 @@ fun <T> LineChart(
 
     val scrollState = rememberScrollState()
 
-    // 🌟 新增：用于在绘制时记录每个数据点在画布上的精确坐标
-    // 注意：这里用普通的 Map 即可，不需要 mutableStateOf，避免在 onDraw 中更新引发无限重组
     val pointCoordinates = remember { mutableMapOf<Int, Offset>() }
 
     val canvasModifier = if (isScrollable) {
@@ -83,27 +100,23 @@ fun <T> LineChart(
         modifier.fillMaxWidth()
     }
 
-    // 🌟 新增：给 Canvas 添加手势监听并拼接高度属性
     val finalModifier = canvasModifier
         .height(220.dp)
         .pointerInput(data, computedMaxY) { // 将依赖项传入，数据变化时重新绑定
             detectTapGestures { tapOffset ->
-                // 定义点击的有效半径，24.dp 扩大了点击热区，提升手指触控体验
+                // 定义点击的有效半径24.dp
                 val clickThreshold = 24.dp.toPx()
                 var clickedIndex = -1
                 var minDistance = Float.MAX_VALUE
 
-                // 遍历保存的点坐标，寻找距离手指最近的一个点
                 for ((index, pointOffset) in pointCoordinates) {
                     val distance = (pointOffset - tapOffset).getDistance()
-                    // 如果该点在点击半径内，且是所有点中最近的
                     if (distance < clickThreshold && distance < minDistance) {
                         minDistance = distance
                         clickedIndex = index
                     }
                 }
 
-                // 如果找到了被点击的点，触发回调
                 if (clickedIndex != -1 && onPointClick != null) {
                     onPointClick(clickedIndex, data[clickedIndex])
                 }
@@ -119,7 +132,6 @@ fun <T> LineChart(
         val graphHeight = canvasHeight - paddingBottom - paddingTop
         val graphWidth = canvasWidth - (paddingX * 2)
 
-        // --- 0. 绘制水平参考线 ---
         horizontalLines.forEach { line ->
             val ratio = line.value / computedMaxY
             val y = paddingTop + graphHeight - (ratio * graphHeight)
@@ -142,12 +154,11 @@ fun <T> LineChart(
             )
         }
 
-        // --- 1. 计算折线坐标点 ---
         val stepX = if (data.size > 1) graphWidth / (data.size - 1) else graphWidth / 2f
         val path = Path()
         val points = mutableListOf<Offset>()
 
-        pointCoordinates.clear() // 🌟 新增：每次重新绘制时先清空历史坐标
+        pointCoordinates.clear()
 
         data.forEachIndexed { index, item ->
             val x = paddingX + if (data.size > 1) index * stepX else stepX
@@ -158,26 +169,23 @@ fun <T> LineChart(
             val offset = Offset(x, y)
             points.add(offset)
 
-            pointCoordinates[index] = offset // 🌟 新增：记录当前点的绝对坐标，供手势检测使用
+            pointCoordinates[index] = offset
 
             if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
         }
 
-        // --- 2. 绘制折线 ---
         drawPath(
             path = path,
             color = lineColor,
             style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
         )
 
-        // --- 3. 绘制圆点与 X 轴文本 ---
         points.forEachIndexed { index, point ->
             drawCircle(color = dotColor, radius = 4.dp.toPx(), center = point)
             val label = xLabelMapper(index, data[index])
             if (label != null) {
                 val textLayoutResult = textMeasurer.measure(label, textStyle)
 
-                // 添加了防文字越界的逻辑（来自之前的建议）
                 var textStartX = point.x - textLayoutResult.size.width / 2f
                 if (textStartX < 0f) textStartX = 0f
                 if (textStartX + textLayoutResult.size.width > canvasWidth) {
@@ -196,7 +204,6 @@ fun <T> LineChart(
             }
         }
 
-        // --- 4. 绘制底线 ---
         drawLine(
             color = textColor.copy(alpha = 0.3f),
             start = Offset(0f, canvasHeight - paddingBottom),
@@ -231,51 +238,63 @@ fun Heatmap(
     val textMeasurer = rememberTextMeasurer()
     val textStyle = MaterialTheme.typography.labelMedium.copy(color = Color.Gray)
 
-    // 2. 使用 BoxWithConstraints 获取真实的可用宽度
+    // 控制弹窗的状态
+    var selectedMonth by remember { mutableStateOf<YearMonth?>(null) }
+
     BoxWithConstraints(modifier = modifier) {
         val cols = 2
         val rows = 6
 
-        // 定义间距参数 (dp)
         val cellGap = 4.dp
         val titleHeight = 24.dp
 
-        // --- 核心尺寸计算 ---
-        // 单个月份模块的最大允许宽度
         val monthBlockW = (maxWidth - horizontalGap * (cols - 1)) / cols
-        // 单个小方块的边长：宽度减去6个间隙后，除以7列 (这里强制以宽度为基准计算正方形)
         val cellSize = (monthBlockW - cellGap * 6) / 7
 
-        // 反向推导单个月份模块需要的高度：标题高度 + 6行方块 + 5个行间隙
         val monthBlockH = titleHeight + (cellSize * 6) + (cellGap * 5)
-
-        // 计算整个 Canvas 所需的总高度
         val totalCanvasHeight = (monthBlockH * rows) + (verticalGap * (rows - 1))
-
         val scrollState = rememberScrollState()
 
-        // 当滚动内容的高度计算出来后（maxValue更新），自动滑动到最底部
-        LaunchedEffect(scrollState.maxValue) {
-            // 如果你希望瞬间定位到最下面，用 scrollTo：
-            scrollState.scrollTo(scrollState.maxValue)
+        val startMonth = endMonth.minusMonths(11)
 
-            // 如果你希望刚进页面时有一个平滑滚动到最下面的动画，用 animateScrollTo：
-            // scrollState.animateScrollTo(scrollState.maxValue)
+        LaunchedEffect(scrollState.maxValue) {
+            scrollState.scrollTo(scrollState.maxValue)
         }
 
-        // 3. 构建可滚动的容器
         Column(
             modifier = Modifier
-                .fillMaxSize() // 填满外部给予的可见区域
-                .verticalScroll(scrollState) // 开启垂直滚动
+                .fillMaxSize()
+                .verticalScroll(scrollState)
         ) {
-            // 内部的 Canvas 使用计算出的精准高度
             Canvas(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(totalCanvasHeight)
+                    // 添加点击事件监听
+                    .pointerInput(Unit) {
+                        detectTapGestures { offset ->
+                            val monthBlockWPx = monthBlockW.toPx()
+                            val monthBlockHPx = monthBlockH.toPx()
+                            val monthGapXPx = horizontalGap.toPx()
+                            val monthGapYPx = verticalGap.toPx()
+
+                            // 计算点击所在的行和列
+                            val c = (offset.x / (monthBlockWPx + monthGapXPx)).toInt()
+                            val r = (offset.y / (monthBlockHPx + monthGapYPx)).toInt()
+
+                            // 确保点击的不是间隔空白处
+                            val xInCell = offset.x % (monthBlockWPx + monthGapXPx)
+                            val yInCell = offset.y % (monthBlockHPx + monthGapYPx)
+
+                            if (c < cols && r < rows && xInCell <= monthBlockWPx && yInCell <= monthBlockHPx) {
+                                val index = r * cols + c
+                                if (index < 12) {
+                                    selectedMonth = startMonth.plusMonths(index.toLong())
+                                }
+                            }
+                        }
+                    }
             ) {
-                // 将 dp 转换为 px 以供 Canvas 绘制使用
                 val monthBlockWPx = monthBlockW.toPx()
                 val monthBlockHPx = monthBlockH.toPx()
                 val monthGapXPx = horizontalGap.toPx()
@@ -284,9 +303,6 @@ fun Heatmap(
                 val cellGapPx = cellGap.toPx()
                 val titleHeightPx = titleHeight.toPx()
 
-                val startMonth = endMonth.minusMonths(11)
-
-                // 4. 遍历绘制
                 for (i in 0 until 12) {
                     val currentMonth = startMonth.plusMonths(i.toLong())
                     val r = i / cols
@@ -333,6 +349,102 @@ fun Heatmap(
                                 size = Size(cellSizePx, cellSizePx),
                                 cornerRadius = CornerRadius(4.dp.toPx())
                             )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 显示选中的月份弹窗
+    selectedMonth?.let { month ->
+        MonthDetailDialog(
+            month = month,
+            dataMap = normalizedDataMap,
+            levelColors = levelColors,
+            emptyColor = emptyColor,
+            onDismiss = { selectedMonth = null } // 关闭弹窗
+        )
+    }
+}
+
+@Composable
+fun MonthDetailDialog(
+    month: YearMonth,
+    dataMap: Map<LocalDate, Int>,
+    levelColors: List<Color>,
+    emptyColor: Color,
+    onDismiss: () -> Unit
+) {
+    StandardDialog(onDismissRequest = onDismiss) {
+        Column(modifier = Modifier.padding(16.dp).fillMaxWidth(0.85f)) {
+            Text(
+                text = "${month.year}年 ${month.monthValue}月",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            // 星期表头
+            val weekdays = listOf("一", "二", "三", "四", "五", "六", "日")
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                weekdays.forEach { day ->
+                    Text(
+                        text = day,
+                        modifier = Modifier.weight(1f),
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // 日期网格
+            val daysInMonth = month.lengthOfMonth()
+            val firstDayOfWeek = month.atDay(1).dayOfWeek.value
+            val totalCells = daysInMonth + firstDayOfWeek - 1
+            val rows = ceil(totalCells / 7.0).toInt()
+
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                for (r in 0 until rows) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        for (c in 0..6) {
+                            val cellIndex = r * 7 + c
+                            val day = cellIndex - firstDayOfWeek + 2
+
+                            if (day in 1..daysInMonth) {
+                                val date = month.atDay(day)
+                                val level = dataMap[date] ?: -1
+                                val bgColor =
+                                    if (level in levelColors.indices) levelColors[level] else emptyColor
+
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .aspectRatio(1f)
+                                        .background(bgColor, squircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = day.toString(),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if (level != -1) Color.White else MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            } else {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
                         }
                     }
                 }

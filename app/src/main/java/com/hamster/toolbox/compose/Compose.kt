@@ -12,6 +12,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -45,6 +46,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDatePickerState
@@ -135,6 +137,23 @@ val assistantBubbleShape = SquircleShape(
     bottomEnd = 16.dp,
     smoothing = CornerSmoothing.Medium
 )
+
+//val adaptiveSquircleShape = object : Shape {
+//    override fun createOutline(
+//        size: Size,
+//        layoutDirection: LayoutDirection,
+//        density: Density
+//    ): Outline {
+//        val maxRadiusPx = with(density) { 16.dp.toPx() }
+//        val isHeightTooSmall = size.height < maxRadiusPx * 2
+//
+//        if (isHeightTooSmall) {
+//            return RoundedCornerShape(50).createOutline(size, layoutDirection, density)
+//        }
+//
+//        return squircleShape.createOutline(size, layoutDirection, density)
+//    }
+//}
 
 @Composable
 fun ItemGroup(
@@ -407,6 +426,16 @@ fun EditTextDialog(
                 ),
                 keyboardActions = KeyboardActions(
                     onDone = { if (singleLine) submitAction() }
+                ),
+                shape = squircleShape,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = colorResource(R.color.mikuGreen), // 选中时用你的主题绿
+                    unfocusedBorderColor = Color.LightGray,                     // 未选中时用浅灰
+                    errorBorderColor = Color.Red,                               // 报错时用红色
+                    disabledBorderColor = Color.Gray.copy(alpha = 0.5f),        // 禁用时半透明灰色
+
+                    focusedLabelColor = colorResource(R.color.mikuGreen),  // 选中时的浮动标签颜色
+                    cursorColor = colorResource(R.color.mikuGreen)         // 输入光标的颜色
                 )
             )
             Spacer(modifier = Modifier.height(24.dp))
@@ -875,7 +904,12 @@ fun StandardDialog(
             Card(
                 modifier = modifier
                     .applySharedTilt(sharedTiltState)
-                    .clickable(enabled = false) {}, // 接收外部传入的 modifier
+                    .border(
+                        width = 2.dp,
+                        color = Color.LightGray,
+                        shape = squircleShape
+                    )
+                    .clickable(enabled = false) {},
                 shape = squircleShape,
                 colors = CardDefaults.cardColors(containerColor = colorResource(R.color.bg_dialog)),
                 elevation = CardDefaults.cardElevation(16.dp)

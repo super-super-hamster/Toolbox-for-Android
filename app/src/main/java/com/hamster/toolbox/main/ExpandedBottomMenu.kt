@@ -1,21 +1,31 @@
 package com.hamster.toolbox.main
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -30,14 +40,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -47,11 +64,13 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.intl.LocaleList
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.hamster.toolbox.ColorPicker
 import com.hamster.toolbox.Debug
-import com.hamster.toolbox.GameConsole
 import com.hamster.toolbox.R
 import com.hamster.toolbox.RandomNumber
 import com.hamster.toolbox.Route
@@ -68,12 +87,10 @@ import com.hamster.toolbox.compose.assistantBubbleShape
 import com.hamster.toolbox.compose.rememberStringPreference
 import com.hamster.toolbox.compose.squircleShape
 import com.hamster.toolbox.compose.userBubbleShape
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import java.io.File
-
-// TODO: 优化菜单栏
-// TODO: 助手下滑关闭菜单栏
-// TODO: 上滑开启菜单栏
+import kotlin.math.roundToInt
 
 @Composable
 fun ExpandedBottomMenu(
@@ -95,6 +112,7 @@ fun ExpandedBottomMenu(
                 inputText = inputText,
                 setInputText = { setInputText(it) },
                 onNavigate = { onNavigate(it) },
+                onDragDown = onDragDown,
                 apiKey = apiKey,
             )
         },
@@ -149,68 +167,57 @@ private fun Menu(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(96.dp)
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             // 课程表
-            IconButton(onClick = { onNavigate(Schedule) }) {
-                Icon(painterResource(R.drawable.ic_calendar), null, tint = Color.Gray)
-            }
+            MenuItem(name = "课程表", icon = painterResource(R.drawable.ic_calendar), onClick = { onNavigate(Schedule) })
+
             // 尺子
-            IconButton(onClick = { onNavigate(Ruler) }) {
-                Icon(painterResource(R.drawable.ic_ruler), null, tint = Color.Gray)
-            }
+            MenuItem(name = "尺子", icon = painterResource(R.drawable.ic_ruler), onClick = { onNavigate(Ruler) })
+
             // 随机数
-            IconButton(onClick = { onNavigate(RandomNumber) }) {
-                Icon(painterResource(R.drawable.ic_numbers), null, tint = Color.Gray)
-            }
+            MenuItem(name = "随机数", icon = painterResource(R.drawable.ic_numbers), onClick = { onNavigate(RandomNumber) })
             // 游戏
 //            IconButton(onClick = { onNavigate(GameConsole) }) {
 //                Icon(painterResource(R.drawable.ic_game_console), null, tint = Color.Gray)
 //            }
             // 取色器
-            IconButton(onClick = { onNavigate(ColorPicker) }) {
-                Icon(painterResource(R.drawable.ic_color_picker), null, tint = Color.Gray)
-            }
+            MenuItem(name = "取色器", icon = painterResource(R.drawable.ic_color_picker), onClick = { onNavigate(ColorPicker) })
         }
 
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(96.dp)
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             // 时间
-            IconButton(onClick = { onNavigate(Time) }) {
-                Icon(painterResource(R.drawable.ic_time), null, tint = Color.Gray)
-            }
-            // Tips
-            IconButton(onClick = { onNavigate(Tips) }) {
-                Icon(painterResource(R.drawable.ic_tips), null, tint = Color.Gray)
-            }
-            // 设置
-            IconButton(onClick = { onNavigate(SettingsGraph) }) {
-                Icon(painterResource(R.drawable.ic_settings), null, tint = Color.Gray)
-            }
+            MenuItem(name = "时间", icon = painterResource(R.drawable.ic_time), onClick = { onNavigate(Time) })
 
+            // Tips
+            MenuItem(name = "Tips", icon = painterResource(R.drawable.ic_tips), onClick = { onNavigate(Tips) })
+
+            // 设置
+            MenuItem(name = "设置", icon = painterResource(R.drawable.ic_settings), onClick = { onNavigate(SettingsGraph) })
+
+            // Debug
             if (userName == "SuperHamster") {
-                IconButton(onClick = { onNavigate(Debug) }) {
-                    Icon(painterResource(R.drawable.ic_debug), null, tint = Color.Gray)
-                }
+                MenuItem(name = "Debug", icon = painterResource(R.drawable.ic_debug), onClick = { onNavigate(Debug) })
             }
         }
     }
 }
 
-// TODO: 发送动画
 @Composable
 fun Assistant(
     inputText: String,
     mainViewModel: MainViewModel,
     setInputText: (String) -> Unit,
     onNavigate: (route: Route) -> Unit,
+    onDragDown: () -> Unit,
     apiKey: String?
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -221,6 +228,25 @@ fun Assistant(
     val chatSize = AI.chatHistory.size
 
     val userAvatarPath by rememberStringPreference("user_avatar_path", "")
+
+    var flyingText by remember { mutableStateOf("") }
+    val flyOffsetX = remember { Animatable(0f) }
+    val flyAlpha = remember { Animatable(0f) }
+
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource
+            ): Offset {
+                if (available.y > 0) {
+                    onDragDown()
+                }
+                return Offset.Zero
+            }
+        }
+    }
 
     LaunchedEffect(chatSize) {
         if (chatSize > 0) {
@@ -242,13 +268,34 @@ fun Assistant(
                     color = Color.Gray,
                     shape = squircleShape
                 )
-                .padding(horizontal = 8.dp),
+                .padding(horizontal = 8.dp)
+                .nestedScroll(nestedScrollConnection), // 顶部继续下划
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(AI.chatHistory) { message ->
+            itemsIndexed(AI.chatHistory) { _, message ->
                 if (message.role != "system") {
-                    ChatBubble(message = message, userAvatarPath = userAvatarPath)
+                    var isBubbleVisible by remember { mutableStateOf(false) }
+
+                    LaunchedEffect(message) {
+                        isBubbleVisible = true
+                    }
+
+                    AnimatedVisibility(
+                        visible = isBubbleVisible,
+                        enter = slideInVertically(
+                            initialOffsetY = { fullHeight -> fullHeight / 2 },
+                            animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing)
+                        ) + fadeIn(
+                            animationSpec = tween(durationMillis = 400)
+                        )
+                    ) {
+                        ChatBubble(message = message, userAvatarPath = userAvatarPath)
+                    }
                 }
+            }
+
+            item {
+                Spacer(modifier = Modifier.height(8.dp))
             }
         }
 
@@ -258,43 +305,64 @@ fun Assistant(
             modifier = Modifier.fillMaxWidth().height(56.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            OutlinedTextField(
-                value = inputText,
-                onValueChange = { setInputText(it) },
+            Box(
                 modifier = Modifier.weight(1f),
-                placeholder = { Text("输入消息...") },
-                maxLines = 3,
-                shape = squircleShape,
-                keyboardOptions = KeyboardOptions(
-                    // 默认中文输入法
-                    hintLocales = LocaleList(Locale("zh"))
-                ),
-                colors = OutlinedTextFieldDefaults.colors(
-                    // 边框颜色
-                    focusedBorderColor = colorResource(R.color.text),
-                    unfocusedBorderColor = Color.LightGray,
-
-                    // 背景颜色
-                    focusedContainerColor = Color.Transparent,
-                    unfocusedContainerColor = Color.Transparent,
-
-                    // 光标颜色
-                    cursorColor = Color.LightGray,
-
-                    // 文字颜色
-                    focusedTextColor = colorResource(R.color.text),
-                    unfocusedTextColor = colorResource(R.color.text)
+                contentAlignment = Alignment.CenterStart
+            ) {
+                OutlinedTextField(
+                    value = inputText,
+                    onValueChange = { setInputText(it) },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("输入消息...") },
+                    maxLines = 3,
+                    shape = squircleShape,
+                    keyboardOptions = KeyboardOptions(
+                        hintLocales = LocaleList(Locale("zh"))
+                    ),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = colorResource(R.color.mikuGreen),
+                        unfocusedBorderColor = Color.LightGray,
+                        errorBorderColor = Color.Red,
+                        disabledBorderColor = Color.Gray.copy(alpha = 0.5f),
+                        focusedLabelColor = colorResource(R.color.mikuGreen),
+                        cursorColor = colorResource(R.color.mikuGreen)
+                    )
                 )
-            )
+
+                if (flyingText.isNotEmpty()) {
+                    Text(
+                        text = flyingText,
+                        modifier = Modifier
+                            .padding(start = 16.dp, end = 16.dp) // 匹配 TextField 的内边距
+                            .offset { IntOffset(flyOffsetX.value.roundToInt(), 0) }
+                            .alpha(flyAlpha.value),
+                        maxLines = 3
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.width(8.dp))
 
             IconButton(
                 onClick = {
-                    if (inputText.isNotBlank()) {
+                    if (inputText.isNotBlank() && flyingText.isEmpty()) {
                         setInputText("")
 
                         coroutineScope.launch {
+                            flyingText = inputText
+                            flyAlpha.snapTo(1f)
+                            flyOffsetX.snapTo(0f)
+
+                            val moveJob = launch {
+                                flyOffsetX.animateTo(150f, animationSpec = tween(300))
+                            }
+                            val fadeJob = launch {
+                                flyAlpha.animateTo(0f, animationSpec = tween(300))
+                            }
+
+                            joinAll(moveJob, fadeJob)
+                            flyingText = ""
+
                             AI.chatWithAssistant(context, mainViewModel, inputText, apiKey) { onNavigate(it) }
                         }
                     }
@@ -387,6 +455,44 @@ fun UserAvatar(avatarPath: String?) {
                 .padding(start = 8.dp)
                 .size(48.dp)
                 .clip(CircleShape)
+        )
+    }
+}
+
+@Composable
+fun MenuItem(
+    name: String,
+    icon: Painter,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    tint: Color = Color.Gray
+) {
+    Column(
+        modifier = modifier
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null, // 去掉点击的视觉效果
+                onClick = onClick
+            )
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            painter = icon,
+            contentDescription = name,
+            tint = tint,
+            modifier = Modifier.size(24.dp)
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Text(
+            text = name,
+            fontSize = 12.sp,
+            color = tint,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }

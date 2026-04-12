@@ -1,6 +1,10 @@
 package com.hamster.toolbox.screen.time
 
 import android.content.Context
+import android.content.pm.ApplicationInfo
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.core.content.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
@@ -11,17 +15,16 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.Calendar
-import androidx.core.content.edit
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
 
 class TimeViewModel(private val appContext: Context, private val dao: UsageStatsDao) : ViewModel() {
     private val mapper = AppUsageMapper(appContext)
@@ -52,21 +55,25 @@ class TimeViewModel(private val appContext: Context, private val dao: UsageStats
             val currentSet = prefs.getStringSet("invisible_apps", emptySet())?.toMutableSet() ?: mutableSetOf()
 
             if (!hasInit) {
-                val initInvisibleSet = setOf(
-                    "com.android.settings",
-                    "com.google.android.deskclock",
-                    "com.android.BBKClock",
-                    "com.vivo.gallery",
-                    "com.vivo.weather",
-                    "com.android.camera",
-                    "com.android.bbkcalculator",
-                    "com.vivo.ai.copilot",
-                    "com.vivo.translator",
-                    "com.bbk.appstore",
-                    "com.vivo.space",
-                    "com.vivo.assistant",
-                    "com.bbk.calendar",
-                    "com.vivo.smartshot")
+                val packageManager = context.packageManager
+
+                // 适配 Android 13+，并直接告诉系统我们只想要系统应用，提高查询效率
+                val installedApps = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    packageManager.getInstalledApplications(
+                        PackageManager.ApplicationInfoFlags.of(PackageManager.MATCH_SYSTEM_ONLY.toLong())
+                    )
+                } else {
+                    @Suppress("DEPRECATION")
+                    packageManager.getInstalledApplications(PackageManager.MATCH_SYSTEM_ONLY)
+                }
+
+                // 二次校验，提取包名
+                val initInvisibleSet = installedApps.filter { appInfo ->
+                    val isSystemApp = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
+                    val isUpdatedSystemApp = (appInfo.flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0
+                    isSystemApp || isUpdatedSystemApp
+                }.map { it.packageName }.toSet()
+
                 currentSet.addAll(initInvisibleSet)
                 prefs.edit {
                     putStringSet(

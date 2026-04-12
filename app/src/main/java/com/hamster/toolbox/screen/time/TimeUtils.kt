@@ -135,6 +135,7 @@ class AppUsageMapper(context: Context) {
     suspend fun dailyMapAndAggregate(entities: List<AppSessionEntity>): List<DailyAppUsageState> {
         val result = entities.mapNotNull { app ->
             try {
+                // 过滤使用时长小于1分钟的记录
                 if (app.durationMillis <= 60000) {
                     return@mapNotNull null
                 }
@@ -184,6 +185,13 @@ fun formatMillis(millis: Long): String {
         minutes > 0 -> "${minutes}分钟"
         else -> "< 1分钟"
     }
+}
+
+// 毫秒转HH:mm
+fun formatRelativeTime(millis: Long): String {
+    val hours = (millis / 3_600_000).toInt()
+    val minutes = ((millis % 3_600_000) / 60_000).toInt()
+    return "${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}"
 }
 
 // 一天开始的时间戳

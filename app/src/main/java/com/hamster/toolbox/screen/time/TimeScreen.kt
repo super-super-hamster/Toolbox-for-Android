@@ -3,19 +3,21 @@ package com.hamster.toolbox.screen.time
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -42,12 +44,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
@@ -67,6 +71,7 @@ import com.hamster.toolbox.compose.HorizontalLine
 import com.hamster.toolbox.compose.ItemGroup
 import com.hamster.toolbox.compose.LineChart
 import com.hamster.toolbox.compose.PageColumn
+import com.hamster.toolbox.compose.StandardDialog
 import com.hamster.toolbox.compose.TabItem
 import com.hamster.toolbox.compose.Tabs
 import com.hamster.toolbox.compose.rememberBooleanPreference
@@ -77,6 +82,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
+
+
 
 @Composable
 fun TimeScreen(
@@ -139,6 +146,7 @@ fun TimeScreen(
         },
         TabItem(title = "今天") {
             DayView(
+                setLoading = setLoading,
                 usageStateList = dayUsageStateList
             )
         }
@@ -213,6 +221,7 @@ fun YearView(
                     Image(
                         painter = rememberDrawablePainter(drawable = selectedApp?.icon),
                         contentDescription = null,
+                        contentScale = ContentScale.Crop,
                         modifier = Modifier
                             .size(64.dp)
                             .clip(shape = squircleShape),
@@ -220,7 +229,16 @@ fun YearView(
 
                     Spacer(modifier = Modifier.width(24.dp))
 
-                    if (showPackageName) selectedApp?.packageName else selectedApp?.name?.let { Text(text = it, fontSize = 32.sp, color = colorResource(R.color.text)) }
+                    val displayText = if (showPackageName) selectedApp?.packageName else selectedApp?.name
+
+                    displayText?.let { text ->
+                        Text(
+                            text = text,
+                            fontSize = 32.sp,
+                            lineHeight = 40.sp,
+                            color = colorResource(R.color.text)
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -321,6 +339,7 @@ fun MonthView(
                     Image(
                         painter = rememberDrawablePainter(drawable = selectedApp?.icon),
                         contentDescription = null,
+                        contentScale = ContentScale.Crop,
                         modifier = Modifier
                             .size(64.dp)
                             .clip(shape = squircleShape),
@@ -388,11 +407,12 @@ fun MonthView(
 
 @Composable
 fun DayView(
+    setLoading: (Boolean) -> Unit,
     usageStateList: List<DailyAppUsageState>,
     hourHeight: Dp = 240.dp
 ) {
     val positionedApps = remember(usageStateList) {
-        calculateAppPositions(usageStateList)
+        calculateAppPositions(usageStateList, setLoading)
     }
 
     val scrollState = rememberScrollState()
@@ -401,6 +421,7 @@ fun DayView(
     Row(
         modifier = Modifier
             .fillMaxSize()
+            .padding(end = 8.dp)
             .verticalScroll(scrollState)
     ) {
         Column(
@@ -416,25 +437,21 @@ fun DayView(
                     contentAlignment = Alignment.TopCenter
                 ) {
                     Text(
-                        text = String.format("%02d:00", i),
+                        text = "${i.toString().padStart(2, '0')}:00",
                         fontSize = 12.sp,
                         color = Color.Gray,
-                        // 稍微向上偏移，让文字中心对齐网格线
-                        modifier = Modifier.offset(y = (-8).dp)
                     )
                 }
             }
         }
 
-        // 右侧：背景网格 + 应用使用块
         Box(
             modifier = Modifier
                 .weight(1f)
                 .height(hourHeight * totalHours)
         ) {
-            // 绘制横向背景网格线
             Column(modifier = Modifier.fillMaxSize()) {
-                for (i in 0 until totalHours) {
+                repeat(totalHours) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -444,7 +461,6 @@ fun DayView(
                 }
             }
 
-            // 绘制应用时间块（绝对定位）
             TimelineLayout(
                 positionedApps = positionedApps,
                 hourHeight = hourHeight,
@@ -463,29 +479,36 @@ fun TimelineLayout(
     val dayMillis = 24 * 60 * 60 * 1000f // 一天的总毫秒数
     val hourHeightPx = with(LocalDensity.current) { hourHeight.toPx() }
 
+    var selectedApp by remember { mutableStateOf<DailyAppUsageState?>(null) }
+
     Layout(
         content = {
-            // 生成所有的 UI 块
             positionedApps.forEach { item ->
                 Surface(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 1.dp, vertical = 1.dp) // 留一点间隙，避免块挨得太紧
-                        .clip(squircleShape),
+                        .padding(horizontal = 4.dp),
                     color = item.appUsage.color,
-                    contentColor = Color.White
+                    shape = squircleShape,
+                    contentColor = Color.White,
+                    border = BorderStroke(1.dp, Color.LightGray),
+                    onClick = {
+                        selectedApp = item.appUsage
+                    }
                 ) {
-                    Column(
+                    BoxWithConstraints(
                         modifier = Modifier.padding(4.dp)
                     ) {
-                        Text(
-                            text = item.appUsage.name,
-                            fontSize = 12.sp,
-                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        // 可选：如果高度够，可以显示持续时间等信息
+                        if (maxHeight > 16.dp) {
+                            Text(
+                                text = item.appUsage.name,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                color = if (item.appUsage.color.luminance() > 0.5f) Color.Black else Color.White // 根据背景颜色亮度使用不同的字体颜色
+                            )
+                        }
                     }
                 }
             }
@@ -495,14 +518,11 @@ fun TimelineLayout(
         val totalHeightPx = (24 * hourHeightPx).roundToInt()
         val totalWidthPx = constraints.maxWidth
 
-        // 测量每个应用的尺寸
-        val placeables = measurables.mapIndexed { index, measurable ->
+        val place = measurables.mapIndexed { index, measurable ->
             val item = positionedApps[index]
             val app = item.appUsage
 
-            // 宽度 = 总宽度 / 所在组的总列数
             val itemWidth = totalWidthPx / item.totalColumns
-            // 高度 = (持续时间 / 全天时间) * 全天总像素高度
             val itemHeight = ((app.endTime - app.startTime) / dayMillis * totalHeightPx).roundToInt()
 
             measurable.measure(
@@ -512,18 +532,81 @@ fun TimelineLayout(
 
         // 布局每个应用的绝对位置
         layout(totalWidthPx, totalHeightPx) {
-            placeables.forEachIndexed { index, placeable ->
+            place.forEachIndexed { index, placeable ->
                 val item = positionedApps[index]
                 val app = item.appUsage
 
                 val itemWidth = totalWidthPx / item.totalColumns
 
-                // X 坐标 = 列索引 * 单个块的宽度
                 val xPosition = item.columnIndex * itemWidth
-                // Y 坐标 = (距离0点时间 / 全天时间) * 全天总像素高度
                 val yPosition = (app.startTime / dayMillis * totalHeightPx).roundToInt()
 
                 placeable.placeRelative(x = xPosition, y = yPosition)
+            }
+        }
+    }
+
+    selectedApp?.let { app ->
+        StandardDialog(onDismissRequest = { selectedApp = null }) {
+            Row(
+                modifier = Modifier.fillMaxWidth(0.85f).padding(24.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.Start
+                ) {
+                    Text(
+                        text = app.name,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = colorResource(R.color.text)
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = app.duration,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = colorResource(R.color.text)
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    val startTimeStr = formatRelativeTime(app.startTime)
+                    val endTimeStr = formatRelativeTime(app.endTime)
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier
+                            .background(
+                                color = Color.LightGray.copy(alpha = 0.2f),
+                                shape = MaterialTheme.shapes.small
+                            )
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            text = "$startTimeStr  —  $endTimeStr",
+                            fontSize = 14.sp,
+                            color = Color.Gray,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                Image(
+                    painter = rememberDrawablePainter(drawable = app.icon),
+                    contentDescription = app.name,
+                    contentScale = ContentScale.Crop, // 使图片的短边适应容器的大小，超出部分裁切
+                    modifier = Modifier
+                        .size(72.dp)
+                        .clip(shape = squircleShape)
+                )
             }
         }
     }
@@ -606,6 +689,7 @@ fun UsageItem(
         Image(
             painter = rememberDrawablePainter(drawable = appUsageState.icon),
             contentDescription = null,
+            contentScale = ContentScale.Crop,
             modifier = Modifier
                 .size(48.dp)
                 .clip(shape = squircleShape),
@@ -680,6 +764,7 @@ fun UsageSwitchItem(
         Image(
             painter = rememberDrawablePainter(drawable = appUsageState.icon),
             contentDescription = null,
+            contentScale = ContentScale.Crop,
             modifier = Modifier
                 .size(48.dp)
                 .clip(shape = squircleShape),
@@ -713,25 +798,24 @@ data class PositionedApp(
     var totalColumns: Int = 1
 )
 
-fun calculateAppPositions(sortedUsageList: List<DailyAppUsageState>): List<PositionedApp> {
+fun calculateAppPositions(sortedUsageList: List<DailyAppUsageState>, setLoading: (Boolean) -> Unit): List<PositionedApp> {
     if (sortedUsageList.isEmpty()) return emptyList()
+
+    setLoading(true)
 
     val clusters = mutableListOf<MutableList<PositionedApp>>()
     var currentCluster = mutableListOf<PositionedApp>()
     var clusterEndTime = 0L
 
-    // 1. 分组 (Clustering)
     for (app in sortedUsageList) {
         if (currentCluster.isEmpty()) {
             currentCluster.add(PositionedApp(app))
             clusterEndTime = app.endTime
         } else {
             if (app.startTime < clusterEndTime) {
-                // 有时间交集，加入当前组
                 currentCluster.add(PositionedApp(app))
                 clusterEndTime = maxOf(clusterEndTime, app.endTime)
             } else {
-                // 无交集，开启新组
                 clusters.add(currentCluster)
                 currentCluster = mutableListOf(PositionedApp(app))
                 clusterEndTime = app.endTime
@@ -742,15 +826,13 @@ fun calculateAppPositions(sortedUsageList: List<DailyAppUsageState>): List<Posit
         clusters.add(currentCluster)
     }
 
-    // 2. 分列 (Assign Columns)
     for (cluster in clusters) {
-        val columnsEndTimes = mutableListOf<Long>() // 记录每一列当前最晚的结束时间
+        val columnsEndTimes = mutableListOf<Long>()
 
         for (positionedApp in cluster) {
             val app = positionedApp.appUsage
             var placed = false
 
-            // 尝试放入已有的列
             for (i in columnsEndTimes.indices) {
                 if (app.startTime >= columnsEndTimes[i]) {
                     positionedApp.columnIndex = i
@@ -760,19 +842,19 @@ fun calculateAppPositions(sortedUsageList: List<DailyAppUsageState>): List<Posit
                 }
             }
 
-            // 如果已有列都放不下（存在重叠），则开启新的一列
             if (!placed) {
                 positionedApp.columnIndex = columnsEndTimes.size
                 columnsEndTimes.add(app.endTime)
             }
         }
 
-        // 3. 记录该组的最大重叠数（即总列数）
         val totalCols = columnsEndTimes.size
         for (positionedApp in cluster) {
             positionedApp.totalColumns = totalCols
         }
     }
+
+    setLoading(false)
 
     return clusters.flatten()
 }

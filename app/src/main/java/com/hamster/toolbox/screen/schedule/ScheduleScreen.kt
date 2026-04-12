@@ -63,9 +63,6 @@ import com.hamster.toolbox.utils.saveSchedule
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
-// TODO: 高光当天
-// TODO: 通用按钮跳转后返回，导航返回默认页面
-
 @Composable
 fun ScheduleScreen() {
     val context = LocalContext.current
@@ -155,6 +152,8 @@ fun WeekScheduleCard(
     var activeEmptySlot by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     var addingSlot by remember { mutableStateOf<Pair<Int, Int>?>(null) }
 
+    val today = remember { LocalDate.now() }
+
     val startDateObj = remember(semesterStartDateStr) {
         try {
             if (semesterStartDateStr != null && semesterStartDateStr != "未设置") {
@@ -206,6 +205,13 @@ fun WeekScheduleCard(
                             color = Color.Black
                         )
 
+                        val currentDate: LocalDate? = if (startDateObj != null) {
+                            val offsetDays = ((weekNumber - 1) * 7 + index).toLong()
+                            startDateObj.plusDays(offsetDays)
+                        } else {
+                            null
+                        }
+
                         val dateText = if (startDateObj != null) {
                             val offsetDays = ((weekNumber - 1) * 7 + index).toLong()
                             val currentDate = startDateObj.plusDays(offsetDays)
@@ -214,11 +220,39 @@ fun WeekScheduleCard(
                             "--/--"
                         }
 
-                        Text(
-                            text = dateText,
-                            fontSize = 10.sp,
-                            color = Color.Gray
-                        )
+                        val isToday = currentDate == today
+
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(top = 2.dp)
+                        ) {
+                            Text(
+                                text = dateText,
+                                fontSize = 10.sp,
+                                color = if (isToday) colorResource(R.color.mikuGreen) else Color.Gray,
+                                fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal
+                            )
+
+                            if (isToday) {
+                                Spacer(
+                                    modifier = Modifier
+                                        .padding(top = 2.dp)
+                                        .width(16.dp)
+                                        .height(2.dp)
+                                        .background(
+                                            color = colorResource(R.color.mikuGreen),
+                                            shape = squircleShape
+                                        )
+                                )
+                            } else {
+                                // 占位，防止横线导致高度不一致
+                                Spacer(
+                                    modifier = Modifier
+                                        .padding(top = 2.dp)
+                                        .height(2.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }

@@ -57,7 +57,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
@@ -127,7 +129,6 @@ import kotlinx.coroutines.withContext
 // TODO: 通知栏字体颜色适配
 // TODO: 测距
 // TODO: preferencesDataStore
-// TODO: 获取权限入口
 
 class MainActivity : ComponentActivity() {
     // 跟随应用生命周期的协程作用域
@@ -155,6 +156,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             val context = LocalContext.current
             val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
+
+            val haptic = LocalHapticFeedback.current
 
             // 底部菜单下标
             var selectedIndex by remember { mutableIntStateOf(0) }
@@ -272,7 +275,7 @@ class MainActivity : ComponentActivity() {
                             Box(modifier = Modifier.fillMaxSize()) {
                                 NavHost(
                                     navController = navController,
-                                    startDestination = ColorPicker,
+                                    startDestination = Time,
                                     modifier = Modifier
                                         .layerBackdrop(backdrop) // 应用玻璃效果
                                         .hazeSource(state = hazeState)
@@ -475,14 +478,13 @@ class MainActivity : ComponentActivity() {
                                                                 if (isSetKeyWordsScreen) {
                                                                     mainViewModel.isShowAddKeywordDialog = true
                                                                 } else if (isScheduleScreen) {
-                                                                    navController.expandMenuNavigate(ImportCurriculum)
+                                                                    navController.navigate(ImportCurriculum)
                                                                 } else if (isTimeScreen) {
                                                                     mainViewModel.updateAppSessionTrigger++
                                                                 }},
                                                             onLongPressStart = {
                                                                 if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED && isModelReady) {
-                                                                    // TODO:震动
-//                                                                    performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                                                     showRecording = true
                                                                     speechManager.startListening()
                                                                 } else {
@@ -578,7 +580,7 @@ class MainActivity : ComponentActivity() {
                                                 interactionSource = remember { MutableInteractionSource() },
                                                 indication = null
                                             ) {
-                                                showLoading = false
+//                                                showLoading = false
                                             },
                                         contentAlignment = Alignment.Center
                                     ) {
