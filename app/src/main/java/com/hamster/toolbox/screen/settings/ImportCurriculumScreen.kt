@@ -49,7 +49,7 @@ fun ImportCurriculumScreen(
                 title = "通过自然语言导入",
                 dialogTitle = "输入自然语言",
                 initialValue = naturalLanguage,
-                hint = "请输入包含课程信息，至少包含课程名称和上课时间，也可包含地点和老师名称",
+                hint = "请输入课程信息",
                 onConfirm = { input ->
                     scope.launch {
                         try {

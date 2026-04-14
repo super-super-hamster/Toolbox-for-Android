@@ -199,7 +199,7 @@ class MainActivity : ComponentActivity() {
             val universalButtonIconId = when {
                 currentDestination?.hasRoute<Schedule>() == true -> R.drawable.ic_add
                 currentDestination?.hasRoute<SetKeywords>() == true -> R.drawable.ic_add
-                currentDestination?.hasRoute<Time>() == true -> R.drawable.ic_refresh
+                currentDestination?.hasRoute<Time>() == true -> if (mainViewModel.isSetInvisibleApp) R.drawable.ic_invisible else R.drawable.ic_visible
                 else -> R.drawable.ic_microphone
             }
 
@@ -327,13 +327,16 @@ class MainActivity : ComponentActivity() {
                                         )
                                     }
 
+                                    // 取色
                                     composable<ColorPicker>(
                                         enterTransition = { slideInWithScaleEnter() },
                                         exitTransition = { scaleOutExit() },
                                         popEnterTransition = { scaleInPopEnter() },
                                         popExitTransition = { slideOutWithScalePopExit() }
                                     ) {
-                                        ColorPickerScreen()
+                                        ColorPickerScreen(
+                                            setLoading = { setLoading(it) }
+                                        )
                                     }
 
                                     // Tips
@@ -360,6 +363,7 @@ class MainActivity : ComponentActivity() {
                                         }
                                     )
 
+                                    // Debug
                                     composable<Debug>(
                                         enterTransition = { slideInWithScaleEnter() },
                                         exitTransition = { scaleOutExit() },
@@ -480,7 +484,7 @@ class MainActivity : ComponentActivity() {
                                                                 } else if (isScheduleScreen) {
                                                                     navController.navigate(ImportCurriculum)
                                                                 } else if (isTimeScreen) {
-                                                                    mainViewModel.updateAppSessionTrigger++
+                                                                    mainViewModel.changeStateOfIsSetInvisibleApp()
                                                                 }},
                                                             onLongPressStart = {
                                                                 if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED && isModelReady) {

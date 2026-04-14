@@ -24,10 +24,12 @@ import com.hamster.toolbox.compose.ItemGroup
 import com.hamster.toolbox.compose.PageColumn
 import com.hamster.toolbox.compose.rememberSharedTiltState
 import com.hamster.toolbox.R
-import com.hamster.toolbox.utils.color.getColors
+import com.hamster.toolbox.utils.color.getMidtoneColors
 
 @Composable
-fun ColorPickerScreen() {
+fun ColorPickerScreen(
+    setLoading: (Boolean) -> Unit
+) {
     val sharedTiltState = rememberSharedTiltState()
     val context = LocalContext.current
 
@@ -49,8 +51,9 @@ fun ColorPickerScreen() {
     }
 
     LaunchedEffect(bitmap) {
+        setLoading(true)
         bitmap?.let { currentBitmap ->
-            val colors = getColors(
+            val colors = getMidtoneColors(
                 bitmap = currentBitmap,
                 radius = 20f,
                 mergeRadius = 10f,
@@ -61,6 +64,7 @@ fun ColorPickerScreen() {
             // 将获取到的 Int 颜色列表映射为 Compose 的 Color 列表
             extractedColors = colors.map { Color(it) }
         }
+        setLoading(false)
     }
 
     PageColumn(sharedTiltState = sharedTiltState) {

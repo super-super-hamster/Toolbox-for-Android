@@ -9,14 +9,10 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sqrt
 
-suspend fun getColors(
+suspend fun getColorGroups(
     bitmap: Bitmap,
     radius: Float = 20f,
-    mergeRadius: Float = 10f,
-    count: Int,
-    mergeSimilarColor: Boolean = true,
-    ignoreBackground: Boolean = false
-): List<Int> = withContext(Dispatchers.Default) {
+): List<GroupNode> = withContext(Dispatchers.Default) {
     val width = bitmap.width
     val height = bitmap.height
     val size = width * height
@@ -96,10 +92,29 @@ suspend fun getColors(
 
     group.sortByDescending { it.count }
 
+    group
+}
+
+suspend fun getMidtoneColors(
+    bitmap: Bitmap,
+    radius: Float = 20f,
+    mergeRadius: Float = 10f,
+    count: Int,
+    mergeSimilarColor: Boolean = true,
+    ignoreBackground: Boolean = false,
+    minBrightness: Float = 15f,
+    maxBrightness: Float = 85f
+): List<Int> = withContext(Dispatchers.Default) {
+    val group = getColorGroups(bitmap, radius)
+
     val result = mutableListOf<Int>()
     val selectedColor = mutableListOf<LAB>()
     for (g in group) {
         if (!(ignoreBackground && g.isBackground)) {
+            if (g.l !in minBrightness..maxBrightness) {
+                continue
+            }
+
             if (mergeSimilarColor && selectedColor.isNotEmpty()) {
                 var minDis = 1e9f
                 selectedColor.forEach {
@@ -123,13 +138,13 @@ suspend fun getColors(
     result
 }
 
-suspend fun getColor(bitmap: Bitmap,
+suspend fun getMidtoneColor(bitmap: Bitmap,
                      radius: Float = 20f,
                      mergeRadius: Float = 10f,
                      mergeSimilarColor: Boolean = true,
                      ignoreBackground: Boolean = false
 ):Int {
-    val color = getColors(bitmap, radius, mergeRadius, 1, mergeSimilarColor, ignoreBackground)
+    val color = getMidtoneColors(bitmap, radius, mergeRadius, 1, mergeSimilarColor, ignoreBackground)
     return if (color.isEmpty()) 0 else color.first()
 }
 

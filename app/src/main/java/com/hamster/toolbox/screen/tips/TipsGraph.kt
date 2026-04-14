@@ -5,7 +5,11 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.navigation
 import com.hamster.toolbox.AssistantTips
+import com.hamster.toolbox.ColorPickerTips
+import com.hamster.toolbox.RandomNumberTips
+import com.hamster.toolbox.RulerTips
 import com.hamster.toolbox.ScheduleTips
+import com.hamster.toolbox.TimeTips
 import com.hamster.toolbox.Tips
 import com.hamster.toolbox.TipsGraph
 import com.hamster.toolbox.WeatherTips
@@ -54,6 +58,42 @@ fun NavGraphBuilder.tipsGraph(
             popExitTransition = { slideOutWithScalePopExit() }
         ) {
             AssistantTipsScreen()
+        }
+
+        composable<ColorPickerTips>(
+            enterTransition = { slideInWithScaleEnter() },
+            exitTransition = { scaleOutExit() },
+            popEnterTransition = { scaleInPopEnter() },
+            popExitTransition = { slideOutWithScalePopExit() }
+        ) {
+            ColorPickerTipsScreen()
+        }
+
+        composable<RandomNumberTips>(
+            enterTransition = { slideInWithScaleEnter() },
+            exitTransition = { scaleOutExit() },
+            popEnterTransition = { scaleInPopEnter() },
+            popExitTransition = { slideOutWithScalePopExit() }
+        ) {
+            RandomNumberTipsScreen()
+        }
+
+        composable<RulerTips>(
+            enterTransition = { slideInWithScaleEnter() },
+            exitTransition = { scaleOutExit() },
+            popEnterTransition = { scaleInPopEnter() },
+            popExitTransition = { slideOutWithScalePopExit() }
+        ) {
+            RulerTipsScreen()
+        }
+
+        composable<TimeTips>(
+            enterTransition = { slideInWithScaleEnter() },
+            exitTransition = { scaleOutExit() },
+            popEnterTransition = { scaleInPopEnter() },
+            popExitTransition = { slideOutWithScalePopExit() }
+        ) {
+            TimeTipsScreen()
         }
     }
 }

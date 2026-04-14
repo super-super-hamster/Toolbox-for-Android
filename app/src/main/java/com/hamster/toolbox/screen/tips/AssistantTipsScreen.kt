@@ -36,7 +36,7 @@ fun AssistantTipsScreen() {
         ItemGroup(titleState = sharedTiltState) {
             ExplanationItem(
                 title = "热词",
-                content = "在 “设置 -> 热词” 中添加热词的可以让助手更容易识别") { }
+                content = "在 “设置 -> 热词” 中添加热词的可以让助手更容易从语音中识别") { }
         }
     }
 }

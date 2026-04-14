@@ -185,6 +185,7 @@ fun RandomNumberScreen() {
                             defaultElevation = 3.dp,
                             pressedElevation = 2.dp
                         ),
+                        enabled = !isRolling,
                         onClick = {
                             if (canGenerate) {
                                 prefs.edit { putInt("random_number_min", selectedMin) }

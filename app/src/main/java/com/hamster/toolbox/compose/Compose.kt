@@ -11,6 +11,7 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -32,7 +33,6 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
@@ -47,7 +47,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
@@ -449,6 +448,7 @@ fun EditTextDialog(
                     modifier = Modifier
                         .weight(1f)
                         .height(42.dp),
+                    border = BorderStroke(1.dp, Color.LightGray),
                     shape = squircleShape,
                     colors = ButtonDefaults.textButtonColors(Color.Transparent),
                     onClick = cancelAction
@@ -459,6 +459,7 @@ fun EditTextDialog(
                     modifier = Modifier
                         .weight(1f)
                         .height(42.dp),
+                    border = BorderStroke(1.dp, Color.LightGray),
                     shape = squircleShape,
                     colors = ButtonDefaults.textButtonColors(colorResource(R.color.btn_confirm)),
                     onClick = submitAction
@@ -569,6 +570,7 @@ fun InquiryDialog(
                         modifier = Modifier
                             .weight(1f)
                             .height(42.dp),
+                        border = BorderStroke(1.dp, Color.LightGray),
                         shape = squircleShape,
                         colors = ButtonDefaults.textButtonColors(Color.Transparent),
                         onClick = cancelAction
@@ -580,6 +582,7 @@ fun InquiryDialog(
                         modifier = Modifier
                             .weight(1f)
                             .height(42.dp),
+                        border = BorderStroke(1.dp, Color.LightGray),
                         shape = squircleShape,
                         colors = ButtonDefaults.textButtonColors(colorResource(R.color.btn_confirm)),
                         onClick = confirmAction
@@ -645,6 +648,7 @@ fun ExplanationItem(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 4.dp),
+                    border = BorderStroke(1.dp, Color.LightGray),
                     shape = squircleShape,
                     colors = ButtonDefaults.textButtonColors(colorResource(R.color.btn_confirm).copy(alpha = 0.8f)),
                     onClick = onButtonClick,
@@ -787,85 +791,61 @@ fun DatePicker(
 ) {
     val datePickerState = rememberDatePickerState(initialSelectedDateMillis = initialSelectedDateMillis)
 
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false,
-            decorFitsSystemWindows = false
-        )
-    ) {
-        Box(
+    StandardDialog(onDismissRequest = onDismiss) {
+        Column(
             modifier = Modifier
-                .fillMaxSize()
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onDismiss
-                ),
-            contentAlignment = Alignment.Center
+                .padding(bottom = 12.dp)
+                .fillMaxWidth(0.85f)
+                .scale(0.85f)
         ) {
-            BlurEffect()
-
-            Surface(
-                shape = squircleShape,
-                color = colorResource(R.color.bg_dialog),
-                tonalElevation = 6.dp,
-                modifier = Modifier
-                    .wrapContentWidth()
-                    .padding(vertical = 16.dp, horizontal = 8.dp)
-                    .clickable(enabled = false) {}
-                    .scale(0.85f)
-            ) {
-                Column(
-                    modifier = Modifier.padding(bottom = 12.dp)
-                ) {
-                    DatePicker(
-                        state = datePickerState,
-                        title = {
-                            Text(
-                                text = title ?: "选择日期",
-                                modifier = Modifier.padding(start = 24.dp, end = 12.dp, top = 16.dp),
-                                style = MaterialTheme.typography.labelMedium
-                            )
-                        },
-                        colors = DatePickerDefaults.colors(
-                            containerColor = colorResource(R.color.bg_dialog),
-                            selectedDayContainerColor = colorResource(R.color.mikuGreen),
-                            todayDateBorderColor = colorResource(R.color.mikuGreen),
-                            selectedYearContainerColor = colorResource(R.color.mikuGreen)
-                        )
+            DatePicker(
+                state = datePickerState,
+                title = {
+                    Text(
+                        text = title ?: "选择日期",
+                        modifier = Modifier.padding(start = 24.dp, end = 12.dp, top = 16.dp),
+                        style = MaterialTheme.typography.labelMedium
                     )
+                },
+                colors = DatePickerDefaults.colors(
+                    containerColor = colorResource(R.color.bg_dialog),
+                    selectedDayContainerColor = colorResource(R.color.mikuGreen),
+                    todayDateBorderColor = colorResource(R.color.mikuGreen),
+                    selectedYearContainerColor = colorResource(R.color.mikuGreen)
+                )
+            )
 
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(24.dp)
-                    ) {
-                        Button(
-                            modifier = Modifier
-                                .height(40.dp)
-                                .weight(1f),
-                            colors = ButtonDefaults.textButtonColors(Color.Transparent),
-                            onClick = onDismiss
-                        ) {
-                            Text(text = "取消", color = colorResource(R.color.text))
-                        }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(24.dp)
+            ) {
+                Button(
+                    modifier = Modifier
+                        .height(40.dp)
+                        .weight(1f),
+                    border = BorderStroke(1.dp, Color.LightGray),
+                    colors = ButtonDefaults.textButtonColors(Color.Transparent),
+                    onClick = onDismiss,
+                    shape = squircleShape
+                ) {
+                    Text(text = "取消", color = colorResource(R.color.text))
+                }
 
-                        Button(
-                            modifier = Modifier
-                                .height(40.dp)
-                                .weight(1f),
-                            shape = squircleShape,
-                            colors = ButtonDefaults.textButtonColors(colorResource(R.color.btn_confirm)),
-                            onClick = {
-                                onDateSelected(datePickerState.selectedDateMillis)
-                                onDismiss()
-                            }
-                        ) {
-                            Text(text = "确定", color = colorResource(R.color.text))
-                        }
+                Button(
+                    modifier = Modifier
+                        .height(40.dp)
+                        .weight(1f),
+                    border = BorderStroke(1.dp, Color.LightGray),
+                    shape = squircleShape,
+                    colors = ButtonDefaults.textButtonColors(colorResource(R.color.btn_confirm)),
+                    onClick = {
+                        onDateSelected(datePickerState.selectedDateMillis)
+                        onDismiss()
                     }
+                ) {
+                    Text(text = "确定", color = colorResource(R.color.text))
                 }
             }
         }

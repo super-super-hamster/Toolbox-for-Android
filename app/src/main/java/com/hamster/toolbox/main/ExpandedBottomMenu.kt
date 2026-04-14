@@ -240,7 +240,8 @@ fun Assistant(
                 available: Offset,
                 source: NestedScrollSource
             ): Offset {
-                if (available.y > 0) {
+                // 位于顶部且由用户划动而非惯性时
+                if (available.y > 0 && source == NestedScrollSource.UserInput) {
                     onDragDown()
                 }
                 return Offset.Zero
@@ -272,9 +273,11 @@ fun Assistant(
                 .nestedScroll(nestedScrollConnection), // 顶部继续下划
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            itemsIndexed(AI.chatHistory) { _, message ->
+            itemsIndexed(AI.chatHistory) { index, message ->
                 if (message.role != "system") {
-                    var isBubbleVisible by remember { mutableStateOf(false) }
+                    val isLastMessage = index == AI.chatHistory.size - 1
+
+                    var isBubbleVisible by remember { mutableStateOf(!isLastMessage) }
 
                     LaunchedEffect(message) {
                         isBubbleVisible = true
@@ -313,7 +316,7 @@ fun Assistant(
                     value = inputText,
                     onValueChange = { setInputText(it) },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("输入消息...") },
+                    placeholder = { Text("...") },
                     maxLines = 3,
                     shape = squircleShape,
                     keyboardOptions = KeyboardOptions(
@@ -368,7 +371,7 @@ fun Assistant(
                     }
                 },
                 colors = IconButtonDefaults.iconButtonColors(
-                    containerColor = colorResource(R.color.icon),
+                    containerColor = colorResource(R.color.mikuGreen),
                     contentColor = Color.White
                 )
             ) {
@@ -482,14 +485,14 @@ fun MenuItem(
             painter = icon,
             contentDescription = name,
             tint = tint,
-            modifier = Modifier.size(24.dp)
+            modifier = Modifier.size(28.dp)
         )
 
         Spacer(modifier = Modifier.height(4.dp))
 
         Text(
             text = name,
-            fontSize = 12.sp,
+            fontSize = 8.sp,
             color = tint,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis

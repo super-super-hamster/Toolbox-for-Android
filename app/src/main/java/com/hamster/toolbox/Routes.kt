@@ -59,6 +59,22 @@ object ScheduleTips : Route
 @Serializable
 object AssistantTips : Route
 
+// 尺子Tips
+@Serializable
+object RulerTips : Route
+
+// 随机数Tips
+@Serializable
+object RandomNumberTips : Route
+
+// 取色器Tips
+@Serializable
+object ColorPickerTips : Route
+
+// 时间Tips
+@Serializable
+object TimeTips : Route
+
 // 游戏机
 @Serializable
 object GameConsole : Route

@@ -34,7 +34,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -64,7 +63,6 @@ import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
 import com.hamster.toolbox.R
-import com.hamster.toolbox.compose.ClickItem
 import com.hamster.toolbox.compose.ExplanationItem
 import com.hamster.toolbox.compose.Heatmap
 import com.hamster.toolbox.compose.HorizontalLine
@@ -101,11 +99,9 @@ fun TimeScreen(
 
     val invisibleAppsSet by viewModel.invisibleApps.collectAsStateWithLifecycle()
 
-    LaunchedEffect(mainViewModel.updateAppSessionTrigger) {
-        if (hasPermission) {
-            setLoading(true)
-            viewModel.syncUsageData(context) // 刷新数据
-            setLoading(false)
+    if (mainViewModel.isSetInvisibleApp) {
+        BackHandler {
+            mainViewModel.changeStateOfIsSetInvisibleApp()
         }
     }
 
@@ -130,7 +126,7 @@ fun TimeScreen(
             YearView(
                 viewModel = viewModel,
                 showPackageName = showPackageName,
-                initialApps = invisibleAppsSet,
+                invisibleApps = invisibleAppsSet,
                 usageStateList = yearUsageStateList,
                 maxDuration = maxYearUsageDuration
             )
@@ -139,7 +135,7 @@ fun TimeScreen(
             MonthView(
                 viewModel = viewModel,
                 showPackageName = showPackageName,
-                initialApps = invisibleAppsSet,
+                invisibleApps = invisibleAppsSet,
                 usageStateList = monthUsageStateList,
                 maxDuration = maxMonthUsageDuration
             )
@@ -147,7 +143,8 @@ fun TimeScreen(
         TabItem(title = "今天") {
             DayView(
                 setLoading = setLoading,
-                usageStateList = dayUsageStateList
+                usageStateList = dayUsageStateList,
+                invisibleApps = invisibleAppsSet
             )
         }
     )
@@ -155,13 +152,33 @@ fun TimeScreen(
     PageColumn(sharedTiltState = sharedTiltState) {
         if (hasPermission) {
             ItemGroup(titleState =  sharedTiltState, modifier = Modifier.weight(1f)) {
-                Tabs(
-                    tabHorizontalPadding = 8.dp,
-                    tabVerticalPadding = 8.dp,
-                    tabs = tabsList,
-                    selectedIndex = selectedIndex,
-                    setSelectedIndex = { selectedIndex = it }
-                )
+                if (mainViewModel.isSetInvisibleApp) {
+                    LazyColumn(modifier = Modifier.weight(1f)) {
+                        items(yearUsageStateList, key = { it.packageName }) { app ->
+                            UsageSwitchItem(
+                                showPackageName = showPackageName,
+                                appUsageState = app,
+                                checked = !invisibleAppsSet.contains(app.packageName)
+                            ) { isChecked ->
+                                val newSet = invisibleAppsSet.toMutableSet()
+                                if (isChecked) {
+                                    newSet.remove(app.packageName)
+                                } else {
+                                    newSet.add(app.packageName)
+                                }
+                                viewModel.updateInvisibleApps(newSet)
+                            }
+                        }
+                    }
+                } else {
+                    Tabs(
+                        tabHorizontalPadding = 8.dp,
+                        tabVerticalPadding = 8.dp,
+                        tabs = tabsList,
+                        selectedIndex = selectedIndex,
+                        setSelectedIndex = { selectedIndex = it }
+                    )
+                }
             }
         } else {
             Column(
@@ -186,7 +203,7 @@ fun YearView(
     maxDuration: Long,
     viewModel: TimeViewModel,
     showPackageName: Boolean = false,
-    initialApps: Set<String>,
+    invisibleApps: Set<String>,
     usageStateList: List<AppUsageState>
 ) {
     var selectedApp by remember { mutableStateOf<AppUsageState?>(null) }
@@ -208,10 +225,9 @@ fun YearView(
     }
 
     UsageRank(
-        viewModel = viewModel,
         selectedApp = selectedApp,
         showPackageName = showPackageName,
-        initialApps = initialApps,
+        invisibleApps = invisibleApps,
         usageStateList = usageStateList,
         maxDuration = maxDuration,
         setSelectedApp = { selectedApp = it },
@@ -298,7 +314,7 @@ fun MonthView(
     viewModel: TimeViewModel,
     maxDuration: Long,
     showPackageName: Boolean = false,
-    initialApps: Set<String>,
+    invisibleApps: Set<String>,
     usageStateList: List<AppUsageState>
 ) {
     var selectedApp by remember { mutableStateOf<AppUsageState?>(null) }
@@ -326,10 +342,9 @@ fun MonthView(
     }
 
     UsageRank(
-        viewModel = viewModel,
         selectedApp = selectedApp,
         showPackageName = showPackageName,
-        initialApps = initialApps,
+        invisibleApps = invisibleApps,
         usageStateList = usageStateList,
         setSelectedApp = { selectedApp = it },
         maxDuration = maxDuration,
@@ -407,6 +422,7 @@ fun MonthView(
 
 @Composable
 fun DayView(
+    invisibleApps: Set<String>,
     setLoading: (Boolean) -> Unit,
     usageStateList: List<DailyAppUsageState>,
     hourHeight: Dp = 240.dp
@@ -464,7 +480,8 @@ fun DayView(
             TimelineLayout(
                 positionedApps = positionedApps,
                 hourHeight = hourHeight,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
+                invisibleApps = invisibleApps
             )
         }
     }
@@ -472,6 +489,7 @@ fun DayView(
 
 @Composable
 fun TimelineLayout(
+    invisibleApps: Set<String>,
     positionedApps: List<PositionedApp>,
     hourHeight: Dp,
     modifier: Modifier = Modifier
@@ -484,30 +502,32 @@ fun TimelineLayout(
     Layout(
         content = {
             positionedApps.forEach { item ->
-                Surface(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 4.dp),
-                    color = item.appUsage.color,
-                    shape = squircleShape,
-                    contentColor = Color.White,
-                    border = BorderStroke(1.dp, Color.LightGray),
-                    onClick = {
-                        selectedApp = item.appUsage
-                    }
-                ) {
-                    BoxWithConstraints(
-                        modifier = Modifier.padding(4.dp)
+                if (!invisibleApps.contains(item.appUsage.packageName)) {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 4.dp),
+                        color = item.appUsage.color,
+                        shape = squircleShape,
+                        contentColor = Color.White,
+                        border = BorderStroke(1.dp, Color.LightGray),
+                        onClick = {
+                            selectedApp = item.appUsage
+                        }
                     ) {
-                        if (maxHeight > 16.dp) {
-                            Text(
-                                text = item.appUsage.name,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                color = if (item.appUsage.color.luminance() > 0.5f) Color.Black else Color.White // 根据背景颜色亮度使用不同的字体颜色
-                            )
+                        BoxWithConstraints(
+                            modifier = Modifier.padding(4.dp)
+                        ) {
+                            if (maxHeight > 16.dp) {
+                                Text(
+                                    text = item.appUsage.name,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    color = if (item.appUsage.color.luminance() > 0.5f) Color.Black else Color.White // 根据背景颜色亮度使用不同的字体颜色
+                                )
+                            }
                         }
                     }
                 }
@@ -614,24 +634,17 @@ fun TimelineLayout(
 
 @Composable
 fun UsageRank(
-    viewModel: TimeViewModel,
     maxDuration: Long,
     selectedApp: AppUsageState?,
     showPackageName: Boolean = false,
-    initialApps: Set<String>,
+    invisibleApps: Set<String>,
     usageStateList: List<AppUsageState>,
     selectedContent: @Composable () -> Unit,
     setSelectedApp: (AppUsageState?) -> Unit
 ) {
-    // 更新UI
-    var invisibleApps by remember { mutableStateOf(initialApps) }
-
-    var isEditVisible by remember { mutableStateOf(false) }
-
-    if (selectedApp != null || isEditVisible) {
+    if (selectedApp != null) {
         BackHandler {
             setSelectedApp(null)
-            isEditVisible = false
         }
     }
 
@@ -641,32 +654,12 @@ fun UsageRank(
         Column(modifier = Modifier.fillMaxSize()) {
             LazyColumn(modifier = Modifier.weight(1f)) {
                 items(usageStateList, key = { it.packageName }) { app ->
-                    if (isEditVisible) {
-                        UsageSwitchItem(
-                            showPackageName = showPackageName,
-                            appUsageState = app,
-                            checked = !invisibleApps.contains(app.packageName)
-                        ) { isChecked ->
-                            val newSet = invisibleApps.toMutableSet()
-                            if (isChecked) {
-                                newSet.remove(app.packageName)
-                            } else {
-                                newSet.add(app.packageName)
-                            }
-                            viewModel.updateInvisibleApps(newSet)
-                        }
-                    } else {
-                        if (!invisibleApps.contains(app.packageName)) {
-                            UsageItem(appUsageState = app, maxDuration = maxDuration, showPackageName = showPackageName) {
-                                setSelectedApp(app)
-                            }
+                    if (!invisibleApps.contains(app.packageName)) {
+                        UsageItem(appUsageState = app, maxDuration = maxDuration, showPackageName = showPackageName) {
+                            setSelectedApp(app)
                         }
                     }
                 }
-            }
-
-            ClickItem(title = if (isEditVisible) "返回" else "编辑可见项", icon = R.drawable.ic_invisible) {
-                isEditVisible = !isEditVisible
             }
         }
     }
@@ -803,11 +796,40 @@ fun calculateAppPositions(sortedUsageList: List<DailyAppUsageState>, setLoading:
 
     setLoading(true)
 
+    val mergedUsageList = mutableListOf<DailyAppUsageState>()
+    val lastSeenAppMap = mutableMapOf<String, Int>()
+    val oneMinuteMillis = 60 * 1000L
+
+    for (app in sortedUsageList) {
+        val lastIndex = lastSeenAppMap[app.packageName]
+        var merged = false
+
+        if (lastIndex != null) {
+            val lastApp = mergedUsageList[lastIndex]
+            val gap = app.startTime - lastApp.endTime
+
+            if (gap <= oneMinuteMillis) {
+                val mergedApp = lastApp.copy(
+                    endTime = maxOf(lastApp.endTime, app.endTime),
+                    durationMillis = lastApp.durationMillis + app.durationMillis,
+                    duration = formatMillis(lastApp.durationMillis + app.durationMillis)
+                )
+                mergedUsageList[lastIndex] = mergedApp
+                merged = true
+            }
+        }
+
+        if (!merged) {
+            mergedUsageList.add(app)
+            lastSeenAppMap[app.packageName] = mergedUsageList.lastIndex
+        }
+    }
+
     val clusters = mutableListOf<MutableList<PositionedApp>>()
     var currentCluster = mutableListOf<PositionedApp>()
     var clusterEndTime = 0L
 
-    for (app in sortedUsageList) {
+    for (app in mergedUsageList) {
         if (currentCluster.isEmpty()) {
             currentCluster.add(PositionedApp(app))
             clusterEndTime = app.endTime
@@ -822,6 +844,7 @@ fun calculateAppPositions(sortedUsageList: List<DailyAppUsageState>, setLoading:
             }
         }
     }
+
     if (currentCluster.isNotEmpty()) {
         clusters.add(currentCluster)
     }

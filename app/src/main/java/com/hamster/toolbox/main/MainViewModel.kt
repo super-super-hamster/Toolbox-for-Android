@@ -9,8 +9,6 @@ import androidx.lifecycle.ViewModel
 class MainViewModel : ViewModel() {
     var isShowAddKeywordDialog by mutableStateOf(false)
 
-    var updateAppSessionTrigger by mutableIntStateOf(0)
-
     private var _speechFinalResult by mutableStateOf("")
     val speechFinalResult: String get() = _speechFinalResult
     fun setSpeechFinalResult(result: String) {
@@ -26,4 +24,10 @@ class MainViewModel : ViewModel() {
 
     private var _settingsScrollTrigger by mutableIntStateOf(0)
     val settingsScrollTrigger: Int get() = _settingsScrollTrigger
+
+    private var _isSetInvisibleApp by mutableStateOf(false)
+    val isSetInvisibleApp: Boolean get() = _isSetInvisibleApp
+    fun changeStateOfIsSetInvisibleApp() {
+        _isSetInvisibleApp = !_isSetInvisibleApp
+    }
 }
