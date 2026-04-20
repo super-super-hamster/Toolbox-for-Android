@@ -37,6 +37,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZoneOffset
+import java.util.Calendar
 
 class ScrollTarget {
     val requester = BringIntoViewRequester()
@@ -64,6 +65,18 @@ class ScrollTarget {
             e.printStackTrace()
         }
     }
+}
+
+// 一天开始的时间戳
+fun getStartOfDay(timestamp: Long): Long {
+    val calendar = Calendar.getInstance().apply {
+        timeInMillis = timestamp
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }
+    return calendar.timeInMillis
 }
 
 fun drawableToBitmap(drawable: Drawable): Bitmap {

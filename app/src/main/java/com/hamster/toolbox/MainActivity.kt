@@ -82,10 +82,18 @@ import com.airbnb.lottie.compose.rememberLottieComposition
 import com.hamster.toolbox.ai.AI
 import com.hamster.toolbox.ai.Message
 import com.hamster.toolbox.ai.SpeechRecognizerManager
+import com.hamster.toolbox.compose.AnimationButton
+import com.hamster.toolbox.compose.ButtonPro
+import com.hamster.toolbox.compose.squircleShape
 import com.hamster.toolbox.main.AudioSpectrumVisualizer
 import com.hamster.toolbox.main.ExpandedBottomMenu
 import com.hamster.toolbox.main.MainViewModel
+import com.hamster.toolbox.screen.colorPicker.ColorPickerScreen
 import com.hamster.toolbox.screen.debug.DebugScreen
+import com.hamster.toolbox.screen.diary.DiaryDatabase
+import com.hamster.toolbox.screen.diary.DiaryViewModel
+import com.hamster.toolbox.screen.diary.diaryGraph
+import com.hamster.toolbox.screen.diary.diaryViewModelFactory
 import com.hamster.toolbox.screen.gameConsole.GameConsoleScreen
 import com.hamster.toolbox.screen.random.RandomNumberScreen
 import com.hamster.toolbox.screen.ruler.RulerScreen
@@ -94,12 +102,8 @@ import com.hamster.toolbox.screen.settings.settingsGraph
 import com.hamster.toolbox.screen.time.AppUsageDatabase
 import com.hamster.toolbox.screen.time.TimeScreen
 import com.hamster.toolbox.screen.time.TimeViewModel
-import com.hamster.toolbox.screen.time.provideTimeViewModelFactory
+import com.hamster.toolbox.screen.time.timeViewModelFactory
 import com.hamster.toolbox.screen.tips.tipsGraph
-import com.hamster.toolbox.compose.AnimationButton
-import com.hamster.toolbox.compose.ButtonPro
-import com.hamster.toolbox.compose.squircleShape
-import com.hamster.toolbox.screen.colorPicker.ColorPickerScreen
 import com.hamster.toolbox.utils.prompt.PromptLoader
 import com.hamster.toolbox.utils.scaleInPopEnter
 import com.hamster.toolbox.utils.scaleOutExit
@@ -127,7 +131,6 @@ import kotlinx.coroutines.withContext
 
 // TODO: 天气,向下滑动天气透明度逐渐降低
 // TODO: 通知栏字体颜色适配
-// TODO: 测距
 // TODO: preferencesDataStore
 
 class MainActivity : ComponentActivity() {
@@ -185,10 +188,16 @@ class MainActivity : ComponentActivity() {
             )
 
             // 时间数据库
-            val database = remember { AppUsageDatabase.getDatabase(context) }
-            val usageStatsDao = database.usageStatsDao()
+            val timeDatabase = remember { AppUsageDatabase.getDatabase(context) }
+            val timeUsageStatsDao = timeDatabase.usageStatsDao()
             val timeViewModel: TimeViewModel = viewModel(
-                factory = provideTimeViewModelFactory(context, usageStatsDao)
+                factory = timeViewModelFactory(context, timeUsageStatsDao)
+            )
+
+            val diaryDatabase = remember { DiaryDatabase.getDatabase(context) }
+            val diaryDao = diaryDatabase.diaryDao()
+            val diaryViewModel: DiaryViewModel = viewModel(
+                factory = diaryViewModelFactory(diaryDao)
             )
 
             var showWeatherDetail by remember { mutableStateOf(false) }
@@ -199,6 +208,7 @@ class MainActivity : ComponentActivity() {
             val universalButtonIconId = when {
                 currentDestination?.hasRoute<Schedule>() == true -> R.drawable.ic_add
                 currentDestination?.hasRoute<SetKeywords>() == true -> R.drawable.ic_add
+                currentDestination?.hasRoute<DiaryPreview>() == true -> R.drawable.ic_add
                 currentDestination?.hasRoute<Time>() == true -> if (mainViewModel.isSetInvisibleApp) R.drawable.ic_invisible else R.drawable.ic_visible
                 else -> R.drawable.ic_microphone
             }
@@ -215,6 +225,7 @@ class MainActivity : ComponentActivity() {
                 currentDestination?.hasRoute<WeatherTips>() == true -> "天气Tips"
                 currentDestination?.hasRoute<Time>() == true -> "应用使用时间"
                 currentDestination?.hasRoute<ColorPicker>() == true -> "取色器"
+                currentDestination?.hasRoute<DiaryPreview>() == true -> "日记"
                 currentDestination?.hasRoute<Debug>() == true -> "Debug"
                 else -> "ToolBox"
             }
@@ -239,10 +250,6 @@ class MainActivity : ComponentActivity() {
             val backdrop = rememberLayerBackdrop {
                 drawContent()
             }
-
-            val isSetKeyWordsScreen = currentDestination?.hierarchy?.any { it.hasRoute<SetKeywords>() } == true
-            val isScheduleScreen = currentDestination?.hierarchy?.any { it.hasRoute<Schedule>() } == true
-            val isTimeScreen = currentDestination?.hierarchy?.any { it.hasRoute<Time>() } == true
 
             // 拦截返回事件
             if (isMenuExpanded || showLoading) {
@@ -275,7 +282,7 @@ class MainActivity : ComponentActivity() {
                             Box(modifier = Modifier.fillMaxSize()) {
                                 NavHost(
                                     navController = navController,
-                                    startDestination = Time,
+                                    startDestination = DiaryGraph,
                                     modifier = Modifier
                                         .layerBackdrop(backdrop) // 应用玻璃效果
                                         .hazeSource(state = hazeState)
@@ -339,6 +346,13 @@ class MainActivity : ComponentActivity() {
                                         )
                                     }
 
+                                    // 日记
+                                    diaryGraph(
+                                        mainViewModel = mainViewModel,
+                                        viewModel = diaryViewModel,
+                                        onNavigate = { navController.navigate(it) }
+                                    )
+
                                     // Tips
                                     tipsGraph(
                                         navController = navController
@@ -400,7 +414,9 @@ class MainActivity : ComponentActivity() {
 
                                 // 底部菜单栏
                                 if (showBottomMenu) {
-                                    Box(modifier = Modifier.align(Alignment.BottomCenter).systemBarsPadding()) {
+                                    Box(modifier = Modifier
+                                        .align(Alignment.BottomCenter)
+                                        .systemBarsPadding()) {
                                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                             // 展开菜单栏
                                             AnimatedVisibility(
@@ -475,17 +491,29 @@ class MainActivity : ComponentActivity() {
                                                     }
 
                                                     // 通用按钮
-                                                    Box(modifier = Modifier.height(48.dp).width(72.dp).align(Alignment.Center), contentAlignment = Alignment.Center) {
+                                                    Box(modifier = Modifier
+                                                        .height(48.dp)
+                                                        .width(72.dp)
+                                                        .align(Alignment.Center), contentAlignment = Alignment.Center) {
                                                         ButtonPro(
                                                             icon = universalButtonIconId,
                                                             onTap = {
-                                                                if (isSetKeyWordsScreen) {
-                                                                    mainViewModel.isShowAddKeywordDialog = true
-                                                                } else if (isScheduleScreen) {
-                                                                    navController.navigate(ImportCurriculum)
-                                                                } else if (isTimeScreen) {
-                                                                    mainViewModel.changeStateOfIsSetInvisibleApp()
-                                                                }},
+                                                                val currentHierarchy = navController.currentDestination?.hierarchy ?: return@ButtonPro
+
+                                                                when {
+                                                                    currentHierarchy .any { it.hasRoute<SetKeywords>() } -> {
+                                                                        mainViewModel.isShowAddKeywordDialog = true
+                                                                    }
+                                                                    currentHierarchy.any { it.hasRoute<Schedule>() } -> {
+                                                                        navController.navigate(ImportCurriculum)
+                                                                    }
+                                                                    currentHierarchy.any { it.hasRoute<Time>() } -> {
+                                                                        mainViewModel.changeStateOfIsSetInvisibleApp()
+                                                                    }
+                                                                    currentHierarchy.any { it.hasRoute<DiaryPreview>() } -> {
+                                                                        mainViewModel.showAddDiaryDialog = true
+                                                                    }
+                                                                } },
                                                             onLongPressStart = {
                                                                 if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED && isModelReady) {
                                                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -510,7 +538,10 @@ class MainActivity : ComponentActivity() {
                                                     }
 
                                                     // 展开按钮
-                                                    Box(modifier = Modifier.height(48.dp).width(72.dp).align(Alignment.CenterEnd), contentAlignment = Alignment.CenterEnd) {
+                                                    Box(modifier = Modifier
+                                                        .height(48.dp)
+                                                        .width(72.dp)
+                                                        .align(Alignment.CenterEnd), contentAlignment = Alignment.CenterEnd) {
                                                         AnimationButton(
                                                             animation = R.raw.ic_arrow_anim,
                                                             changed = isMenuExpanded,
@@ -571,7 +602,9 @@ class MainActivity : ComponentActivity() {
                                                 effects = {
                                                     vibrancy()
                                                     blur(4f.dp.toPx())
-                                                    lens(12f.dp.toPx(), 8f.dp.toPx()) },)
+                                                    lens(12f.dp.toPx(), 8f.dp.toPx())
+                                                },
+                                            )
                                     )
                                 }
 

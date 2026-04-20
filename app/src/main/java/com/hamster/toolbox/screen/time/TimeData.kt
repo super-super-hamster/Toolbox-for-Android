@@ -91,8 +91,6 @@ abstract class AppUsageDatabase : RoomDatabase() {
                     AppUsageDatabase::class.java,
                     "app_usage_database"
                 )
-                    // 暂时允许在主线程进行少量查询（不推荐，最好全用协程，这里仅为方便开发初期调试）
-                    // .allowMainThreadQueries()
                     .fallbackToDestructiveMigration(true) // 数据库版本冲突时删除旧的数据库
                     .build()
                 INSTANCE = instance

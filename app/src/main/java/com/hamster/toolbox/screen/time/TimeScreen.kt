@@ -34,6 +34,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -81,7 +82,7 @@ import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
 
-
+// TODO: 时间加载
 
 @Composable
 fun TimeScreen(
@@ -98,6 +99,14 @@ fun TimeScreen(
     var showPackageName by rememberBooleanPreference("super_hamster_show_package_name", false)
 
     val invisibleAppsSet by viewModel.invisibleApps.collectAsStateWithLifecycle()
+
+    LaunchedEffect(Unit) {
+        if (hasPermission) {
+            setLoading(true)
+            viewModel.syncUsageData(context)
+            setLoading(false)
+        }
+    }
 
     if (mainViewModel.isSetInvisibleApp) {
         BackHandler {
@@ -142,7 +151,6 @@ fun TimeScreen(
         },
         TabItem(title = "今天") {
             DayView(
-                setLoading = setLoading,
                 usageStateList = dayUsageStateList,
                 invisibleApps = invisibleAppsSet
             )
@@ -423,12 +431,11 @@ fun MonthView(
 @Composable
 fun DayView(
     invisibleApps: Set<String>,
-    setLoading: (Boolean) -> Unit,
     usageStateList: List<DailyAppUsageState>,
     hourHeight: Dp = 240.dp
 ) {
     val positionedApps = remember(usageStateList) {
-        calculateAppPositions(usageStateList, setLoading)
+        calculateAppPositions(usageStateList)
     }
 
     val scrollState = rememberScrollState()
@@ -791,10 +798,8 @@ data class PositionedApp(
     var totalColumns: Int = 1
 )
 
-fun calculateAppPositions(sortedUsageList: List<DailyAppUsageState>, setLoading: (Boolean) -> Unit): List<PositionedApp> {
+fun calculateAppPositions(sortedUsageList: List<DailyAppUsageState>): List<PositionedApp> {
     if (sortedUsageList.isEmpty()) return emptyList()
-
-    setLoading(true)
 
     val mergedUsageList = mutableListOf<DailyAppUsageState>()
     val lastSeenAppMap = mutableMapOf<String, Int>()
@@ -876,8 +881,6 @@ fun calculateAppPositions(sortedUsageList: List<DailyAppUsageState>, setLoading:
             positionedApp.totalColumns = totalCols
         }
     }
-
-    setLoading(false)
 
     return clusters.flatten()
 }

@@ -12,9 +12,9 @@ import android.provider.Settings
 import androidx.compose.ui.graphics.Color
 import com.hamster.toolbox.utils.color.getMidtoneColor
 import com.hamster.toolbox.utils.drawableToBitmap
+import com.hamster.toolbox.utils.getStartOfDay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
 // 获取时间数据
@@ -192,16 +192,4 @@ fun formatRelativeTime(millis: Long): String {
     val hours = (millis / 3_600_000).toInt()
     val minutes = ((millis % 3_600_000) / 60_000).toInt()
     return "${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}"
-}
-
-// 一天开始的时间戳
-fun getStartOfDay(timestamp: Long): Long {
-    val calendar = Calendar.getInstance().apply {
-        timeInMillis = timestamp
-        set(Calendar.HOUR_OF_DAY, 0)
-        set(Calendar.MINUTE, 0)
-        set(Calendar.SECOND, 0)
-        set(Calendar.MILLISECOND, 0)
-    }
-    return calendar.timeInMillis
 }

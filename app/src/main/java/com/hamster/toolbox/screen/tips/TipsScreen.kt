@@ -5,9 +5,13 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.hamster.toolbox.AssistantTips
+import com.hamster.toolbox.ColorPickerTips
 import com.hamster.toolbox.R
+import com.hamster.toolbox.RandomNumberTips
 import com.hamster.toolbox.Route
+import com.hamster.toolbox.RulerTips
 import com.hamster.toolbox.ScheduleTips
+import com.hamster.toolbox.TimeTips
 import com.hamster.toolbox.WeatherTips
 import com.hamster.toolbox.compose.ClickItem
 import com.hamster.toolbox.compose.ItemGroup
@@ -24,6 +28,22 @@ fun TipsScreen(
         ItemGroup(titleState = sharedTiltState) {
             ClickItem(title = "课程表", icon = R.drawable.ic_curriculum) {
                 onNavigate(ScheduleTips)
+            }
+
+            ClickItem(title = "取色器", icon = R.drawable.ic_color_picker) {
+                onNavigate(ColorPickerTips)
+            }
+
+            ClickItem(title = "随机数", icon = R.drawable.ic_numbers) {
+                onNavigate(RandomNumberTips)
+            }
+
+            ClickItem(title = "尺子", icon = R.drawable.ic_ruler) {
+                onNavigate(RulerTips)
+            }
+
+            ClickItem(title = "时间", icon = R.drawable.ic_time) {
+                onNavigate(TimeTips)
             }
 
             ClickItem(title = "助手", icon = R.drawable.ic_assistant) {

@@ -83,5 +83,18 @@ object GameConsole : Route
 @Serializable
 object Time : Route
 
+// 日记导航
+@Serializable
+object DiaryGraph : Route
+
+// 日记预览
+@Serializable
+object DiaryPreview : Route
+
+// 日记
+@Serializable
+object Diary : Route
+
+// 取色器
 @Serializable
 object ColorPicker : Route

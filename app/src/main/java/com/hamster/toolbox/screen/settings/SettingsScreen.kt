@@ -27,7 +27,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
-import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.preference.PreferenceManager
@@ -36,9 +35,6 @@ import com.hamster.toolbox.R
 import com.hamster.toolbox.Route
 import com.hamster.toolbox.SetKeywords
 import com.hamster.toolbox.WeatherSettings
-import com.hamster.toolbox.main.MainViewModel
-import com.hamster.toolbox.system.Receiver
-import com.hamster.toolbox.utils.ScrollTarget
 import com.hamster.toolbox.compose.ClickItem
 import com.hamster.toolbox.compose.DatePicker
 import com.hamster.toolbox.compose.EditTextItem
@@ -49,6 +45,9 @@ import com.hamster.toolbox.compose.SwitchItem
 import com.hamster.toolbox.compose.rememberBooleanPreference
 import com.hamster.toolbox.compose.rememberSharedTiltState
 import com.hamster.toolbox.compose.rememberStringPreference
+import com.hamster.toolbox.main.MainViewModel
+import com.hamster.toolbox.system.Receiver
+import com.hamster.toolbox.utils.ScrollTarget
 import com.hamster.toolbox.utils.convertDateToMillis
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -106,9 +105,9 @@ fun SettingsScreen(
         scrollTo(mainViewModel.settingsScrollTarget)
     }
 
-    var nickname by rememberStringPreference("nickname", stringResource(R.string.anonymous))
-    var signature by rememberStringPreference("signature", stringResource(R.string.user_signature))
-    var assistantNickname by rememberStringPreference("assistant_nickname", stringResource(R.string.assistant))
+    var nickname by rememberStringPreference("nickname", "无名氏")
+    var signature by rememberStringPreference("signature", "无")
+    var assistantNickname by rememberStringPreference("assistant_nickname", "助手")
     var semesterStartDate by rememberStringPreference("semester_start_date", "")
     var curriculumImportState by rememberStringPreference("schedule_json", "")
     var apiKey by rememberStringPreference("api_key", "")

@@ -137,23 +137,6 @@ val assistantBubbleShape = SquircleShape(
     smoothing = CornerSmoothing.Medium
 )
 
-//val adaptiveSquircleShape = object : Shape {
-//    override fun createOutline(
-//        size: Size,
-//        layoutDirection: LayoutDirection,
-//        density: Density
-//    ): Outline {
-//        val maxRadiusPx = with(density) { 16.dp.toPx() }
-//        val isHeightTooSmall = size.height < maxRadiusPx * 2
-//
-//        if (isHeightTooSmall) {
-//            return RoundedCornerShape(50).createOutline(size, layoutDirection, density)
-//        }
-//
-//        return squircleShape.createOutline(size, layoutDirection, density)
-//    }
-//}
-
 @Composable
 fun ItemGroup(
     modifier: Modifier = Modifier,
@@ -525,70 +508,59 @@ fun InquiryDialog(
     }
 
     StandardDialog(onDismissRequest = onDismissRequest) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth(0.85f)
-                .clickable(enabled = false) {},
-            shape = squircleShape,
-            colors = CardDefaults.cardColors(
-                containerColor = colorResource(R.color.bg_dialog)
-            ),
-            elevation = CardDefaults.cardElevation(16.dp)
+        Column(
+            modifier = Modifier.padding(24.dp).fillMaxWidth(0.85f),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                modifier = Modifier.padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (content.isNotEmpty()) {
                 Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleLarge,
+                    text = content,
+                    style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center,
-                    fontWeight = FontWeight.Bold
+                    textAlign = TextAlign.Center
                 )
+            }
 
-                Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-                if (content.isNotEmpty()) {
-                    Text(
-                        text = content,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center
-                    )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(42.dp),
+                horizontalArrangement = Arrangement.spacedBy(24.dp)
+            ) {
+                Button(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(42.dp),
+                    border = BorderStroke(1.dp, Color.LightGray),
+                    shape = squircleShape,
+                    colors = ButtonDefaults.textButtonColors(Color.Transparent),
+                    onClick = cancelAction
+                ) {
+                    Text(text = cancelText, color = Color.Gray)
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Row(
+                Button(
                     modifier = Modifier
-                        .fillMaxWidth()
+                        .weight(1f)
                         .height(42.dp),
-                    horizontalArrangement = Arrangement.spacedBy(24.dp)
+                    border = BorderStroke(1.dp, Color.LightGray),
+                    shape = squircleShape,
+                    colors = ButtonDefaults.textButtonColors(colorResource(R.color.btn_confirm)),
+                    onClick = confirmAction
                 ) {
-                    Button(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(42.dp),
-                        border = BorderStroke(1.dp, Color.LightGray),
-                        shape = squircleShape,
-                        colors = ButtonDefaults.textButtonColors(Color.Transparent),
-                        onClick = cancelAction
-                    ) {
-                        Text(text = cancelText, color = Color.Gray)
-                    }
-
-                    Button(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(42.dp),
-                        border = BorderStroke(1.dp, Color.LightGray),
-                        shape = squircleShape,
-                        colors = ButtonDefaults.textButtonColors(colorResource(R.color.btn_confirm)),
-                        onClick = confirmAction
-                    ) {
-                        Text(text = confirmText, color = colorResource(R.color.text))
-                    }
+                    Text(text = confirmText, color = colorResource(R.color.text))
                 }
             }
         }

@@ -10,6 +10,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.preference.PreferenceManager
+import com.hamster.toolbox.utils.getStartOfDay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -216,7 +217,7 @@ class TimeViewModel(private val appContext: Context, private val dao: UsageStats
     }
 }
 
-fun provideTimeViewModelFactory(context: Context, dao: UsageStatsDao) = viewModelFactory {
+fun timeViewModelFactory(context: Context, dao: UsageStatsDao) = viewModelFactory {
     initializer {
         TimeViewModel(context.applicationContext, dao)
     }

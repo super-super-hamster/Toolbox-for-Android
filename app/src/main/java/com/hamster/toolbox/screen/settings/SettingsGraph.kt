@@ -26,7 +26,7 @@ fun NavGraphBuilder.settingsGraph(
             exitTransition = { scaleOutExit() },
             popEnterTransition = { scaleInPopEnter() },
             popExitTransition = { slideOutWithScalePopExit() }
-        ) { _ ->
+        ) {
             SettingsScreen(
                 mainViewModel = mainViewModel,
                 onNavigate = { route ->

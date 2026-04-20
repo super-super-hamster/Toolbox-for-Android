@@ -9,6 +9,8 @@ import androidx.lifecycle.ViewModel
 class MainViewModel : ViewModel() {
     var isShowAddKeywordDialog by mutableStateOf(false)
 
+    var showAddDiaryDialog by mutableStateOf(false)
+
     private var _speechFinalResult by mutableStateOf("")
     val speechFinalResult: String get() = _speechFinalResult
     fun setSpeechFinalResult(result: String) {

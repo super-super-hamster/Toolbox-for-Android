@@ -68,9 +68,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewModelScope
 import coil.compose.AsyncImage
 import com.hamster.toolbox.ColorPicker
 import com.hamster.toolbox.Debug
+import com.hamster.toolbox.DiaryPreview
 import com.hamster.toolbox.R
 import com.hamster.toolbox.RandomNumber
 import com.hamster.toolbox.Route
@@ -203,6 +205,18 @@ private fun Menu(
             // 设置
             MenuItem(name = "设置", icon = painterResource(R.drawable.ic_settings), onClick = { onNavigate(SettingsGraph) })
 
+            // 日记
+            MenuItem(name = "日记", icon = painterResource(R.drawable.ic_diary), onClick = { onNavigate(DiaryPreview) })
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(96.dp)
+                .padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
             // Debug
             if (userName == "SuperHamster") {
                 MenuItem(name = "Debug", icon = painterResource(R.drawable.ic_debug), onClick = { onNavigate(Debug) })
@@ -221,11 +235,12 @@ fun Assistant(
     apiKey: String?
 ) {
     val coroutineScope = rememberCoroutineScope()
-
     val context = LocalContext.current
 
     val listState = rememberLazyListState()
     val chatSize = AI.chatHistory.size
+
+    var isSending by remember { mutableStateOf(false) }
 
     val userAvatarPath by rememberStringPreference("user_avatar_path", "")
 
@@ -347,9 +362,11 @@ fun Assistant(
             Spacer(modifier = Modifier.width(8.dp))
 
             IconButton(
+                enabled = !isSending,
                 onClick = {
                     if (inputText.isNotBlank() && flyingText.isEmpty()) {
                         setInputText("")
+                        isSending = true
 
                         coroutineScope.launch {
                             flyingText = inputText
@@ -366,13 +383,21 @@ fun Assistant(
                             joinAll(moveJob, fadeJob)
                             flyingText = ""
 
-                            AI.chatWithAssistant(context, mainViewModel, inputText, apiKey) { onNavigate(it) }
+                            mainViewModel.viewModelScope.launch {
+                                try {
+                                    AI.chatWithAssistant(context, mainViewModel, inputText, apiKey) { onNavigate(it) }
+                                } finally {
+                                    isSending = false
+                                }
+                            }
                         }
                     }
                 },
                 colors = IconButtonDefaults.iconButtonColors(
                     containerColor = colorResource(R.color.mikuGreen),
-                    contentColor = Color.White
+                    contentColor = Color.White,
+                    disabledContainerColor = colorResource(R.color.mikuGreen).copy(alpha = 0.75f),
+                    disabledContentColor = Color.White
                 )
             ) {
                 Icon(painter = painterResource(R.drawable.ic_send), contentDescription = "Send")

@@ -1,5 +1,6 @@
 package com.hamster.toolbox.screen.schedule
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -62,6 +63,8 @@ import com.hamster.toolbox.utils.getSchedule
 import com.hamster.toolbox.utils.saveSchedule
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
+
+// TODO: 课程表周数过多导致编辑按钮被挤出。应当换行
 
 @Composable
 fun ScheduleScreen() {
@@ -621,6 +624,7 @@ fun CourseEditDialog(
                             onDismiss()
                         }
                     },
+                    border = BorderStroke(1.dp, Color.LightGray),
                     modifier = Modifier
                         .weight(1f)
                         .height(42.dp),
@@ -649,6 +653,7 @@ fun CourseEditDialog(
                             onConfirm(initialCourse, updatedCourse)
                         }
                     },
+                    border = BorderStroke(1.dp, Color.LightGray),
                     modifier = Modifier
                         .weight(1f)
                         .height(42.dp),
