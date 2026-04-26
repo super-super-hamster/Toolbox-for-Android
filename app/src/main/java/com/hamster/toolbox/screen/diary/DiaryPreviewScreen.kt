@@ -7,6 +7,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,7 +19,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -51,9 +51,11 @@ import com.hamster.toolbox.Diary
 import com.hamster.toolbox.R
 import com.hamster.toolbox.Route
 import com.hamster.toolbox.compose.DatePicker
+import com.hamster.toolbox.compose.InquiryDialog
 import com.hamster.toolbox.compose.ItemGroup
 import com.hamster.toolbox.compose.PageColumn
 import com.hamster.toolbox.compose.StandardDialog
+import com.hamster.toolbox.compose.TextInputField
 import com.hamster.toolbox.compose.rememberSharedTiltState
 import com.hamster.toolbox.compose.squircleShape
 import com.hamster.toolbox.main.MainViewModel
@@ -82,13 +84,17 @@ fun DiaryPreviewScreen(
 
     var diaryTitle by remember { mutableStateOf("") }
 
+    var showDeleteDiaryDialog by remember { mutableStateOf(false) }
+    var deleteDiaryId by remember { mutableLongStateOf(-1) }
+    var deleteDate by remember { mutableStateOf("") }
+
     PageColumn(modifier = Modifier.verticalScroll(rememberScrollState()), sharedTiltState = sharedTiltState) {
         diaries.forEach { (year, months) ->
             ItemGroup(titleState = sharedTiltState) {
-                DiaryItem(title = "$year 年") {
+                DiaryItem(title = "$year 年", onClick = {
                     selectedYear = if (selectedYear == year) -1 else year
                     selectedMonth = -1
-                }
+                })
 
                 AnimatedVisibility(
                     visible = selectedYear == year,
@@ -97,9 +103,9 @@ fun DiaryPreviewScreen(
                 ) {
                     Column {
                         months.forEach { (month, diary) ->
-                            DiaryItem(title = "    $month 月") {
+                            DiaryItem(title = "    $month 月", onClick = {
                                 selectedMonth = if (selectedMonth == month) -1 else month
-                            }
+                            })
 
                             AnimatedVisibility(
                                 visible = selectedMonth == month,
@@ -113,9 +119,13 @@ fun DiaryPreviewScreen(
                                         }
                                         val title = "        $day 日" + if (it.title.isNullOrBlank()) "" else " - ${it.title}"
 
-                                        DiaryItem(title = title, wordCount = it.wordCount) {
+                                        DiaryItem(title = title, wordCount = it.wordCount, onClick = {
                                             viewModel.selectedDiaryDate = it.date
                                             onNavigate(Diary)
+                                        }) {
+                                            deleteDiaryId = it.id
+                                            deleteDate = dateFormatter.format(Date(it.date))
+                                            showDeleteDiaryDialog = true
                                         }
                                     }
                                 }
@@ -173,7 +183,7 @@ fun DiaryPreviewScreen(
                         if (diaryTitle.isEmpty()) {
                             Text("标题", color = Color.Gray, style = MaterialTheme.typography.bodyLarge)
                         }
-                        BasicTextField(
+                        TextInputField(
                             value = diaryTitle,
                             onValueChange = { diaryTitle = it },
                             textStyle = LocalTextStyle.current.copy(
@@ -252,6 +262,18 @@ fun DiaryPreviewScreen(
                 }
             )
         }
+
+        if (showDeleteDiaryDialog) {
+            InquiryDialog(
+                title = "删除确认",
+                content = "要删除$deleteDate 的日记吗？",
+                onCancel = { showDeleteDiaryDialog = false },
+                onDismissRequest = { showDeleteDiaryDialog = false }
+            ) {
+                viewModel.deleteDiary(deleteDiaryId)
+                true
+            }
+        }
     }
 }
 
@@ -259,22 +281,27 @@ fun DiaryPreviewScreen(
 fun DiaryItem(
     title: String,
     wordCount: Int = -1,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onLongClick: () -> Unit = {}
 ) {
     var isRotated by remember { mutableStateOf(false) }
 
     val rotation by animateFloatAsState(
-        targetValue = if (isRotated) 90f else 0f,
-        label = "iconRotation"
+        targetValue = if (isRotated) 90f else 0f
     )
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable {
-                isRotated = !isRotated
-                onClick()
-            }
+            .combinedClickable(
+                onClick = {
+                    isRotated = !isRotated
+                    onClick()
+                },
+                onLongClick = {
+                    onLongClick()
+                }
+            )
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

@@ -26,6 +26,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.dimensionResource
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
@@ -71,6 +72,8 @@ fun SettingsScreen(
 
     val sharedTiltState = rememberSharedTiltState()
     val targets = remember { mutableMapOf<String, ScrollTarget>() }
+
+    val uriHandler = LocalUriHandler.current
 
     val avatarPickMedia = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia()
@@ -305,6 +308,18 @@ fun SettingsScreen(
                 onNavigate(WeatherSettings)
             }
         }
+
+        Spacer(modifier = Modifier.height(dimensionResource(R.dimen.item_group_gap)))
+
+        ItemGroup(titleState = sharedTiltState) {
+            ClickItem(
+                modifier = getModifier("GitHub"),
+                title = "Github",
+                icon = R.drawable.ic_github
+            ) {
+                uriHandler.openUri("https://github.com/super-super-hamster/Toolbox-for-Android")
+            }
+        }
     }
 
     if (showUserAvatarOptionsDialog) {
@@ -361,7 +376,6 @@ object SettingsUtils {
         val width = bitmap.width
         val height = bitmap.height
         val newWidth = if (height > width) width else height
-        val newHeight = if (height > width) height - (height - width) / 2 else height
         var cropW = (width - height) / 2
         cropW = if (cropW < 0) 0 else cropW
         var cropH = (height - width) / 2

@@ -38,7 +38,10 @@ fun NavGraphBuilder.diaryGraph(
             popEnterTransition = { scaleInPopEnter() },
             popExitTransition = { slideOutWithScalePopExit() }
         ) {
-            DiaryScreen()
+            DiaryScreen(
+                mainViewModel = mainViewModel,
+                viewModel = viewModel
+            )
         }
     }
 }

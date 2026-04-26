@@ -10,12 +10,15 @@ class MainViewModel : ViewModel() {
     var isShowAddKeywordDialog by mutableStateOf(false)
 
     var showAddDiaryDialog by mutableStateOf(false)
+    var isAddDiaryImage by mutableStateOf(false)
 
     private var _speechFinalResult by mutableStateOf("")
     val speechFinalResult: String get() = _speechFinalResult
     fun setSpeechFinalResult(result: String) {
         _speechFinalResult = result
     }
+
+
 
     private var _settingsScrollTarget by mutableStateOf("")
     val settingsScrollTarget: String get() = _settingsScrollTarget

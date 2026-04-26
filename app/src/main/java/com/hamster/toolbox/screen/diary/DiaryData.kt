@@ -46,7 +46,7 @@ data class DiaryWithImages(
     @Embedded val diary: DiaryEntity,
     @Relation(
         parentColumn = "id",
-        entityColumn = "diaryId"
+        entityColumn = "diaryId",
     )
     val images: List<DiaryImageEntity>
 )
@@ -59,7 +59,7 @@ interface DiaryDao {
     // 根据ID查询单条日记
     @Transaction
     @Query("SELECT * FROM diary_table WHERE id = :diaryId")
-    suspend fun getDiaryById(diaryId: Long): DiaryWithImages?
+    fun getDiaryById(diaryId: Long): DiaryWithImages?
 
     // 插入日记主表（返回生成的ID）
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -71,33 +71,31 @@ interface DiaryDao {
 
     @Transaction
     @Query("SELECT * FROM diary_table WHERE date = :targetDate")
-    suspend fun getDiaryByDate(targetDate: Long): DiaryWithImages?
+    fun getDiaryByDate(targetDate: Long): Flow<DiaryWithImages?>
 
-    // 👇 2. 新增：明确的 Update 方法
     @Update
     suspend fun updateDiary(diary: DiaryEntity)
 
-    // 👇 3. 新增：清空某篇日记的所有旧图片（用于更新时重置图文布局）
     @Query("DELETE FROM diary_image_table WHERE diaryId = :diaryId")
     suspend fun deleteImagesByDiaryId(diaryId: Long)
+
+    @Query("SELECT * FROM diary_table WHERE date = :targetDate")
+    suspend fun getDiaryEntityByDate(targetDate: Long): DiaryEntity?
 
     @Transaction
     suspend fun saveDiary(diary: DiaryEntity, imagesData: List<Pair<String, Int>>) {
         // 先去数据库查一下，这天是不是已经有日记了
-        val existingRecord = getDiaryByDate(diary.date)
+        val existingRecord = getDiaryEntityByDate(diary.date)
         val finalDiaryId: Long
 
         if (existingRecord != null) {
-            // 💡 存在旧记录 -> 走更新逻辑
-            finalDiaryId = existingRecord.diary.id
-            // 必须把原来的 ID 赋给新对象，否则无法覆盖
+            finalDiaryId = existingRecord.id
             val diaryToUpdate = diary.copy(id = finalDiaryId)
             updateDiary(diaryToUpdate)
 
             // 因为图文混排可能增删了图片，最简单的做法是先清空这篇日记关联的旧图片表
             deleteImagesByDiaryId(finalDiaryId)
         } else {
-            // 💡 不存在 -> 走全新的插入逻辑
             finalDiaryId = insertDiary(diary)
         }
 
@@ -114,8 +112,8 @@ interface DiaryDao {
         }
     }
 
-    @Delete
-    suspend fun deleteDiary(diary: DiaryEntity)
+    @Query("DELETE FROM diary_table WHERE id = :id")
+    suspend fun deleteDiaryById(id: Long)
 }
 
 @Database(

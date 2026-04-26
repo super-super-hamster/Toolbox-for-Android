@@ -1,5 +1,7 @@
 package com.hamster.toolbox.screen.diary
 
+import android.content.Context
+import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.setValue
@@ -8,9 +10,13 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.hamster.toolbox.utils.getStartOfDay
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
 import java.time.Instant
 import java.time.ZoneId
 
@@ -21,7 +27,7 @@ fun Long.toYearMonth(): Pair<Int, Int> {
     return Pair(dateTime.year, dateTime.monthValue)
 }
 
-class DiaryViewModel(private val dao: DiaryDao) : ViewModel() {
+class DiaryViewModel(private val appContext: Context, private val dao: DiaryDao) : ViewModel() {
     var selectedDiaryDate by mutableLongStateOf(-1)
 
     val diaries: Flow<Map<Int, Map<Int, List<DiaryPreviewData>>>> =
@@ -37,23 +43,30 @@ class DiaryViewModel(private val dao: DiaryDao) : ViewModel() {
                 }
         }
 
-    fun saveDiary(title: String?, date: Long, content: String, images: List<Pair<String, Int>>) {
-        viewModelScope.launch {
-            val diary = DiaryEntity(
-                title = title?.ifBlank { null },
-                date = getStartOfDay(date),
-                content = content,
-                wordCount = content.length
-            )
+    fun getDiary(date: Long = selectedDiaryDate): Flow<DiaryWithImages?> {
+        return dao.getDiaryByDate(date)
+    }
 
-            dao.saveDiary(diary, images)
+    fun getDiaryById(id: Long): DiaryWithImages? {
+        return dao.getDiaryById(id)
+    }
+
+    fun saveDiary(diary: DiaryWithImages) {
+        viewModelScope.launch {
+            val diaryEntity = diary.diary
+
+            val imagesData = diary.images.map { imageEntity ->
+                Pair(imageEntity.localPath, imageEntity.position)
+            }
+
+            dao.saveDiary(diaryEntity, imagesData)
         }
     }
 
     fun createDiary(title: String?, date: Long, onNavigate: () -> Unit) {
         viewModelScope.launch {
             val targetDate = getStartOfDay(date)
-            val existingRecord = dao.getDiaryByDate(targetDate)
+            val existingRecord = dao.getDiaryEntityByDate(targetDate)
 
             if (existingRecord == null) {
                 val diary = DiaryEntity(
@@ -69,10 +82,50 @@ class DiaryViewModel(private val dao: DiaryDao) : ViewModel() {
             onNavigate()
         }
     }
+
+    fun saveImageToLocal(uri: Uri, onSuccess: (String) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val inputStream = appContext.contentResolver.openInputStream(uri) ?: return@launch
+
+                val fileName = "diary_img_${System.currentTimeMillis()}.jpg"
+                val localFile = File(appContext.filesDir, fileName)
+
+                val outputStream = FileOutputStream(localFile)
+                inputStream.copyTo(outputStream)
+
+                inputStream.close()
+                outputStream.close()
+
+                withContext(Dispatchers.Main) {
+                    onSuccess(localFile.absolutePath)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun deleteDiary(diaryId: Long?) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val images = diaryId?.let { getDiaryById(it) }?.images ?: emptyList()
+
+            images.forEach { image ->
+                val file = File(image.localPath)
+                if (file.exists()) {
+                    file.delete()
+                }
+            }
+
+            if (diaryId != null) {
+                dao.deleteDiaryById(diaryId)
+            }
+        }
+    }
 }
 
-fun diaryViewModelFactory(dao: DiaryDao) = viewModelFactory {
+fun diaryViewModelFactory(context: Context, dao: DiaryDao) = viewModelFactory {
     initializer {
-        DiaryViewModel(dao)
+        DiaryViewModel(context, dao)
     }
 }

@@ -22,7 +22,6 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -56,6 +55,7 @@ import com.hamster.toolbox.R
 import com.hamster.toolbox.compose.PageColumn
 import com.hamster.toolbox.compose.SharedTiltState
 import com.hamster.toolbox.compose.StandardDialog
+import com.hamster.toolbox.compose.TextInputField
 import com.hamster.toolbox.compose.applySharedTilt
 import com.hamster.toolbox.compose.rememberSharedTiltState
 import com.hamster.toolbox.compose.squircleShape
@@ -434,7 +434,7 @@ fun CourseEditDialog(
                     .fillMaxWidth()
                     .padding(bottom = 24.dp)
             ) {
-                BasicTextField(
+                TextInputField(
                     value = courseName,
                     onValueChange = { courseName = it },
                     textStyle = TextStyle(
@@ -480,7 +480,7 @@ fun CourseEditDialog(
             if (!toDelete) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("教室：", fontSize = 18.sp)
-                    BasicTextField(
+                    TextInputField(
                         value = location,
                         onValueChange = { location = it },
                         textStyle = TextStyle(fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface),
@@ -490,7 +490,7 @@ fun CourseEditDialog(
                 Spacer(modifier = Modifier.height(16.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("教师：", fontSize = 18.sp)
-                    BasicTextField(
+                    TextInputField(
                         value = teacher,
                         onValueChange = { teacher = it },
                         textStyle = TextStyle(fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface),

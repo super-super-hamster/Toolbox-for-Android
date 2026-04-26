@@ -197,7 +197,7 @@ class MainActivity : ComponentActivity() {
             val diaryDatabase = remember { DiaryDatabase.getDatabase(context) }
             val diaryDao = diaryDatabase.diaryDao()
             val diaryViewModel: DiaryViewModel = viewModel(
-                factory = diaryViewModelFactory(diaryDao)
+                factory = diaryViewModelFactory(context, diaryDao)
             )
 
             var showWeatherDetail by remember { mutableStateOf(false) }
@@ -209,6 +209,7 @@ class MainActivity : ComponentActivity() {
                 currentDestination?.hasRoute<Schedule>() == true -> R.drawable.ic_add
                 currentDestination?.hasRoute<SetKeywords>() == true -> R.drawable.ic_add
                 currentDestination?.hasRoute<DiaryPreview>() == true -> R.drawable.ic_add
+                currentDestination?.hasRoute<Diary>() == true -> R.drawable.ic_add
                 currentDestination?.hasRoute<Time>() == true -> if (mainViewModel.isSetInvisibleApp) R.drawable.ic_invisible else R.drawable.ic_visible
                 else -> R.drawable.ic_microphone
             }
@@ -512,6 +513,9 @@ class MainActivity : ComponentActivity() {
                                                                     }
                                                                     currentHierarchy.any { it.hasRoute<DiaryPreview>() } -> {
                                                                         mainViewModel.showAddDiaryDialog = true
+                                                                    }
+                                                                    currentHierarchy.any { it.hasRoute<Diary>() } -> {
+                                                                        mainViewModel.isAddDiaryImage = true
                                                                     }
                                                                 } },
                                                             onLongPressStart = {

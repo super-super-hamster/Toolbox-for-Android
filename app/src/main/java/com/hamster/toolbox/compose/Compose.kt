@@ -33,8 +33,11 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.selection.LocalTextSelectionColors
+import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -48,8 +51,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldColors
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
@@ -70,6 +75,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.graphicsLayer
@@ -90,6 +96,7 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -135,6 +142,23 @@ val assistantBubbleShape = SquircleShape(
     bottomStart = 16.dp,
     bottomEnd = 16.dp,
     smoothing = CornerSmoothing.Medium
+)
+
+@Composable
+fun outlinedTextFieldColors(): TextFieldColors {
+    return OutlinedTextFieldDefaults.colors(
+        focusedBorderColor = colorResource(id = R.color.mikuGreen),
+        unfocusedBorderColor = Color.LightGray,
+        errorBorderColor = Color.Red,
+        disabledBorderColor = Color.Gray.copy(alpha = 0.5f),
+        focusedLabelColor = colorResource(id = R.color.mikuGreen),
+        cursorColor = colorResource(id = R.color.mikuGreen)
+    )
+}
+
+val cursorBrushColor = TextSelectionColors(
+    handleColor = Color(0xFF39C5BB),
+    backgroundColor = Color(0xFF39C5BB).copy(alpha = 0.25f)
 )
 
 @Composable
@@ -410,15 +434,7 @@ fun EditTextDialog(
                     onDone = { if (singleLine) submitAction() }
                 ),
                 shape = squircleShape,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = colorResource(R.color.mikuGreen), // 选中时用你的主题绿
-                    unfocusedBorderColor = Color.LightGray,                     // 未选中时用浅灰
-                    errorBorderColor = Color.Red,                               // 报错时用红色
-                    disabledBorderColor = Color.Gray.copy(alpha = 0.5f),        // 禁用时半透明灰色
-
-                    focusedLabelColor = colorResource(R.color.mikuGreen),  // 选中时的浮动标签颜色
-                    cursorColor = colorResource(R.color.mikuGreen)         // 输入光标的颜色
-                )
+                colors = outlinedTextFieldColors()
             )
             Spacer(modifier = Modifier.height(24.dp))
             Row(
@@ -649,6 +665,29 @@ fun PageColumn(
 
             Spacer(modifier = Modifier.height(dimensionResource(R.dimen.bottom_padding)))
         }
+    }
+}
+
+@Composable
+fun TextInputField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    textStyle: TextStyle = TextStyle.Default,
+    singleLine: Boolean = false,
+    decorationBox: @Composable (innerTextField: @Composable () -> Unit) -> Unit =
+        @Composable { innerTextField -> innerTextField() },
+    modifier: Modifier = Modifier,
+) {
+    CompositionLocalProvider(LocalTextSelectionColors provides cursorBrushColor) {
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            textStyle = textStyle,
+            modifier = modifier,
+            singleLine = singleLine,
+            decorationBox = decorationBox,
+            cursorBrush = SolidColor(colorResource(R.color.mikuGreen))
+        )
     }
 }
 

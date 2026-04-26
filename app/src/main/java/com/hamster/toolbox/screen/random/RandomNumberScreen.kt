@@ -27,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -179,7 +180,12 @@ fun RandomNumberScreen() {
                                 spotColor = colorResource(id = R.color.item_group_card_shadow),
                                 ambientColor = colorResource(id = R.color.item_group_card_shadow)
                             ),
-                        colors = ButtonDefaults.buttonColors(colorResource(R.color.mikuGreen)),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = colorResource(R.color.mikuGreen),
+                            disabledContainerColor = colorResource(R.color.mikuGreen),
+                             contentColor = Color.White,
+                             disabledContentColor = Color.White
+                        ),
                         shape = squircleShape,
                         elevation = ButtonDefaults.buttonElevation(
                             defaultElevation = 3.dp,
