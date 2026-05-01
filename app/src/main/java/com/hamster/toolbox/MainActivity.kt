@@ -90,6 +90,7 @@ import com.hamster.toolbox.main.ExpandedBottomMenu
 import com.hamster.toolbox.main.MainViewModel
 import com.hamster.toolbox.screen.colorPicker.ColorPickerScreen
 import com.hamster.toolbox.screen.debug.DebugScreen
+import com.hamster.toolbox.screen.decibelMeter.DecibelMeterScreen
 import com.hamster.toolbox.screen.diary.DiaryDatabase
 import com.hamster.toolbox.screen.diary.DiaryViewModel
 import com.hamster.toolbox.screen.diary.diaryGraph
@@ -210,6 +211,7 @@ class MainActivity : ComponentActivity() {
                 currentDestination?.hasRoute<SetKeywords>() == true -> R.drawable.ic_add
                 currentDestination?.hasRoute<DiaryPreview>() == true -> R.drawable.ic_add
                 currentDestination?.hasRoute<Diary>() == true -> R.drawable.ic_add
+                currentDestination?.hasRoute<DecibelMeter>() == true -> R.drawable.ic_tune
                 currentDestination?.hasRoute<Time>() == true -> if (mainViewModel.isSetInvisibleApp) R.drawable.ic_invisible else R.drawable.ic_visible
                 else -> R.drawable.ic_microphone
             }
@@ -222,13 +224,19 @@ class MainActivity : ComponentActivity() {
                 currentDestination?.hasRoute<ImportCurriculum>() == true -> "导入课程表"
                 currentDestination?.hasRoute<WeatherSettings>() == true -> "天气"
                 currentDestination?.hasRoute<Tips>() == true -> "Tips"
-                currentDestination?.hasRoute<ScheduleTips>() == true -> "课程表Tips"
-                currentDestination?.hasRoute<WeatherTips>() == true -> "天气Tips"
+                currentDestination?.hasRoute<ScheduleTips>() == true -> "课程表 Tips"
+                currentDestination?.hasRoute<AssistantTips>() == true -> "助手 Tips"
+                currentDestination?.hasRoute<ColorPickerTips>() == true -> "取色器 Tips"
+                currentDestination?.hasRoute<RandomNumberTips>() == true -> "随机数 Tips"
+                currentDestination?.hasRoute<RulerTips>() == true -> "尺子 Tips"
+                currentDestination?.hasRoute<TimeTips>() == true -> "应用使用时间 Tips"
+                currentDestination?.hasRoute<WeatherTips>() == true -> "天气 Tips"
                 currentDestination?.hasRoute<Time>() == true -> "应用使用时间"
                 currentDestination?.hasRoute<ColorPicker>() == true -> "取色器"
                 currentDestination?.hasRoute<DiaryPreview>() == true -> "日记"
+                currentDestination?.hasRoute<DecibelMeter>() == true -> "分贝仪"
                 currentDestination?.hasRoute<Debug>() == true -> "Debug"
-                else -> "ToolBox"
+                else -> "Toolbox"
             }
 
             val showTopBar = when {
@@ -283,7 +291,7 @@ class MainActivity : ComponentActivity() {
                             Box(modifier = Modifier.fillMaxSize()) {
                                 NavHost(
                                     navController = navController,
-                                    startDestination = DiaryGraph,
+                                    startDestination = DecibelMeter,
                                     modifier = Modifier
                                         .layerBackdrop(backdrop) // 应用玻璃效果
                                         .hazeSource(state = hazeState)
@@ -359,14 +367,15 @@ class MainActivity : ComponentActivity() {
                                         navController = navController
                                     )
 
-                                    // 游戏机
-                                    composable<GameConsole>(
+                                    composable<DecibelMeter>(
                                         enterTransition = { slideInWithScaleEnter() },
                                         exitTransition = { scaleOutExit() },
                                         popEnterTransition = { scaleInPopEnter() },
                                         popExitTransition = { slideOutWithScalePopExit() }
                                     ) {
-                                        GameConsoleScreen()
+                                        DecibelMeterScreen(
+                                            mainViewModel = mainViewModel
+                                        )
                                     }
 
                                     // 设置
@@ -516,6 +525,9 @@ class MainActivity : ComponentActivity() {
                                                                     }
                                                                     currentHierarchy.any { it.hasRoute<Diary>() } -> {
                                                                         mainViewModel.isAddDiaryImage = true
+                                                                    }
+                                                                    currentHierarchy.any { it.hasRoute<DecibelMeter>() } -> {
+                                                                        mainViewModel.showDecibelMeterOffsetDialog = true
                                                                     }
                                                                 } },
                                                             onLongPressStart = {

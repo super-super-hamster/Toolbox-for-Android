@@ -33,3 +33,15 @@ fun LAB.toRGB(): RGB {
         b = (rgbColor.blue * 255f).roundToInt().coerceIn(0, 255)
     )
 }
+
+fun LAB.toInt(): Int {
+    return this.toRGB().toInt()
+}
+
+fun Color.toRGB(): RGB {
+    return RGB(
+        r = (this.red * 255).toInt().coerceIn(0, 255),
+        g = (this.green * 255).toInt().coerceIn(0, 255),
+        b = (this.blue * 255).toInt().coerceIn(0, 255)
+    )
+}

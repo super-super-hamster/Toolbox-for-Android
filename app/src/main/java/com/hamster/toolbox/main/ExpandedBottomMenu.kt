@@ -72,6 +72,7 @@ import androidx.lifecycle.viewModelScope
 import coil.compose.AsyncImage
 import com.hamster.toolbox.ColorPicker
 import com.hamster.toolbox.Debug
+import com.hamster.toolbox.DecibelMeter
 import com.hamster.toolbox.DiaryPreview
 import com.hamster.toolbox.R
 import com.hamster.toolbox.RandomNumber
@@ -217,6 +218,9 @@ private fun Menu(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
+            // 分贝仪
+            MenuItem(name = "分贝仪", icon = painterResource(R.drawable.ic_decibel_meter), onClick = { onNavigate(DecibelMeter) })
+
             // Debug
             if (userName == "SuperHamster") {
                 MenuItem(name = "Debug", icon = painterResource(R.drawable.ic_debug), onClick = { onNavigate(Debug) })

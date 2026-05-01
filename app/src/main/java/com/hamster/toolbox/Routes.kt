@@ -95,6 +95,10 @@ object DiaryPreview : Route
 @Serializable
 object Diary : Route
 
+// 分贝仪
+@Serializable
+object DecibelMeter : Route
+
 // 取色器
 @Serializable
 object ColorPicker : Route

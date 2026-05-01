@@ -32,13 +32,15 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.edit
 import androidx.preference.PreferenceManager
 import com.hamster.toolbox.compose.EditTextDialog
+import com.hamster.toolbox.compose.SliderDialog
+import com.hamster.toolbox.compose.rememberFloatPreference
 
 @Composable
 fun RulerScreen() {
     val prefs = PreferenceManager.getDefaultSharedPreferences(LocalContext.current)
 
     var showCalibrationDialog by remember { mutableStateOf(false) }
-    var zoomFactor by remember { mutableFloatStateOf(prefs.getFloat("ruler_zoom_factor", 1f)) }
+    var zoomFactor by rememberFloatPreference("ruler_zoom_factor", 1f)
 
     // 获取每毫米对应的物理像素数
     val pxPerMm = rememberPxPerMm() * zoomFactor
@@ -67,30 +69,27 @@ fun RulerScreen() {
                 maxCm = maxCm
             )
         }
+
         TextButton(
             modifier = Modifier.align(Alignment.Center),
             onClick = { showCalibrationDialog = true },) {
             Text(
                 text = "校准",
                 style = MaterialTheme.typography.displayMedium,
-                color = Color.Black.copy(alpha = 0.8f),)
+                color = Color.Black.copy(alpha = 0.8f)
+            )
         }
+
         if (showCalibrationDialog) {
-            EditTextDialog(
+            SliderDialog(
                 title = "校准",
-                initialValue = zoomFactor.toString(),
-                hint = "输入缩放倍数",
-                type = "Float",
+                content = "修改缩放倍数",
+                value = zoomFactor,
+                onValueChange = { zoomFactor = it },
+                onCancel = {},
+                onConfirm = { true },
                 onDismissRequest = { showCalibrationDialog = false },
-                onConfirm = { text ->
-                    try {
-                        zoomFactor = text.toFloat()
-                        prefs.edit { putFloat("ruler_zoom_factor", text.toFloat()) }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                    true
-                }
+                setValue = { zoomFactor = it }
             )
         }
     }
