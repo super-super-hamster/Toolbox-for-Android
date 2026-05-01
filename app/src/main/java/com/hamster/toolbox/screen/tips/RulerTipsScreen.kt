@@ -15,7 +15,7 @@ fun RulerTipsScreen() {
 
     PageColumn(modifier = Modifier.verticalScroll(rememberScrollState()), sharedTiltState = sharedTiltState) {
         ItemGroup(titleState = sharedTiltState) {
-            ExplanationItem(title = "用法", content = "尺子刻度可能并不准确，你可以点击屏幕中心的“校准”按钮，输入缩放倍数，与现实中的尺子进行校准。") { }
+            ExplanationItem(title = "校准", content = "尺子刻度可能并不准确，你可以点击屏幕中心的“校准”按钮，输入缩放倍数，与现实中的尺子进行校准。") { }
         }
     }
 }

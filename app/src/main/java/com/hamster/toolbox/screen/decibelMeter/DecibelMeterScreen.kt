@@ -118,7 +118,7 @@ fun DecibelMeterScreen(
                     RingProgress(
                         ringColor = Color(colorLine.getColor((if (isBegin) viewModel.currentDb + offset else 0f) / 120f)),
                         progress = ((if (isBegin) viewModel.currentDb + offset else 0f) / 120f).coerceIn(0f, 1f),
-                        text = if (viewModel.isRecording) String.format(Locale.getDefault(), "%.1f dB", viewModel.currentDb) else "开始",
+                        text = if (viewModel.isRecording) String.format(Locale.getDefault(), "%.1f dB", viewModel.currentDb + offset) else "开始",
                     ) {
                         val hasPermission = ContextCompat.checkSelfPermission(
                             context,

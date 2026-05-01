@@ -6,6 +6,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navigation
 import com.hamster.toolbox.AssistantTips
 import com.hamster.toolbox.ColorPickerTips
+import com.hamster.toolbox.DecibelMeterTips
+import com.hamster.toolbox.DiaryTips
 import com.hamster.toolbox.RandomNumberTips
 import com.hamster.toolbox.RulerTips
 import com.hamster.toolbox.ScheduleTips
@@ -94,6 +96,24 @@ fun NavGraphBuilder.tipsGraph(
             popExitTransition = { slideOutWithScalePopExit() }
         ) {
             TimeTipsScreen()
+        }
+
+        composable<DiaryTips>(
+            enterTransition = { slideInWithScaleEnter() },
+            exitTransition = { scaleOutExit() },
+            popEnterTransition = { scaleInPopEnter() },
+            popExitTransition = { slideOutWithScalePopExit() }
+        ) {
+            DiaryTipsScreen()
+        }
+
+        composable<DecibelMeterTips>(
+            enterTransition = { slideInWithScaleEnter() },
+            exitTransition = { scaleOutExit() },
+            popEnterTransition = { scaleInPopEnter() },
+            popExitTransition = { slideOutWithScalePopExit() }
+        ) {
+            DecibelMeterTipsScreen()
         }
     }
 }

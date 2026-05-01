@@ -38,6 +38,12 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.util.Calendar
+import android.content.ContextWrapper
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
+import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
+import androidx.biometric.BiometricPrompt
+import androidx.fragment.app.FragmentActivity
 
 class ScrollTarget {
     val requester = BringIntoViewRequester()
@@ -154,6 +160,54 @@ fun copyCurriculumJSONPrompt(context: Context) {
     clipboardManager.setPrimaryClip(clipData)
 
     Toast.makeText(context, "已复制", Toast.LENGTH_SHORT).show()
+}
+
+fun Context.findFragmentActivity(): FragmentActivity? {
+    var context = this
+    while (context is ContextWrapper) {
+        if (context is FragmentActivity) return context
+        context = context.baseContext
+    }
+    return null
+}
+
+fun authenticate(
+    context: Context,
+    onSuccess: () -> Unit,
+    onNoPasswordSet: () -> Unit
+) {
+    val activity = context.findFragmentActivity() ?: return
+
+    val biometricManager = BiometricManager.from(context)
+    val authenticators = BIOMETRIC_STRONG or DEVICE_CREDENTIAL
+
+    when (biometricManager.canAuthenticate(authenticators)) {
+        BiometricManager.BIOMETRIC_SUCCESS -> {
+            // 有密码或指纹
+            val executor = ContextCompat.getMainExecutor(activity)
+
+            val callback = object : BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                    super.onAuthenticationSucceeded(result)
+                    onSuccess()
+                }
+            }
+
+            val biometricPrompt = BiometricPrompt(activity, executor, callback)
+
+            val promptInfo = BiometricPrompt.PromptInfo.Builder()
+                .setTitle("解锁日记")
+                .setAllowedAuthenticators(BIOMETRIC_STRONG or DEVICE_CREDENTIAL) // 允许使用强生物识别(指纹/面容) 或 设备密码(PIN/图案)
+                .build()
+
+            biometricPrompt.authenticate(promptInfo)
+        }
+        BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED -> {
+            // 没设任何锁屏密码
+            onNoPasswordSet()
+        }
+        else -> {}
+    }
 }
 
 //判断json是否合法并保存

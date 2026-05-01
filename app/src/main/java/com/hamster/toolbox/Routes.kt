@@ -75,6 +75,14 @@ object ColorPickerTips : Route
 @Serializable
 object TimeTips : Route
 
+// 日记Tips
+@Serializable
+object DiaryTips : Route
+
+// 分贝仪Tips
+@Serializable
+object DecibelMeterTips : Route
+
 // 游戏机
 @Serializable
 object GameConsole : Route

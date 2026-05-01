@@ -6,7 +6,6 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -63,6 +62,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hasRoute
@@ -95,7 +95,6 @@ import com.hamster.toolbox.screen.diary.DiaryDatabase
 import com.hamster.toolbox.screen.diary.DiaryViewModel
 import com.hamster.toolbox.screen.diary.diaryGraph
 import com.hamster.toolbox.screen.diary.diaryViewModelFactory
-import com.hamster.toolbox.screen.gameConsole.GameConsoleScreen
 import com.hamster.toolbox.screen.random.RandomNumberScreen
 import com.hamster.toolbox.screen.ruler.RulerScreen
 import com.hamster.toolbox.screen.schedule.ScheduleScreen
@@ -134,7 +133,7 @@ import kotlinx.coroutines.withContext
 // TODO: 通知栏字体颜色适配
 // TODO: preferencesDataStore
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
     // 跟随应用生命周期的协程作用域
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private lateinit var speechManager: SpeechRecognizerManager
@@ -231,6 +230,8 @@ class MainActivity : ComponentActivity() {
                 currentDestination?.hasRoute<RulerTips>() == true -> "尺子 Tips"
                 currentDestination?.hasRoute<TimeTips>() == true -> "应用使用时间 Tips"
                 currentDestination?.hasRoute<WeatherTips>() == true -> "天气 Tips"
+                currentDestination?.hasRoute<DiaryTips>() == true -> "日记 Tips"
+                currentDestination?.hasRoute<DecibelMeterTips>() == true -> "分贝仪 Tips"
                 currentDestination?.hasRoute<Time>() == true -> "应用使用时间"
                 currentDestination?.hasRoute<ColorPicker>() == true -> "取色器"
                 currentDestination?.hasRoute<DiaryPreview>() == true -> "日记"

@@ -6,6 +6,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.hamster.toolbox.AssistantTips
 import com.hamster.toolbox.ColorPickerTips
+import com.hamster.toolbox.DecibelMeterTips
+import com.hamster.toolbox.DiaryTips
 import com.hamster.toolbox.R
 import com.hamster.toolbox.RandomNumberTips
 import com.hamster.toolbox.Route
@@ -52,6 +54,14 @@ fun TipsScreen(
 
             ClickItem(title = "天气", icon = R.drawable.ic_weather) {
                 onNavigate(WeatherTips)
+            }
+
+            ClickItem(title = "日记", icon = R.drawable.ic_diary) {
+                onNavigate(DiaryTips)
+            }
+
+            ClickItem(title = "分贝仪", icon = R.drawable.ic_decibel_meter) {
+                onNavigate(DecibelMeterTips)
             }
         }
     }

@@ -28,6 +28,7 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -39,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
@@ -56,9 +58,11 @@ import com.hamster.toolbox.compose.ItemGroup
 import com.hamster.toolbox.compose.PageColumn
 import com.hamster.toolbox.compose.StandardDialog
 import com.hamster.toolbox.compose.TextInputField
+import com.hamster.toolbox.compose.rememberBooleanPreference
 import com.hamster.toolbox.compose.rememberSharedTiltState
 import com.hamster.toolbox.compose.squircleShape
 import com.hamster.toolbox.main.MainViewModel
+import com.hamster.toolbox.utils.authenticate
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -70,6 +74,7 @@ fun DiaryPreviewScreen(
     viewModel: DiaryViewModel,
     onNavigate: (Route) -> Unit
 ) {
+    val context = LocalContext.current
     val sharedTiltState = rememberSharedTiltState()
 
     val diaries by viewModel.diaries.collectAsStateWithLifecycle(initialValue = emptyMap())
@@ -88,44 +93,65 @@ fun DiaryPreviewScreen(
     var deleteDiaryId by remember { mutableLongStateOf(-1) }
     var deleteDate by remember { mutableStateOf("") }
 
+    var isLocked by remember { mutableStateOf(true) }
+    val isDiaryUsingPassword by rememberBooleanPreference("is_diary_using_password", true)
+
+    LaunchedEffect(Unit) {
+        if (isDiaryUsingPassword) {
+            authenticate(
+                context = context,
+                onSuccess = {
+                    isLocked = false
+                },
+                onNoPasswordSet = {
+                    isLocked = false
+                }
+            )
+        } else {
+            isLocked = false
+        }
+    }
+
     PageColumn(modifier = Modifier.verticalScroll(rememberScrollState()), sharedTiltState = sharedTiltState) {
-        diaries.forEach { (year, months) ->
-            ItemGroup(titleState = sharedTiltState) {
-                DiaryItem(title = "$year 年", onClick = {
-                    selectedYear = if (selectedYear == year) -1 else year
-                    selectedMonth = -1
-                })
+        if (!isLocked) {
+            diaries.forEach { (year, months) ->
+                ItemGroup(titleState = sharedTiltState) {
+                    DiaryItem(title = "$year 年", onClick = {
+                        selectedYear = if (selectedYear == year) -1 else year
+                        selectedMonth = -1
+                    })
 
-                AnimatedVisibility(
-                    visible = selectedYear == year,
-                    enter = expandVertically(animationSpec = tween(durationMillis = 300)),
-                    exit = shrinkVertically(animationSpec = tween(durationMillis = 300))
-                ) {
-                    Column {
-                        months.forEach { (month, diary) ->
-                            DiaryItem(title = "    $month 月", onClick = {
-                                selectedMonth = if (selectedMonth == month) -1 else month
-                            })
+                    AnimatedVisibility(
+                        visible = selectedYear == year,
+                        enter = expandVertically(animationSpec = tween(durationMillis = 300)),
+                        exit = shrinkVertically(animationSpec = tween(durationMillis = 300))
+                    ) {
+                        Column {
+                            months.forEach { (month, diary) ->
+                                DiaryItem(title = "    $month 月", onClick = {
+                                    selectedMonth = if (selectedMonth == month) -1 else month
+                                })
 
-                            AnimatedVisibility(
-                                visible = selectedMonth == month,
-                                enter = expandVertically(animationSpec = tween(durationMillis = 300)),
-                                exit = shrinkVertically(animationSpec = tween(durationMillis = 300))
-                            ) {
-                                Column {
-                                    diary.forEach {
-                                        val day = remember(it.date) {
-                                            Calendar.getInstance().apply { timeInMillis = it.date }.get(Calendar.DAY_OF_MONTH)
-                                        }
-                                        val title = "        $day 日" + if (it.title.isNullOrBlank()) "" else " - ${it.title}"
+                                AnimatedVisibility(
+                                    visible = selectedMonth == month,
+                                    enter = expandVertically(animationSpec = tween(durationMillis = 300)),
+                                    exit = shrinkVertically(animationSpec = tween(durationMillis = 300))
+                                ) {
+                                    Column {
+                                        diary.forEach {
+                                            val day = remember(it.date) {
+                                                Calendar.getInstance().apply { timeInMillis = it.date }.get(Calendar.DAY_OF_MONTH)
+                                            }
+                                            val title = "        $day 日" + if (it.title.isNullOrBlank()) "" else " - ${it.title}"
 
-                                        DiaryItem(title = title, wordCount = it.wordCount, onClick = {
-                                            viewModel.selectedDiaryDate = it.date
-                                            onNavigate(Diary)
-                                        }) {
-                                            deleteDiaryId = it.id
-                                            deleteDate = dateFormatter.format(Date(it.date))
-                                            showDeleteDiaryDialog = true
+                                            DiaryItem(title = title, wordCount = it.wordCount, onClick = {
+                                                viewModel.selectedDiaryDate = it.date
+                                                onNavigate(Diary)
+                                            }) {
+                                                deleteDiaryId = it.id
+                                                deleteDate = dateFormatter.format(Date(it.date))
+                                                showDeleteDiaryDialog = true
+                                            }
                                         }
                                     }
                                 }
@@ -133,145 +159,145 @@ fun DiaryPreviewScreen(
                         }
                     }
                 }
+
+                Spacer(modifier = Modifier.height(dimensionResource(R.dimen.item_group_gap)))
             }
 
-            Spacer(modifier = Modifier.height(dimensionResource(R.dimen.item_group_gap)))
-        }
-
-        if (mainViewModel.showAddDiaryDialog) {
-            StandardDialog(onDismissRequest = { mainViewModel.showAddDiaryDialog = false }) {
-                Column(
-                    modifier = Modifier
-                        .padding(24.dp)
-                        .fillMaxWidth(0.85f),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Box(
+            if (mainViewModel.showAddDiaryDialog) {
+                StandardDialog(onDismissRequest = { mainViewModel.showAddDiaryDialog = false }) {
+                    Column(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 24.dp)
+                            .padding(24.dp)
+                            .fillMaxWidth(0.85f),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(
-                            text = dateFormatter.format(Date(currentTime)),
-                            style = MaterialTheme.typography.titleLarge,
-                            modifier = Modifier.fillMaxWidth(),
-                            textAlign = TextAlign.Center,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        Icon(
-                            painter = painterResource(R.drawable.ic_edit_calendar),
-                            contentDescription = null,
-                            tint = colorResource(R.color.icon),
+                        Box(
                             modifier = Modifier
-                                .size(20.dp)
-                                .align(Alignment.TopEnd)
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null
-                                ) {
-                                    mainViewModel.showAddDiaryDialog = false
-                                    showDatePicker = true
-                                }
-                        )
-                    }
-
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        if (diaryTitle.isEmpty()) {
-                            Text("标题", color = Color.Gray, style = MaterialTheme.typography.bodyLarge)
-                        }
-                        TextInputField(
-                            value = diaryTitle,
-                            onValueChange = { diaryTitle = it },
-                            textStyle = LocalTextStyle.current.copy(
-                                textAlign = TextAlign.Center,
-                                color = colorResource(R.color.text),
-                                fontSize = MaterialTheme.typography.bodyLarge.fontSize
-                            ),
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(42.dp),
-                        horizontalArrangement = Arrangement.spacedBy(24.dp)
-                    ) {
-                        Button(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(42.dp),
-                            border = BorderStroke(1.dp, Color.LightGray),
-                            shape = squircleShape,
-                            colors = ButtonDefaults.textButtonColors(Color.Transparent),
-                            onClick = {
-                                mainViewModel.showAddDiaryDialog = false
-                                diaryTitle = ""
-                                currentTime = System.currentTimeMillis()
-                            }
+                                .fillMaxWidth()
+                                .padding(bottom = 24.dp)
                         ) {
-                            Text(text = "取消", color = Color.Gray)
+                            Text(
+                                text = dateFormatter.format(Date(currentTime)),
+                                style = MaterialTheme.typography.titleLarge,
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = TextAlign.Center,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            Icon(
+                                painter = painterResource(R.drawable.ic_edit_calendar),
+                                contentDescription = null,
+                                tint = colorResource(R.color.icon),
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .align(Alignment.TopEnd)
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null
+                                    ) {
+                                        mainViewModel.showAddDiaryDialog = false
+                                        showDatePicker = true
+                                    }
+                            )
                         }
 
-                        Button(
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            if (diaryTitle.isEmpty()) {
+                                Text("标题", color = Color.Gray, style = MaterialTheme.typography.bodyLarge)
+                            }
+                            TextInputField(
+                                value = diaryTitle,
+                                onValueChange = { diaryTitle = it },
+                                textStyle = LocalTextStyle.current.copy(
+                                    textAlign = TextAlign.Center,
+                                    color = colorResource(R.color.text),
+                                    fontSize = MaterialTheme.typography.bodyLarge.fontSize
+                                ),
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        Row(
                             modifier = Modifier
-                                .weight(1f)
+                                .fillMaxWidth()
                                 .height(42.dp),
-                            border = BorderStroke(1.dp, Color.LightGray),
-                            shape = squircleShape,
-                            colors = ButtonDefaults.textButtonColors(colorResource(R.color.btn_confirm)),
-                            onClick = {
-                                viewModel.createDiary(
-                                    title = diaryTitle,
-                                    date = currentTime
-                                ) {
-                                    onNavigate(Diary)
+                            horizontalArrangement = Arrangement.spacedBy(24.dp)
+                        ) {
+                            Button(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(42.dp),
+                                border = BorderStroke(1.dp, Color.LightGray),
+                                shape = squircleShape,
+                                colors = ButtonDefaults.textButtonColors(Color.Transparent),
+                                onClick = {
+                                    mainViewModel.showAddDiaryDialog = false
                                     diaryTitle = ""
                                     currentTime = System.currentTimeMillis()
-                                    mainViewModel.showAddDiaryDialog = false
                                 }
+                            ) {
+                                Text(text = "取消", color = Color.Gray)
                             }
-                        ) {
-                            Text(text = "确认", color = colorResource(R.color.text))
+
+                            Button(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(42.dp),
+                                border = BorderStroke(1.dp, Color.LightGray),
+                                shape = squircleShape,
+                                colors = ButtonDefaults.textButtonColors(colorResource(R.color.btn_confirm)),
+                                onClick = {
+                                    viewModel.createDiary(
+                                        title = diaryTitle,
+                                        date = currentTime
+                                    ) {
+                                        onNavigate(Diary)
+                                        diaryTitle = ""
+                                        currentTime = System.currentTimeMillis()
+                                        mainViewModel.showAddDiaryDialog = false
+                                    }
+                                }
+                            ) {
+                                Text(text = "确认", color = colorResource(R.color.text))
+                            }
                         }
                     }
                 }
             }
-        }
 
-        if (showDatePicker) {
-            DatePicker(
-                initialSelectedDateMillis = currentTime,
-                onDismiss = {
-                    showDatePicker = false
-                    mainViewModel.showAddDiaryDialog = true
-                },
-                onDateSelected = {
-                    if (it != null) {
-                        currentTime = it
+            if (showDatePicker) {
+                DatePicker(
+                    initialSelectedDateMillis = currentTime,
+                    onDismiss = {
+                        showDatePicker = false
+                        mainViewModel.showAddDiaryDialog = true
+                    },
+                    onDateSelected = {
+                        if (it != null) {
+                            currentTime = it
+                        }
+                        showDatePicker = false
+                        mainViewModel.showAddDiaryDialog = true
                     }
-                    showDatePicker = false
-                    mainViewModel.showAddDiaryDialog = true
-                }
-            )
-        }
+                )
+            }
 
-        if (showDeleteDiaryDialog) {
-            InquiryDialog(
-                title = "删除确认",
-                content = "要删除$deleteDate 的日记吗？",
-                onCancel = { showDeleteDiaryDialog = false },
-                onDismissRequest = { showDeleteDiaryDialog = false }
-            ) {
-                viewModel.deleteDiary(deleteDiaryId)
-                true
+            if (showDeleteDiaryDialog) {
+                InquiryDialog(
+                    title = "删除确认",
+                    content = "要删除$deleteDate 的日记吗？",
+                    onCancel = { showDeleteDiaryDialog = false },
+                    onDismissRequest = { showDeleteDiaryDialog = false }
+                ) {
+                    viewModel.deleteDiary(deleteDiaryId)
+                    true
+                }
             }
         }
     }

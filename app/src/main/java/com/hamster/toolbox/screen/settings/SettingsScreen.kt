@@ -116,6 +116,7 @@ fun SettingsScreen(
     var apiKey by rememberStringPreference("api_key", "")
     var isClassRemindEnabled by rememberBooleanPreference("class_notification")
     var isAlarmRemindEnabled by rememberBooleanPreference("alarm_notification")
+    var isDiaryUsingPassword by rememberBooleanPreference("is_diary_using_password", true)
 
     var showUserAvatarOptionsDialog by remember { mutableStateOf(false) }
     var showDatePickerDialog by remember { mutableStateOf(false) }
@@ -253,7 +254,19 @@ fun SettingsScreen(
                     )
                 }
             )
+        }
 
+        Spacer(modifier = Modifier.height(dimensionResource(R.dimen.item_group_gap)))
+
+        ItemGroup(titleState = sharedTiltState) {
+            SwitchItem(
+                modifier = getModifier("is_diary_using_password"),
+                title = "使用密码保护日记",
+                checked = isDiaryUsingPassword,
+                icon = R.drawable.ic_diary
+            ) {
+                isDiaryUsingPassword = it
+            }
         }
 
         Spacer(modifier = Modifier.height(dimensionResource(R.dimen.item_group_gap)))
