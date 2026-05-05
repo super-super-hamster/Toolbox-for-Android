@@ -4,6 +4,7 @@ import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.navigation
+import com.hamster.toolbox.AssistantSettings
 import com.hamster.toolbox.ImportCurriculum
 import com.hamster.toolbox.SetKeywords
 import com.hamster.toolbox.Settings
@@ -65,6 +66,15 @@ fun NavGraphBuilder.settingsGraph(
                 mainViewModel = mainViewModel,
                 onNavigate = { navController.navigate(it) }
             )
+        }
+
+        composable<AssistantSettings>(
+            enterTransition = { slideInWithScaleEnter() },
+            exitTransition = { scaleOutExit() },
+            popEnterTransition = { scaleInPopEnter() },
+            popExitTransition = { slideOutWithScalePopExit() }
+        ) {
+            AssistantSettingsScreen()
         }
 
         composable<WeatherSettings>(

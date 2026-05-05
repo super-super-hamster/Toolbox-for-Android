@@ -95,27 +95,28 @@ suspend fun getColorGroups(
     group
 }
 
-suspend fun getMidtoneColors(
+suspend fun getColors(
     bitmap: Bitmap,
     radius: Float = 20f,
     mergeRadius: Float = 10f,
     count: Int,
-    mergeSimilarColor: Boolean = true,
     ignoreBackground: Boolean = false,
-    minBrightness: Float = 15f,
-    maxBrightness: Float = 85f
+    brightnessRange: ClosedFloatingPointRange<Float> = 15f..85f,
+    chromaRange: ClosedFloatingPointRange<Float> = 0.05f..0.15f,
 ): List<Int> = withContext(Dispatchers.Default) {
     val group = getColorGroups(bitmap, radius)
+
+    val squareChromaRange = (chromaRange.start * chromaRange.start)..(chromaRange.endInclusive * chromaRange.endInclusive)
 
     val result = mutableListOf<Int>()
     val selectedColor = mutableListOf<LAB>()
     for (g in group) {
         if (!(ignoreBackground && g.isBackground)) {
-            if (g.l !in minBrightness..maxBrightness) {
+            if (g.l !in brightnessRange && (g.a * g.a + g.b* g.b) !in squareChromaRange) {
                 continue
             }
 
-            if (mergeSimilarColor && selectedColor.isNotEmpty()) {
+            if (selectedColor.isNotEmpty()) {
                 var minDis = 1e9f
                 selectedColor.forEach {
                     minDis = min(minDis, dis(g, it.l, it.a, it.b))
@@ -138,13 +139,14 @@ suspend fun getMidtoneColors(
     result
 }
 
-suspend fun getMidtoneColor(bitmap: Bitmap,
+suspend fun getColor(bitmap: Bitmap,
                      radius: Float = 20f,
                      mergeRadius: Float = 10f,
-                     mergeSimilarColor: Boolean = true,
-                     ignoreBackground: Boolean = false
+                     ignoreBackground: Boolean = false,
+                     brightnessRange: ClosedFloatingPointRange<Float> = 15f..85f,
+                     chromaRange: ClosedFloatingPointRange<Float> = 0.05f..0.15f,
 ):Int {
-    val color = getMidtoneColors(bitmap, radius, mergeRadius, 1, mergeSimilarColor, ignoreBackground)
+    val color = getColors(bitmap, radius, mergeRadius, 1, ignoreBackground, brightnessRange = brightnessRange, chromaRange = chromaRange)
     return if (color.isEmpty()) 0 else color.first()
 }
 

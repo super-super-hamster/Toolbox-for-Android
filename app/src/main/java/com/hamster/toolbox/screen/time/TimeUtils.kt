@@ -10,7 +10,7 @@ import android.os.Build
 import android.os.Process
 import android.provider.Settings
 import androidx.compose.ui.graphics.Color
-import com.hamster.toolbox.utils.color.getMidtoneColor
+import com.hamster.toolbox.utils.color.getColor
 import com.hamster.toolbox.utils.drawableToBitmap
 import com.hamster.toolbox.utils.getStartOfDay
 import kotlinx.coroutines.Dispatchers
@@ -146,7 +146,7 @@ class AppUsageMapper(context: Context) {
                 val appIcon = packageManager.getApplicationIcon(info)
                 val mainColor = colorCache[appName] ?: run {
                     val bitmap = drawableToBitmap(appIcon)
-                    val extractedColor = getMidtoneColor(bitmap)
+                    val extractedColor = getColor(bitmap)
                     val colorObj = Color(extractedColor)
                     colorCache[appName] = colorObj
                     colorObj

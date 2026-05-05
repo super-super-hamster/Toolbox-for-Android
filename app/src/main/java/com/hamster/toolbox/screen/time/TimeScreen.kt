@@ -527,6 +527,7 @@ fun TimelineLayout(
                         ) {
                             if (maxHeight > 16.dp) {
                                 Text(
+                                    modifier = Modifier.align(Alignment.Center),
                                     text = item.appUsage.name,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,

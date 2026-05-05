@@ -335,7 +335,6 @@ fun Assistant(
                     value = inputText,
                     onValueChange = { setInputText(it) },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("...") },
                     maxLines = 3,
                     shape = squircleShape,
                     keyboardOptions = KeyboardOptions(

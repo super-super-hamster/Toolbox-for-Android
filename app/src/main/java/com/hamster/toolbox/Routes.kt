@@ -27,6 +27,10 @@ object SetKeywords : Route
 @Serializable
 object WeatherSettings : Route
 
+// 助手设置
+@Serializable
+object AssistantSettings : Route
+
 // 尺子
 @Serializable
 object Ruler : Route

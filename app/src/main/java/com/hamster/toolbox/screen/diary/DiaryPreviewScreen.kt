@@ -100,6 +100,7 @@ fun DiaryPreviewScreen(
         if (isDiaryUsingPassword) {
             authenticate(
                 context = context,
+                title = "解锁日记",
                 onSuccess = {
                     isLocked = false
                 },

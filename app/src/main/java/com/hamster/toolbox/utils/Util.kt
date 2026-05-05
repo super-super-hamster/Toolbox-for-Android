@@ -172,6 +172,7 @@ fun Context.findFragmentActivity(): FragmentActivity? {
 }
 
 fun authenticate(
+    title: String,
     context: Context,
     onSuccess: () -> Unit,
     onNoPasswordSet: () -> Unit
@@ -196,7 +197,7 @@ fun authenticate(
             val biometricPrompt = BiometricPrompt(activity, executor, callback)
 
             val promptInfo = BiometricPrompt.PromptInfo.Builder()
-                .setTitle("解锁日记")
+                .setTitle(title)
                 .setAllowedAuthenticators(BIOMETRIC_STRONG or DEVICE_CREDENTIAL) // 允许使用强生物识别(指纹/面容) 或 设备密码(PIN/图案)
                 .build()
 

@@ -24,7 +24,7 @@ import com.hamster.toolbox.compose.ItemGroup
 import com.hamster.toolbox.compose.PageColumn
 import com.hamster.toolbox.compose.rememberSharedTiltState
 import com.hamster.toolbox.R
-import com.hamster.toolbox.utils.color.getMidtoneColors
+import com.hamster.toolbox.utils.color.getColors
 
 @Composable
 fun ColorPickerScreen(
@@ -53,7 +53,7 @@ fun ColorPickerScreen(
     LaunchedEffect(bitmap) {
         setLoading(true)
         bitmap?.let { currentBitmap ->
-            val colors = getMidtoneColors(
+            val colors = getColors(
                 bitmap = currentBitmap,
                 radius = 20f,
                 mergeRadius = 10f,

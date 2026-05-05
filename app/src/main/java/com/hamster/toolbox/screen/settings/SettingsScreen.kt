@@ -49,6 +49,7 @@ import com.hamster.toolbox.compose.rememberStringPreference
 import com.hamster.toolbox.main.MainViewModel
 import com.hamster.toolbox.system.Receiver
 import com.hamster.toolbox.utils.ScrollTarget
+import com.hamster.toolbox.utils.authenticate
 import com.hamster.toolbox.utils.convertDateToMillis
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -264,8 +265,21 @@ fun SettingsScreen(
                 title = "使用密码保护日记",
                 checked = isDiaryUsingPassword,
                 icon = R.drawable.ic_diary
-            ) {
-                isDiaryUsingPassword = it
+            ) { checked ->
+                if (!checked) {
+                    authenticate(
+                        context = context,
+                        title = "取消密码确认",
+                        onSuccess = {
+                            isDiaryUsingPassword = checked
+                        },
+                        onNoPasswordSet = {
+                            isDiaryUsingPassword = checked
+                        }
+                    )
+                } else {
+                    isDiaryUsingPassword = true
+                }
             }
         }
 
