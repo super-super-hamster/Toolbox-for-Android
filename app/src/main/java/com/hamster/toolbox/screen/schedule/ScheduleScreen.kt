@@ -31,6 +31,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -52,6 +53,8 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.preference.PreferenceManager
 import com.hamster.toolbox.R
+import com.hamster.toolbox.ai.AI
+import com.hamster.toolbox.ai.tools.ToolScope
 import com.hamster.toolbox.compose.PageColumn
 import com.hamster.toolbox.compose.SharedTiltState
 import com.hamster.toolbox.compose.StandardDialog
@@ -69,6 +72,10 @@ import java.time.temporal.ChronoUnit
 @Composable
 fun ScheduleScreen() {
     val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        AI.setScope(ToolScope.SCHEDULE)
+    }
 
     val totalWeeks = 20
 

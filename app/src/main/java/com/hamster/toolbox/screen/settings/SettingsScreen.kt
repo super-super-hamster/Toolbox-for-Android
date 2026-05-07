@@ -34,8 +34,8 @@ import androidx.preference.PreferenceManager
 import com.hamster.toolbox.ImportCurriculum
 import com.hamster.toolbox.R
 import com.hamster.toolbox.Route
-import com.hamster.toolbox.SetKeywords
-import com.hamster.toolbox.WeatherSettings
+import com.hamster.toolbox.ai.AI
+import com.hamster.toolbox.ai.tools.ToolScope
 import com.hamster.toolbox.compose.ClickItem
 import com.hamster.toolbox.compose.DatePicker
 import com.hamster.toolbox.compose.EditTextItem
@@ -70,6 +70,10 @@ fun SettingsScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
+
+    LaunchedEffect(Unit) {
+        AI.setScope(ToolScope.SETTINGS)
+    }
 
     val sharedTiltState = rememberSharedTiltState()
     val targets = remember { mutableMapOf<String, ScrollTarget>() }
@@ -111,10 +115,8 @@ fun SettingsScreen(
 
     var nickname by rememberStringPreference("nickname", "无名氏")
     var signature by rememberStringPreference("signature", "无")
-    var assistantNickname by rememberStringPreference("assistant_nickname", "助手")
     var semesterStartDate by rememberStringPreference("semester_start_date", "")
     var curriculumImportState by rememberStringPreference("schedule_json", "")
-    var apiKey by rememberStringPreference("api_key", "")
     var isClassRemindEnabled by rememberBooleanPreference("class_notification")
     var isAlarmRemindEnabled by rememberBooleanPreference("alarm_notification")
     var isDiaryUsingPassword by rememberBooleanPreference("is_diary_using_password", true)
@@ -280,59 +282,6 @@ fun SettingsScreen(
                 } else {
                     isDiaryUsingPassword = true
                 }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(dimensionResource(R.dimen.item_group_gap)))
-
-        ItemGroup(titleState = sharedTiltState) {
-            EditTextItem(
-                modifier = getModifier("assistant_nickname"),
-                title = "助手昵称",
-                dialogTitle = "修改助手昵称",
-                initialValue = assistantNickname,
-                hint = "助手昵称",
-                singleLine = true,
-                icon = R.drawable.ic_user_name,
-                onCancel = { assistantNickname = prefs.getString("assistant_nickname", "") ?: "" },
-                onConfirm = { input ->
-                    assistantNickname = input
-                    prefs.edit { putString("assistant_nickname", assistantNickname) }
-                    true
-                }
-            )
-            ClickItem(
-                modifier = getModifier("keywords"),
-                title = "热词",
-                summary = "热词更容易被语音识别",
-                icon = R.drawable.ic_characters
-            ) {
-                onNavigate(SetKeywords)
-            }
-
-            EditTextItem(
-                modifier = getModifier("api_key"),
-                title = "大模型 API",
-                summary = if (apiKey.isEmpty()) "未设置" else "******",
-                dialogTitle = "API Key",
-                initialValue = apiKey,
-                hint = "输入 API Key",
-                singleLine = true,
-                icon = R.drawable.ic_a,
-                onCancel = { apiKey = prefs.getString("api_key", "") ?: "" },
-                onConfirm = { input ->
-                    apiKey = input
-                    prefs.edit { putString("api_key", apiKey) }
-                    true
-                }
-            )
-
-            ClickItem(
-                modifier = getModifier("weather"),
-                title = "天气",
-                icon = R.drawable.ic_weather
-            ) {
-                onNavigate(WeatherSettings)
             }
         }
 

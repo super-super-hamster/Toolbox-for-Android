@@ -52,6 +52,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hamster.toolbox.Diary
 import com.hamster.toolbox.R
 import com.hamster.toolbox.Route
+import com.hamster.toolbox.ai.AI
+import com.hamster.toolbox.ai.tools.ToolScope
 import com.hamster.toolbox.compose.DatePicker
 import com.hamster.toolbox.compose.InquiryDialog
 import com.hamster.toolbox.compose.ItemGroup
@@ -76,6 +78,10 @@ fun DiaryPreviewScreen(
 ) {
     val context = LocalContext.current
     val sharedTiltState = rememberSharedTiltState()
+
+    LaunchedEffect(Unit) {
+        AI.setScope(ToolScope.DIARY)
+    }
 
     val diaries by viewModel.diaries.collectAsStateWithLifecycle(initialValue = emptyMap())
 

@@ -35,15 +35,6 @@ fun NavGraphBuilder.tipsGraph(
             )
         }
 
-        composable<WeatherTips>(
-            enterTransition = { slideInWithScaleEnter() },
-            exitTransition = { scaleOutExit() },
-            popEnterTransition = { scaleInPopEnter() },
-            popExitTransition = { slideOutWithScalePopExit() }
-        ) {
-            WeatherTipsScreen()
-        }
-
         composable<ScheduleTips>(
             enterTransition = { slideInWithScaleEnter() },
             exitTransition = { scaleOutExit() },
@@ -87,6 +78,15 @@ fun NavGraphBuilder.tipsGraph(
             popExitTransition = { slideOutWithScalePopExit() }
         ) {
             RulerTipsScreen()
+        }
+
+        composable<WeatherTips>(
+            enterTransition = { slideInWithScaleEnter() },
+            exitTransition = { scaleOutExit() },
+            popEnterTransition = { scaleInPopEnter() },
+            popExitTransition = { slideOutWithScalePopExit() }
+        ) {
+            WeatherTipsScreen()
         }
 
         composable<TimeTips>(

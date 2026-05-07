@@ -276,7 +276,7 @@ fun ExplanationItem(
                 Button(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 4.dp),
+                        .padding(start = 4.dp, end = 4.dp, top = 12.dp, bottom = 4.dp),
                     border = BorderStroke(1.dp, Color.LightGray),
                     shape = squircleShape,
                     colors = ButtonDefaults.textButtonColors(colorResource(R.color.btn_confirm).copy(alpha = 0.8f)),

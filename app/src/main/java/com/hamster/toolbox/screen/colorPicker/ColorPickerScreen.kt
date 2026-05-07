@@ -24,6 +24,8 @@ import com.hamster.toolbox.compose.ItemGroup
 import com.hamster.toolbox.compose.PageColumn
 import com.hamster.toolbox.compose.rememberSharedTiltState
 import com.hamster.toolbox.R
+import com.hamster.toolbox.ai.AI
+import com.hamster.toolbox.ai.tools.ToolScope
 import com.hamster.toolbox.utils.color.getColors
 
 @Composable
@@ -32,6 +34,10 @@ fun ColorPickerScreen(
 ) {
     val sharedTiltState = rememberSharedTiltState()
     val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        AI.setScope(ToolScope.COLOR_PICKER)
+    }
 
     var extractedColors by remember { mutableStateOf<List<Color>>(emptyList()) }
 

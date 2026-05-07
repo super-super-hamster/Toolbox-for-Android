@@ -57,7 +57,6 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.colorResource
@@ -239,7 +238,6 @@ fun Assistant(
     apiKey: String?
 ) {
     val coroutineScope = rememberCoroutineScope()
-    val context = LocalContext.current
 
     val listState = rememberLazyListState()
     val chatSize = AI.chatHistory.size
@@ -293,7 +291,7 @@ fun Assistant(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             itemsIndexed(AI.chatHistory) { index, message ->
-                if (message.role != "system") {
+                if (message.role != "system" && message.role != "tool") {
                     val isLastMessage = index == AI.chatHistory.size - 1
 
                     var isBubbleVisible by remember { mutableStateOf(!isLastMessage) }
@@ -388,7 +386,7 @@ fun Assistant(
 
                             mainViewModel.viewModelScope.launch {
                                 try {
-                                    AI.chatWithAssistant(context, mainViewModel, inputText, apiKey) { onNavigate(it) }
+                                    AI.chatWithAssistant(inputText, apiKey)
                                 } finally {
                                     isSending = false
                                 }
@@ -448,11 +446,13 @@ fun ChatBubble(
                     ambientColor = colorResource(id = R.color.item_group_card_shadow)
                 )
         ) {
-            Text(
-                text = message.content,
-                modifier = Modifier.padding(12.dp),
-                color = colorResource(R.color.text)
-            )
+            if (!message.content.isNullOrBlank()) {
+                Text(
+                    text = message.content!!,
+                    modifier = Modifier.padding(12.dp),
+                    color = colorResource(R.color.text)
+                )
+            }
         }
 
         if (isUser) {

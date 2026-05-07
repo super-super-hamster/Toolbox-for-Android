@@ -9,7 +9,6 @@ import com.hamster.toolbox.ImportCurriculum
 import com.hamster.toolbox.SetKeywords
 import com.hamster.toolbox.Settings
 import com.hamster.toolbox.SettingsGraph
-import com.hamster.toolbox.WeatherSettings
 import com.hamster.toolbox.main.MainViewModel
 import com.hamster.toolbox.utils.scaleInPopEnter
 import com.hamster.toolbox.utils.scaleOutExit
@@ -74,16 +73,7 @@ fun NavGraphBuilder.settingsGraph(
             popEnterTransition = { scaleInPopEnter() },
             popExitTransition = { slideOutWithScalePopExit() }
         ) {
-            AssistantSettingsScreen()
-        }
-
-        composable<WeatherSettings>(
-            enterTransition = { slideInWithScaleEnter() },
-            exitTransition = { scaleOutExit() },
-            popEnterTransition = { scaleInPopEnter() },
-            popExitTransition = { slideOutWithScalePopExit() }
-        ) {
-            WeatherSettings(
+            AssistantSettingsScreen(
                 onNavigate = { navController.navigate(it) }
             )
         }

@@ -15,8 +15,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -29,15 +29,16 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.sp
-import androidx.core.content.edit
-import androidx.preference.PreferenceManager
-import com.hamster.toolbox.compose.EditTextDialog
+import com.hamster.toolbox.ai.AI
+import com.hamster.toolbox.ai.tools.ToolScope
 import com.hamster.toolbox.compose.SliderDialog
 import com.hamster.toolbox.compose.rememberFloatPreference
 
 @Composable
 fun RulerScreen() {
-    val prefs = PreferenceManager.getDefaultSharedPreferences(LocalContext.current)
+    LaunchedEffect(Unit) {
+        AI.setScope(ToolScope.RULE)
+    }
 
     var showCalibrationDialog by remember { mutableStateOf(false) }
     var zoomFactor by rememberFloatPreference("ruler_zoom_factor", 1f)

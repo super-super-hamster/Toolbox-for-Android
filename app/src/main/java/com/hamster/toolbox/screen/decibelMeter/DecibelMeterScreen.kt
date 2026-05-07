@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,6 +42,8 @@ import com.hamster.toolbox.compose.RingProgress
 import com.hamster.toolbox.compose.rememberSharedTiltState
 import com.hamster.toolbox.compose.squircleShape
 import com.hamster.toolbox.R
+import com.hamster.toolbox.ai.AI
+import com.hamster.toolbox.ai.tools.ToolScope
 import com.hamster.toolbox.compose.SliderDialog
 import com.hamster.toolbox.compose.rememberFloatPreference
 import com.hamster.toolbox.main.MainViewModel
@@ -54,6 +57,10 @@ fun DecibelMeterScreen(
 ) {
     val context = LocalContext.current
     val sharedTiltState = rememberSharedTiltState()
+
+    LaunchedEffect(Unit) {
+        AI.setScope(ToolScope.DECIBEL_METER)
+    }
 
     val viewModel: DecibelMeterViewModel = viewModel()
 

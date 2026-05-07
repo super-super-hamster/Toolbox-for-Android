@@ -130,8 +130,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 // TODO: 天气,向下滑动天气透明度逐渐降低
-// TODO: 通知栏字体颜色适配
 // TODO: preferencesDataStore
+// TODO: 生辰
+// TODO: 菜谱
+// TODO: 书/影评
+// TODO: 中文加密（均匀词频？）
+// TODO: 文表图
 
 class MainActivity : FragmentActivity() {
     // 跟随应用生命周期的协程作用域
@@ -153,6 +157,8 @@ class MainActivity : FragmentActivity() {
         applicationScope.launch {
             initSpeechManager()
         }
+
+        AI.initTools(this.applicationContext)
 
         enableEdgeToEdge()
 
@@ -222,7 +228,6 @@ class MainActivity : FragmentActivity() {
                 currentDestination?.hasRoute<SetKeywords>() == true -> "热词管理"
                 currentDestination?.hasRoute<ImportCurriculum>() == true -> "导入课程表"
                 currentDestination?.hasRoute<AssistantSettings>() == true -> "助手"
-                currentDestination?.hasRoute<WeatherSettings>() == true -> "天气设置"
                 currentDestination?.hasRoute<Tips>() == true -> "Tips"
                 currentDestination?.hasRoute<ScheduleTips>() == true -> "课程表 Tips"
                 currentDestination?.hasRoute<AssistantTips>() == true -> "助手 Tips"
@@ -684,7 +689,7 @@ class MainActivity : FragmentActivity() {
 
     override fun onStart() {
         super.onStart()
-        PromptLoader.getPromptById(this, "assistant")?.let { AI.chatHistory.add(Message("system", it)) }
+        PromptLoader.getPromptById(this.applicationContext, "assistant")?.let { AI.chatHistory.add(Message("system", it)) }
     }
 
     override fun onDestroy() {
@@ -693,7 +698,7 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun initSpeechManager() {
-        speechManager = SpeechRecognizerManager(this)
+        speechManager = SpeechRecognizerManager(this.applicationContext)
         lifecycleScope.launch(Dispatchers.IO) {
             speechManager.initModel()
             isModelReady = true
