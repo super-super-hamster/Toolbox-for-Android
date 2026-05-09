@@ -23,10 +23,6 @@ object ImportCurriculum : Route
 @Serializable
 object SetKeywords : Route
 
-// 天气
-@Serializable
-object WeatherSettings : Route
-
 // 助手设置
 @Serializable
 object AssistantSettings : Route

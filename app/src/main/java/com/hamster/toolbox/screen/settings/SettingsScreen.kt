@@ -31,6 +31,7 @@ import androidx.compose.ui.res.dimensionResource
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.preference.PreferenceManager
+import com.hamster.toolbox.AssistantSettings
 import com.hamster.toolbox.ImportCurriculum
 import com.hamster.toolbox.R
 import com.hamster.toolbox.Route
@@ -282,6 +283,18 @@ fun SettingsScreen(
                 } else {
                     isDiaryUsingPassword = true
                 }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(dimensionResource(R.dimen.item_group_gap)))
+
+        ItemGroup(titleState = sharedTiltState) {
+            ClickItem(
+                modifier = getModifier("assistant_settings"),
+                title = "助手设置",
+                icon = R.drawable.ic_assistant
+            ) {
+                onNavigate(AssistantSettings)
             }
         }
 

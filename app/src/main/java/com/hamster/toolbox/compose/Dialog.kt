@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
@@ -60,7 +62,6 @@ import androidx.compose.ui.window.DialogProperties
 import com.hamster.toolbox.R
 import kotlinx.coroutines.delay
 import java.util.Locale
-import kotlin.math.roundToInt
 import kotlin.text.isNotEmpty
 
 @Composable
@@ -289,6 +290,103 @@ fun SliderDialog(
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(text = String.format(Locale.getDefault(), "%+.1f dB", valueRange.endInclusive), fontSize = 12.sp, color = colorResource(R.color.text))
+        }
+    }
+}
+
+@Composable
+fun OptionDialog(
+    title: String,
+    options: List<String>,
+    initialSelections: Set<Int> = emptySet(),
+    singleSelect: Boolean = false,
+    onCancel: () -> Unit = {},
+    onDismissRequest: () -> Unit,
+    onConfirm: (Set<Int>) -> Unit,
+    cancelText: String = "取消",
+    confirmText: String = "确认",
+) {
+    var selectedItems by remember { mutableStateOf(initialSelections) }
+
+    val confirmAction = {
+        onConfirm(selectedItems)
+        onDismissRequest()
+    }
+
+    val cancelAction = {
+        onCancel()
+        onDismissRequest()
+    }
+
+    StandardDialog(onDismissRequest = onDismissRequest) {
+        Column(
+            modifier = Modifier.fillMaxWidth(0.85f).padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = title,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f, fill = false)
+            ) {
+                itemsIndexed(options) { index, optionTitle ->
+                    val isChecked = selectedItems.contains(index)
+                    OptionAnimItem(
+                        title = optionTitle,
+                        checked = isChecked,
+                        onCheckedChange = {
+                            selectedItems = if (singleSelect) {
+                                setOf(index)
+                            } else {
+                                val newSet = selectedItems.toMutableSet()
+                                if (isChecked) newSet.remove(index) else newSet.add(index)
+                                newSet
+                            }
+                        }
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(42.dp),
+                horizontalArrangement = Arrangement.spacedBy(24.dp)
+            ) {
+                Button(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(42.dp),
+                    border = BorderStroke(1.dp, Color.LightGray),
+                    shape = squircleShape,
+                    colors = ButtonDefaults.textButtonColors(Color.Transparent),
+                    onClick = cancelAction
+                ) {
+                    Text(cancelText, color = Color.Gray)
+                }
+                Button(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(42.dp),
+                    border = BorderStroke(1.dp, Color.LightGray),
+                    shape = squircleShape,
+                    colors = ButtonDefaults.textButtonColors(colorResource(R.color.btn_confirm)),
+                    onClick = confirmAction
+                ) {
+                    Text(confirmText, color = colorResource(R.color.text))
+                }
+            }
         }
     }
 }

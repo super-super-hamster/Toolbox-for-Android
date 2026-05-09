@@ -3,10 +3,8 @@ package com.hamster.toolbox.system
 import android.content.Context
 import android.content.Intent
 import android.provider.AlarmClock
-import com.google.gson.Gson
 
 class Alarm {
-
     fun setAlarm(
         context: Context,
         hour: Int,
@@ -29,23 +27,5 @@ class Alarm {
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
         context.startActivity(intent)
-    }
-
-    fun setAlarmFromJSON(context: Context, json: String?): Boolean {
-        if (json.isNullOrBlank()) {
-            return false
-        }
-
-        try {
-            val gson = Gson()
-            val data: AlarmData = gson.fromJson(json, AlarmData::class.java)
-
-            setAlarm(context, data.hour, data.minute, data.days, data.vibrate)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            return false
-        }
-
-        return true
     }
 }

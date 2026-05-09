@@ -32,10 +32,11 @@ import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
-import androidx.core.content.edit
-import androidx.preference.PreferenceManager
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.gson.Gson
 import com.hamster.toolbox.R
+import com.hamster.toolbox.WeatherRepository
+import com.hamster.toolbox.weatherStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -45,17 +46,20 @@ import java.util.Locale
 fun Weather(
     onClick: () -> Unit
 ) {
+    val context = LocalContext.current
+
     var weatherData by remember { mutableStateOf<WeatherNow?>(null) }
     var currentCity by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(true) }
     var isError by remember { mutableStateOf(false) }
     val gson = remember { Gson() }
 
-    val context = LocalContext.current
-    val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
+    val weatherRepository = remember { WeatherRepository(context.weatherStore) }
 
-    val apiKey = prefs.getString("weather_api_key", null)
-    val apiHost = prefs.getString("weather_api_host", null)
+    val apiKey by weatherRepository.weatherApiKeyFlow.collectAsStateWithLifecycle(initialValue = null)
+    val apiHost by weatherRepository.weatherApiHostFlow.collectAsStateWithLifecycle(initialValue = null)
+    val cachedWeatherJson by weatherRepository.weatherCachedDataFlow.collectAsStateWithLifecycle(initialValue = "")
+    val cachedCity by weatherRepository.weatherCachedCityFlow.collectAsStateWithLifecycle(initialValue = "")
 
     var locationQuery by remember { mutableStateOf<String?>(null) }
     val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
@@ -105,6 +109,12 @@ fun Weather(
     }
 
     LaunchedEffect(apiKey, apiHost, locationQuery, refreshTrigger) {
+        if (apiKey == null || apiHost == null) {
+            return@LaunchedEffect
+        }
+        if (locationQuery == null) return@LaunchedEffect
+        val lastFetchTime = weatherRepository.getLastFetchTime()
+
         if (apiKey.isNullOrEmpty() || apiHost.isNullOrEmpty()) {
             isError = true
             isLoading = false
@@ -118,17 +128,13 @@ fun Weather(
         isLoading = true
 
         val cacheExpirationMs = 300000L // 缓存有效期5分钟
-        val lastFetchTime = prefs.getLong("weather_last_fetch_time", 0L)
         val currentTime = System.currentTimeMillis()
 
         // 尝试使用缓存
         if (currentTime - lastFetchTime < cacheExpirationMs) {
-            val cachedWeatherJson = prefs.getString("weather_cached_data", null)
-            val cachedCity = prefs.getString("weather_cached_city", null)
-
-            if (cachedWeatherJson != null) {
+            if (cachedWeatherJson.isNotEmpty()) {
                 weatherData = gson.fromJson(cachedWeatherJson, WeatherNow::class.java)
-                currentCity = cachedCity ?: ""
+                currentCity = cachedCity
 
                 WeatherData.editWeatherState(weatherData?.text)
                 WeatherData.editLocation(currentCity)
@@ -141,37 +147,36 @@ fun Weather(
 
         try {
             withContext(Dispatchers.IO) {
-                val weatherApi = WeatherApiClient.getApi(apiHost)
-                val weatherResp = weatherApi.getWeatherNow(locationQuery!!, apiKey)
+                val weatherApi = WeatherApiClient.getApi(apiHost!!)
+                val weatherResp = weatherApi.getWeatherNow(locationQuery!!, apiKey!!)
 
-                val geoApi = WeatherApiClient.getApi(apiHost)
-                val geoResp = geoApi.getCityInfo(locationQuery!!, apiKey)
+                val geoApi = WeatherApiClient.getApi(apiHost!!)
+                val geoResp = geoApi.getCityInfo(locationQuery!!, apiKey!!)
+
+                var newCity = currentCity
+                var success = false
+
+                if (weatherResp.code == "200" && weatherResp.now != null) {
+                    success = true
+                    if (geoResp.code == "200" && !geoResp.location.isNullOrEmpty()) {
+                        val loc = geoResp.location[0]
+                        newCity = if (loc.adm2 == loc.name) loc.name else "${loc.adm2}-${loc.name}"
+                    }
+                    weatherRepository.setLastFetchTime(System.currentTimeMillis())
+                    weatherRepository.setCachedData(gson.toJson(weatherResp.now))
+                    weatherRepository.setCachedCity(newCity)
+                }
 
                 withContext(Dispatchers.Main) {
-                    if (weatherResp.code == "200" && weatherResp.now != null) {
+                    if (success) {
                         weatherData = weatherResp.now
+                        currentCity = newCity
                         WeatherData.editWeatherState(weatherData?.text)
+                        WeatherData.editLocation(currentCity)
                         isError = false
                     } else {
                         isError = true
                     }
-
-                    if (geoResp.code == "200" && !geoResp.location.isNullOrEmpty()) {
-                        val loc = geoResp.location[0]
-                        currentCity = if (loc.adm2 == loc.name) {
-                            loc.name
-                        } else {
-                            "${loc.adm2}-${loc.name}"
-                        }
-                        WeatherData.editLocation(currentCity)
-                    }
-
-                    prefs.edit {
-                        putLong("weather_last_fetch_time", System.currentTimeMillis())
-                            .putString("weather_cached_data", gson.toJson(weatherResp.now))
-                            .putString("weather_cached_city", currentCity)
-                    }
-
                 }
             }
         } catch (e: Exception) {

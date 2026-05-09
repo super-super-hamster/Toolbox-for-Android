@@ -1,49 +1,50 @@
 package com.hamster.toolbox.ai
 
 import android.content.Context
-import android.util.Log
-import androidx.compose.runtime.mutableStateListOf
 import com.google.gson.Gson
-import com.hamster.toolbox.Route
-import com.hamster.toolbox.SettingsGraph
+import com.hamster.toolbox.SettingsRepository
+import com.hamster.toolbox.ai.tools.GetWeather
 import com.hamster.toolbox.ai.tools.SetAlarmTool
 import com.hamster.toolbox.ai.tools.SetScopeTool
 import com.hamster.toolbox.ai.tools.ToolRegistry
 import com.hamster.toolbox.ai.tools.ToolScope
 import com.hamster.toolbox.main.MainViewModel
+import com.hamster.toolbox.settingsStore
 import com.hamster.toolbox.utils.prompt.PromptLoader
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import retrofit2.HttpException
+import java.util.UUID
 
 object AI {
     private val apiService = AiService.service
-    val chatHistory = mutableStateListOf<Message>()
+//    val chatHistory = mutableStateListOf<Message>()
     val toolRegistry = ToolRegistry()
+    lateinit var settingsRepository: SettingsRepository
 
-    suspend fun chatWithAssistant(message: String, apiKey: String?) {
+    suspend fun chatWithAssistant(message: String, apiKey: String?, mainViewModel: MainViewModel) {
         if (apiKey.isNullOrBlank()) {
             return
         }
 
-        chatHistory.add(Message("user", message))
+        mainViewModel.apiHistory.add(Message("user", message))
+        mainViewModel.uiHistory.add(ChatUiModel.Text(role = "user", content = message))
 
         withContext(Dispatchers.IO) {
             try {
-                // 启动状态机循环
                 var isConversationFinished = false
                 var stepCount = 0
 
+                // 最大请求次数 5
                 while (!isConversationFinished && stepCount < 5) {
                     ++stepCount
-                    // 2. 构建请求，携带历史记录和当前激活的作用域工具
                     val request = Request(
-                        messages = chatHistory.toList(),
-                        // 取出当前场景可以使用的工具列表
-                        tools = toolRegistry.getActiveToolDefinitions().takeIf { it.isNotEmpty() }
+                        messages = mainViewModel.apiHistory.toList(),
+                        tools = toolRegistry.getActiveToolDefinitions().takeIf { it.isNotEmpty() },
+                        model = settingsRepository.getAiModelName()
                     )
 
-                    // 3. 发送网络请求
                     val response = apiService.getChatCompletion("Bearer $apiKey", request)
                     val choice = response.choices.firstOrNull() ?: break
                     val responseMessage = choice.message
@@ -53,56 +54,45 @@ object AI {
                         responseMessage.content = ""
                     }
 
-                    // 4. 判断大模型想干什么
                     if (finishReason == "tool_calls" && !responseMessage.toolCalls.isNullOrEmpty()) {
-
-                        // 【中断】大模型决定调用工具！
-
-                        // a. 必须把大模型的这个思考过程也存入历史记录，不能丢弃
                         withContext(Dispatchers.Main) {
-                            chatHistory.add(responseMessage)
+                            mainViewModel.apiHistory.add(responseMessage)
                         }
 
-                        // b. 遍历执行大模型要求的所有工具 (并发/顺序调用)
                         for (toolCall in responseMessage.toolCalls) {
-                            // 核心：由注册中心分发执行具体的方法
                             val toolResult = toolRegistry.dispatchCall(
                                 name = toolCall.function.name,
                                 arguments = toolCall.function.arguments
                             )
 
-                            // c. 把终端执行的结果作为 role="tool" 塞回去
                             withContext(Dispatchers.Main) {
-                                chatHistory.add(
+                                mainViewModel.apiHistory.add(
                                     Message(
                                         role = "tool",
                                         content = toolResult,
-                                        toolCallId = toolCall.id // ID 必须对应上
+                                        toolCallId = toolCall.id
                                     )
                                 )
                             }
                         }
-                        // 循环继续，大模型会看到 toolResult 并给出最终回答
 
                     } else {
-                        // 【结束】大模型给出了普通文本回答 (finishReason == "stop")
-
                         if (responseMessage.content != null) {
                             withContext(Dispatchers.Main) {
-                                chatHistory.add(responseMessage)
+                                mainViewModel.apiHistory.add(responseMessage)
+                                mainViewModel.uiHistory.add(ChatUiModel.Text(role = "assistant", content = responseMessage.content!!))
                             }
                         }
-                        // 结束循环，跳出
                         isConversationFinished = true
                     }
                 }
 
                 if (!isConversationFinished) {
-                    chatHistory.add(Message(role = "assistant", content = "我是笨蛋"))
+                    mainViewModel.apiHistory.add(Message(role = "assistant", content = "我是笨蛋"))
+                    mainViewModel.uiHistory.add(ChatUiModel.Text(role = "assistant", content = "我是笨蛋"))
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
-                // 发生异常时，优雅地告诉用户
                 val errorMessage = if (e is HttpException) {
                     val errorBody = e.response()?.errorBody()?.string()
                     "API请求错误 (HTTP ${e.code()}): $errorBody"
@@ -110,10 +100,9 @@ object AI {
                     "网络请求异常：${e.message}"
                 }
 
-                Log.d("fuck", errorMessage)
-
                 withContext(Dispatchers.Main) {
-                    chatHistory.add(Message(role = "assistant", content = "请求失败，请检查网络或配置：${e.message}"))
+                    mainViewModel.apiHistory.add(Message(role = "assistant", content = "请求失败，请检查网络或配置：$errorMessage"))
+                    mainViewModel.uiHistory.add(ChatUiModel.Text(role = "user", content = "请求失败，请检查网络或配置：$errorMessage"))
                 }
             }
         }
@@ -139,21 +128,67 @@ object AI {
         }
     }
 
+    suspend fun getBalance(apiKey: String): String {
+        if (apiKey.isBlank()) return "无"
+
+        return withContext(Dispatchers.IO) {
+            try {
+                val response = apiService.getBalance("Bearer $apiKey")
+
+                if (response.balanceInfos.isEmpty()) {
+                    return@withContext "无"
+                }
+
+                val balanceStr = response.balanceInfos.joinToString("，") { info ->
+                    "${info.totalBalance} ${info.currency}"
+                }
+
+                balanceStr
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+                "无"
+            }
+        }
+    }
+
     fun setScope(scope: ToolScope) {
         toolRegistry.setCurrentScope(scope)
     }
 
-    fun initTools(context: Context) {
+    fun init(context: Context, mainViewModel: MainViewModel) {
         toolRegistry.registerAll(
             SetScopeTool(toolRegistry),
-            SetAlarmTool(context),
+            SetAlarmTool(context) { title, message ->
+                mainViewModel.requireUserConfirmation(title, message)
+            },
+            GetWeather(context)
         )
+        settingsRepository = SettingsRepository(context.settingsStore)
+
+        PromptLoader.getPromptById(context, "assistant")?.let { mainViewModel.apiHistory.add(Message("system", it)) }
     }
 
-    private suspend fun settingsScrollTo(target: String, mainViewModel: MainViewModel, onNavigate: (Route) -> Unit) {
-        mainViewModel.setSettingsScrollTarget(target)
-        withContext(Dispatchers.Main) {
-            onNavigate(SettingsGraph)
-        }
-    }
+//    private suspend fun settingsScrollTo(target: String, mainViewModel: MainViewModel, onNavigate: (Route) -> Unit) {
+//        mainViewModel.setSettingsScrollTarget(target)
+//        withContext(Dispatchers.Main) {
+//            onNavigate(SettingsGraph)
+//        }
+//    }
+}
+
+sealed class ChatUiModel {
+    val id: String = UUID.randomUUID().toString()
+
+    data class Text(
+        val role: String,
+        val content: String
+    ) : ChatUiModel()
+
+    data class ConfirmCard(
+        val title: String,
+        val message: String,
+        // 挂起凭证,UI层调用 .complete(true/false) 就能唤醒后台大模型
+        val deferred: CompletableDeferred<Boolean>
+    ) : ChatUiModel()
 }

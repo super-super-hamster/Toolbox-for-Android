@@ -80,7 +80,6 @@ import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.animateLottieCompositionAsState
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.hamster.toolbox.ai.AI
-import com.hamster.toolbox.ai.Message
 import com.hamster.toolbox.ai.SpeechRecognizerManager
 import com.hamster.toolbox.compose.AnimationButton
 import com.hamster.toolbox.compose.ButtonPro
@@ -104,7 +103,6 @@ import com.hamster.toolbox.screen.time.TimeScreen
 import com.hamster.toolbox.screen.time.TimeViewModel
 import com.hamster.toolbox.screen.time.timeViewModelFactory
 import com.hamster.toolbox.screen.tips.tipsGraph
-import com.hamster.toolbox.utils.prompt.PromptLoader
 import com.hamster.toolbox.utils.scaleInPopEnter
 import com.hamster.toolbox.utils.scaleOutExit
 import com.hamster.toolbox.utils.slideInWithScaleEnter
@@ -158,7 +156,7 @@ class MainActivity : FragmentActivity() {
             initSpeechManager()
         }
 
-        AI.initTools(this.applicationContext)
+        AI.init(this.applicationContext, mainViewModel)
 
         enableEdgeToEdge()
 
@@ -689,7 +687,6 @@ class MainActivity : FragmentActivity() {
 
     override fun onStart() {
         super.onStart()
-        PromptLoader.getPromptById(this.applicationContext, "assistant")?.let { AI.chatHistory.add(Message("system", it)) }
     }
 
     override fun onDestroy() {

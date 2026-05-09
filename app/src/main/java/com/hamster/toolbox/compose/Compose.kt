@@ -70,6 +70,8 @@ import com.airbnb.lottie.compose.rememberLottieDynamicProperty
 import com.hamster.toolbox.R
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.draw.alpha
 import kotlin.math.abs
 
 @Composable
@@ -341,5 +343,54 @@ fun BlurEffect(blurRadius: Int = 24, blurDimAmount: Float = 0f, fallbackDimAmoun
                 }
             }
         }
+    }
+}
+
+@Composable
+fun OptionAnimItem(
+    modifier: Modifier = Modifier,
+    title: String,
+    checked: Boolean,
+    enabled: Boolean = true,
+    onCheckedChange: () -> Unit
+) {
+    val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.check_anim))
+
+    // 控制动画进度 (这里设定选中时进度为 1f，未选中时为 0f。如果您使用的动画满进度为 0.5f，请自行修改 targetValue)
+    val progress by animateFloatAsState(
+        targetValue = if (checked) 1f else 0f,
+        animationSpec = tween(durationMillis = 300), // 动画时长500ms
+        label = "LottieProgress"
+    )
+
+    val interactionSource = remember { MutableInteractionSource() }
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(
+                enabled = enabled,
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onCheckedChange
+            )
+            .padding(horizontal = 12.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = title,
+            modifier = Modifier.weight(1f),
+            fontSize = 20.sp,
+            color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+        )
+
+        LottieAnimation(
+            composition = composition,
+            progress = { progress },
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .size(28.dp)
+                .alpha(if (enabled) 1f else 0.5f)
+        )
     }
 }

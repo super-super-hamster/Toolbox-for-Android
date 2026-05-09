@@ -5,6 +5,7 @@ import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.Body
+import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
 import java.util.concurrent.TimeUnit
@@ -20,6 +21,11 @@ interface AiService {
         //将Request对象序列化为JSON字符串并将其作为HTTP Body发送
         @Body request: Request
     ): Response
+
+    @GET("user/balance")
+    suspend fun getBalance(
+        @Header("Authorization") apiKey: String
+    ): BalanceResponse
 
     //companion object的大括号中包含的是静态的成员和方法
     companion object {

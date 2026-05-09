@@ -126,6 +126,7 @@ dependencies {
     implementation("androidx.palette:palette-ktx:1.0.0")
     implementation("com.google.android.material:material:1.11.0")
     implementation("androidx.biometric:biometric:1.1.0")
+    implementation("androidx.datastore:datastore-preferences:1.0.0")
     implementation(files("libs/sherpa-onnx.aar"))
 //    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar", "*.aar"))))
 }

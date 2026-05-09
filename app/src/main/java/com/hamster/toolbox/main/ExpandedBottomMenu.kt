@@ -3,9 +3,11 @@ package com.hamster.toolbox.main
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -13,6 +15,7 @@ import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -24,11 +27,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -43,6 +51,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -61,6 +70,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.intl.LocaleList
 import androidx.compose.ui.text.style.TextOverflow
@@ -82,6 +92,7 @@ import com.hamster.toolbox.SettingsGraph
 import com.hamster.toolbox.Time
 import com.hamster.toolbox.Tips
 import com.hamster.toolbox.ai.AI
+import com.hamster.toolbox.ai.ChatUiModel
 import com.hamster.toolbox.ai.Message
 import com.hamster.toolbox.compose.TabItem
 import com.hamster.toolbox.compose.Tabs
@@ -113,7 +124,6 @@ fun ExpandedBottomMenu(
                 mainViewModel = mainViewModel,
                 inputText = inputText,
                 setInputText = { setInputText(it) },
-                onNavigate = { onNavigate(it) },
                 onDragDown = onDragDown,
                 apiKey = apiKey,
             )
@@ -233,14 +243,13 @@ fun Assistant(
     inputText: String,
     mainViewModel: MainViewModel,
     setInputText: (String) -> Unit,
-    onNavigate: (route: Route) -> Unit,
     onDragDown: () -> Unit,
     apiKey: String?
 ) {
     val coroutineScope = rememberCoroutineScope()
 
     val listState = rememberLazyListState()
-    val chatSize = AI.chatHistory.size
+    val chatSize = mainViewModel.uiHistory.size
 
     var isSending by remember { mutableStateOf(false) }
 
@@ -286,30 +295,164 @@ fun Assistant(
                     color = Color.Gray,
                     shape = squircleShape
                 )
-                .padding(horizontal = 8.dp)
+                .padding(8.dp)
                 .nestedScroll(nestedScrollConnection), // 顶部继续下划
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            itemsIndexed(AI.chatHistory) { index, message ->
-                if (message.role != "system" && message.role != "tool") {
-                    val isLastMessage = index == AI.chatHistory.size - 1
+            itemsIndexed(mainViewModel.uiHistory, key = { _, item -> item.id }) { index, item ->
 
-                    var isBubbleVisible by remember { mutableStateOf(!isLastMessage) }
+                val isLastMessage = index == mainViewModel.uiHistory.size - 1
+                var isBubbleVisible by remember { mutableStateOf(!isLastMessage) }
 
-                    LaunchedEffect(message) {
-                        isBubbleVisible = true
-                    }
+                LaunchedEffect(item) {
+                    isBubbleVisible = true
+                }
 
-                    AnimatedVisibility(
-                        visible = isBubbleVisible,
-                        enter = slideInVertically(
-                            initialOffsetY = { fullHeight -> fullHeight / 2 },
-                            animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing)
-                        ) + fadeIn(
-                            animationSpec = tween(durationMillis = 400)
-                        )
-                    ) {
-                        ChatBubble(message = message, userAvatarPath = userAvatarPath)
+                AnimatedVisibility(
+                    visible = isBubbleVisible,
+                    enter = slideInVertically(
+                        initialOffsetY = { fullHeight -> fullHeight / 2 },
+                        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing)
+                    ) + fadeIn(animationSpec = tween(durationMillis = 400))
+                ) {
+                    when (item) {
+                        is ChatUiModel.Text -> {
+                            if (item.role != "system" && item.role != "tool") {
+                                val tempMessage = Message(role = item.role, content = item.content)
+                                ChatBubble(message = tempMessage, userAvatarPath = userAvatarPath)
+                            }
+                        }
+
+                        is ChatUiModel.ConfirmCard -> {
+                            var isAnswered by rememberSaveable { mutableStateOf(item.deferred.isCompleted) }
+                            var isConfirmed by rememberSaveable { mutableStateOf(false) }
+
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp, horizontal = 8.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = colorResource(R.color.bg_dialog)
+                                ),
+                                shape = squircleShape
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp)
+                                ) {
+                                    Text(
+                                        text = item.title,
+                                        fontWeight = FontWeight.Bold,
+                                        color = colorResource(R.color.mikuGreen),
+                                        fontSize = 16.sp
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(text = item.message, fontSize = 14.sp)
+                                    Spacer(modifier = Modifier.height(16.dp))
+
+                                    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                                        val buttonSpacing = 8.dp
+                                        val halfWidth = (maxWidth - buttonSpacing) / 2
+
+                                        val cancelTarget = if (!isAnswered) halfWidth else if (!isConfirmed) maxWidth else 0.dp
+                                        val confirmTarget = if (!isAnswered) halfWidth else if (isConfirmed) maxWidth else 0.dp
+
+                                        val cancelWidth by animateDpAsState(
+                                            targetValue = cancelTarget,
+                                            animationSpec = tween(400, easing = FastOutSlowInEasing),
+                                            label = "cancelAnim"
+                                        )
+                                        val confirmWidth by animateDpAsState(
+                                            targetValue = confirmTarget,
+                                            animationSpec = tween(400, easing = FastOutSlowInEasing),
+                                            label = "confirmAnim"
+                                        )
+
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            if (cancelWidth > 1.dp) {
+                                                Button(
+                                                    modifier = Modifier
+                                                        .width(cancelWidth)
+                                                        .height(42.dp),
+                                                    border = BorderStroke(1.dp, Color.LightGray),
+                                                    shape = squircleShape,
+                                                    enabled = !isAnswered,
+                                                    colors = ButtonDefaults.buttonColors(
+                                                        containerColor = Color.Transparent,
+                                                        disabledContainerColor = Color.Transparent
+                                                    ),
+                                                    onClick = {
+                                                        isAnswered = true
+                                                        isConfirmed = false
+                                                        item.deferred.complete(false)
+                                                    }
+                                                ) {
+                                                    Row(
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.Center,
+                                                        modifier = Modifier.wrapContentWidth(unbounded = true)
+                                                    ) {
+                                                        Icon(
+                                                            painter = painterResource(R.drawable.ic_close),
+                                                            contentDescription = "取消",
+                                                            tint = Color.Gray,
+                                                            modifier = Modifier.size(20.dp)
+                                                        )
+                                                        AnimatedVisibility(visible = isAnswered && !isConfirmed) {
+                                                            Row {
+                                                                Spacer(modifier = Modifier.width(6.dp))
+                                                                Text("已取消", color = Color.Gray, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+
+                                            if (confirmWidth > 1.dp) {
+                                                Button(
+                                                    modifier = Modifier
+                                                        .width(confirmWidth)
+                                                        .height(42.dp),
+                                                    border = BorderStroke(1.dp, if (isAnswered) colorResource(R.color.mikuGreen) else Color.LightGray),
+                                                    shape = squircleShape,
+                                                    enabled = !isAnswered,
+                                                    colors = ButtonDefaults.buttonColors(
+                                                        containerColor = if (isAnswered) colorResource(R.color.mikuGreen).copy(alpha = 0.1f) else colorResource(R.color.btn_confirm),
+                                                        disabledContainerColor = colorResource(R.color.mikuGreen).copy(alpha = 0.1f)
+                                                    ),
+                                                    onClick = {
+                                                        isAnswered = true
+                                                        isConfirmed = true
+                                                        item.deferred.complete(true)
+                                                    }
+                                                ) {
+                                                    Row(
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.Center,
+                                                        modifier = Modifier.wrapContentWidth(unbounded = true)
+                                                    ) {
+                                                        Icon(
+                                                            painter = painterResource(R.drawable.ic_check),
+                                                            contentDescription = "确认",
+                                                            tint = Color.White,
+                                                            modifier = Modifier.size(20.dp)
+                                                        )
+                                                        AnimatedVisibility(visible = isAnswered && isConfirmed) {
+                                                            Row {
+                                                                Spacer(modifier = Modifier.width(6.dp))
+                                                                Text("已确认", color = colorResource(R.color.mikuGreen), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -386,7 +529,7 @@ fun Assistant(
 
                             mainViewModel.viewModelScope.launch {
                                 try {
-                                    AI.chatWithAssistant(inputText, apiKey)
+                                    AI.chatWithAssistant(inputText, apiKey, mainViewModel)
                                 } finally {
                                     isSending = false
                                 }

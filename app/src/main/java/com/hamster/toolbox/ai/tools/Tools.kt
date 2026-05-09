@@ -3,6 +3,7 @@ package com.hamster.toolbox.ai.tools
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.google.gson.JsonParser
 import com.hamster.toolbox.ai.FunctionDefinition
 import com.hamster.toolbox.ai.ToolDefinition
 
@@ -48,8 +49,13 @@ class SetScopeTool(private val registry: ToolRegistry) : Tool {
     )
 
     override suspend fun execute(arguments: String): String {
+        val jsonObject = JsonParser.parseString(arguments).asJsonObject
+
+        val domainStr = jsonObject.get("domain")?.asString
+            ?: return "执行失败：缺少 domain 参数"
+
         val scope: ToolScope = ToolScope.GENERAL
-        when (arguments) {
+        when (domainStr) {
             "DIARY" -> ToolScope.DIARY
             "SETTINGS" -> ToolScope.SETTINGS
             "SCHEDULE" -> ToolScope.SCHEDULE

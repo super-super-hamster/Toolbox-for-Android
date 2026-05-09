@@ -74,7 +74,10 @@ fun NavGraphBuilder.settingsGraph(
             popExitTransition = { slideOutWithScalePopExit() }
         ) {
             AssistantSettingsScreen(
-                onNavigate = { navController.navigate(it) }
+                setLoading = { setLoading(it) },
+                onNavigate = {
+                    navController.navigate(it)
+                }
             )
         }
     }
