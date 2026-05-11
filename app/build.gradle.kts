@@ -99,6 +99,9 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.core.splashscreen)
+    implementation(libs.latex.base)
+    implementation(libs.latex.renderer)
+    implementation(libs.latex.parser)
     implementation("com.google.mlkit:image-labeling-custom:17.0.3")
     implementation("com.google.android.material:material:1.13.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
@@ -127,6 +130,8 @@ dependencies {
     implementation("com.google.android.material:material:1.11.0")
     implementation("androidx.biometric:biometric:1.1.0")
     implementation("androidx.datastore:datastore-preferences:1.0.0")
+    implementation("com.mikepenz:multiplatform-markdown-renderer-android:0.40.2")
+    implementation("com.mikepenz:multiplatform-markdown-renderer-m3:0.40.2")
     implementation(files("libs/sherpa-onnx.aar"))
 //    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar", "*.aar"))))
 }

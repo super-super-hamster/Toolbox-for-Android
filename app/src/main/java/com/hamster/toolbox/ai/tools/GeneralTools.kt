@@ -7,6 +7,7 @@ import com.hamster.toolbox.WeatherRepository
 import com.hamster.toolbox.system.Alarm
 import com.hamster.toolbox.system.AlarmData
 import com.hamster.toolbox.weatherStore
+import java.util.Locale
 
 class SetAlarmTool(
     private val context: Context,
@@ -46,7 +47,27 @@ class SetAlarmTool(
             val gson = Gson()
             val data: AlarmData = gson.fromJson(arguments, AlarmData::class.java)
 
-            val isConfirmed = onConfirm("设置闹钟", "是否要设置 的闹钟？")
+            val timeStr = String.format(Locale.getDefault(), "%02d:%02d", data.hour, data.minute)
+
+            val repeatStr = if (data.days.isNullOrEmpty()) {
+                "（单次闹钟）"
+            } else {
+                val weekMap = mapOf(
+                    0 to "一", 1 to "二", 2 to "三", 3 to "四",
+                    4 to "五", 5 to "六", 6 to "日"
+                )
+                val daysDesc = data.days
+                    .sorted()
+                    .mapNotNull { weekMap[it] }
+                    .joinToString("、")
+
+                if (data.days.size == 7) "（每天）" else "（每周$daysDesc）"
+            }
+
+            val vibrateStr = if (data.vibrate) "，并开启震动" else ""
+
+            val message = "是否要设置 $timeStr 的闹钟$repeatStr$vibrateStr？"
+            val isConfirmed = onConfirm("设置闹钟", message)
 
             return if (isConfirmed) {
                 val alarm = Alarm()
@@ -74,7 +95,7 @@ class GetWeather(private val context: Context) : Tool {
             "location" to mapOf(
                 "type" to "string",
                 "description" to "查询天气的位置，若为空则默认查询本地天气。"
-            ),
+            )
         ),
     )
 

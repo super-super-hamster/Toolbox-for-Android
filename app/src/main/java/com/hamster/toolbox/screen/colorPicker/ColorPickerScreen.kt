@@ -5,6 +5,7 @@ import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -26,10 +27,12 @@ import com.hamster.toolbox.compose.rememberSharedTiltState
 import com.hamster.toolbox.R
 import com.hamster.toolbox.ai.AI
 import com.hamster.toolbox.ai.tools.ToolScope
+import com.hamster.toolbox.main.MainViewModel
 import com.hamster.toolbox.utils.color.getColors
 
 @Composable
 fun ColorPickerScreen(
+    mainViewModel: MainViewModel,
     setLoading: (Boolean) -> Unit
 ) {
     val sharedTiltState = rememberSharedTiltState()
@@ -69,6 +72,7 @@ fun ColorPickerScreen(
 
             // 将获取到的 Int 颜色列表映射为 Compose 的 Color 列表
             extractedColors = colors.map { Color(it) }
+            mainViewModel.pickedColor = colors.joinToString(separator = ", ") { colorInt -> String.format("#%06X", colorInt) }
         }
         setLoading(false)
     }

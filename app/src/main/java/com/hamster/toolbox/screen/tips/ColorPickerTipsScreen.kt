@@ -15,7 +15,7 @@ fun ColorPickerTipsScreen() {
 
     PageColumn(modifier = Modifier.verticalScroll(rememberScrollState()), sharedTiltState = sharedTiltState) {
         ItemGroup(titleState = sharedTiltState) {
-            ExplanationItem(title = "用法", content = "点击加号选择图片，将给出图片中的主要中等亮度颜色。") { }
+            ExplanationItem(title = "用法", content = "点击加号选择图片，将给出图片中的主要中等亮度和中等饱和度的颜色。") { }
         }
     }
 }

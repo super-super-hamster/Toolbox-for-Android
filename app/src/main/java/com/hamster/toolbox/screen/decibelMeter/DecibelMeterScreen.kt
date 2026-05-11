@@ -53,6 +53,7 @@ import kotlin.math.roundToInt
 
 @Composable
 fun DecibelMeterScreen(
+    viewModel: DecibelMeterViewModel,
     mainViewModel: MainViewModel
 ) {
     val context = LocalContext.current
@@ -62,7 +63,7 @@ fun DecibelMeterScreen(
         AI.setScope(ToolScope.DECIBEL_METER)
     }
 
-    val viewModel: DecibelMeterViewModel = viewModel()
+//    val viewModel: DecibelMeterViewModel = viewModel()
 
     var offset by rememberFloatPreference("decibel_meter_offset", 0f)
 

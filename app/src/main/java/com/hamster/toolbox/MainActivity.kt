@@ -47,6 +47,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -90,6 +91,7 @@ import com.hamster.toolbox.main.MainViewModel
 import com.hamster.toolbox.screen.colorPicker.ColorPickerScreen
 import com.hamster.toolbox.screen.debug.DebugScreen
 import com.hamster.toolbox.screen.decibelMeter.DecibelMeterScreen
+import com.hamster.toolbox.screen.decibelMeter.DecibelMeterViewModel
 import com.hamster.toolbox.screen.diary.DiaryDatabase
 import com.hamster.toolbox.screen.diary.DiaryViewModel
 import com.hamster.toolbox.screen.diary.diaryGraph
@@ -142,6 +144,8 @@ class MainActivity : FragmentActivity() {
     private var isModelReady = false
     private val mainViewModel: MainViewModel by viewModels()
 
+    private val decibelMeterViewModel: DecibelMeterViewModel = DecibelMeterViewModel()
+
     private val requestAudioPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { _: Boolean -> }
@@ -155,8 +159,6 @@ class MainActivity : FragmentActivity() {
         applicationScope.launch {
             initSpeechManager()
         }
-
-        AI.init(this.applicationContext, mainViewModel)
 
         enableEdgeToEdge()
 
@@ -203,6 +205,10 @@ class MainActivity : FragmentActivity() {
             val diaryViewModel: DiaryViewModel = viewModel(
                 factory = diaryViewModelFactory(context, diaryDao)
             )
+
+            LaunchedEffect(Unit) {
+                AI.init(this@MainActivity.applicationContext, navController, mainViewModel, decibelMeterViewModel, diaryViewModel)
+            }
 
             var showWeatherDetail by remember { mutableStateOf(false) }
 
@@ -356,7 +362,10 @@ class MainActivity : FragmentActivity() {
                                         popExitTransition = { slideOutWithScalePopExit() }
                                     ) {
                                         ColorPickerScreen(
-                                            setLoading = { setLoading(it) }
+                                            setLoading = {
+                                                setLoading(it)
+                                            },
+                                            mainViewModel = mainViewModel
                                         )
                                     }
 
@@ -379,7 +388,8 @@ class MainActivity : FragmentActivity() {
                                         popExitTransition = { slideOutWithScalePopExit() }
                                     ) {
                                         DecibelMeterScreen(
-                                            mainViewModel = mainViewModel
+                                            mainViewModel = mainViewModel,
+                                            viewModel = decibelMeterViewModel
                                         )
                                     }
 
@@ -516,7 +526,7 @@ class MainActivity : FragmentActivity() {
                                                                 val currentHierarchy = navController.currentDestination?.hierarchy ?: return@ButtonPro
 
                                                                 when {
-                                                                    currentHierarchy .any { it.hasRoute<SetKeywords>() } -> {
+                                                                    currentHierarchy.any { it.hasRoute<SetKeywords>() } -> {
                                                                         mainViewModel.isShowAddKeywordDialog = true
                                                                     }
                                                                     currentHierarchy.any { it.hasRoute<Schedule>() } -> {

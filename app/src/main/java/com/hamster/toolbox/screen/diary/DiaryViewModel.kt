@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -29,6 +30,11 @@ fun Long.toYearMonth(): Pair<Int, Int> {
 
 class DiaryViewModel(private val appContext: Context, private val dao: DiaryDao) : ViewModel() {
     var selectedDiaryDate by mutableLongStateOf(-1)
+
+    var isLocked by mutableStateOf(true)
+    var previewDiaryTitle by mutableStateOf("")
+    var showTitleSuggestionDialog by mutableStateOf(false)
+    var titleSuggestion by mutableStateOf<List<String>>(listOf())
 
     val diaries: Flow<Map<Int, Map<Int, List<DiaryPreviewData>>>> =
         dao.getAllDiaryPreviews().map { list ->

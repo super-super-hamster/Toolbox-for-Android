@@ -66,6 +66,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import coil.compose.AsyncImage
+import com.hamster.toolbox.compose.OptionDialog
 import com.hamster.toolbox.main.MainViewModel
 
 @Composable
@@ -237,6 +238,20 @@ fun DiaryScreen(
                 titleState = sharedTiltState
             )
              Spacer(modifier = Modifier.height(dimensionResource(R.dimen.item_group_gap)))
+        }
+
+        if (viewModel.showTitleSuggestionDialog) {
+            OptionDialog(
+                title = "标题建议",
+                options = viewModel.titleSuggestion,
+                singleSelect = true,
+                onDismissRequest = { viewModel.showTitleSuggestionDialog = false },
+                onConfirm = {
+                    if (it.isNotEmpty()) {
+                        titleText = viewModel.titleSuggestion[it.first()]
+                    }
+                }
+            )
         }
     }
 }

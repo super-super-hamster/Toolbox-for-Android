@@ -17,7 +17,7 @@ object PromptLoader {
         return Gson().fromJson(jsonString, type)
     }
 
-    fun getPromptById(context: Context, id: String): String? {
+    fun getPromptById(context: Context, id: String): String {
         val currentTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
         return "Current system time is: $currentTime\n" +loadPrompts(context).find { it.id == id }?.content + "\nUser Input:"
     }

@@ -27,7 +27,7 @@ data class DecibelStats(
     val min: Float = 0f
 )
 
-class DecibelMeterViewModel : ViewModel() {
+class DecibelMeterViewModel() : ViewModel() {
 
     var isRecording by mutableStateOf(false)
         private set

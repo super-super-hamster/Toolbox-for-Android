@@ -93,13 +93,13 @@ fun DiaryPreviewScreen(
     val dateFormatter = remember { SimpleDateFormat("yyyy年MM月dd日", Locale.getDefault()) }
     var currentTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
 
-    var diaryTitle by remember { mutableStateOf("") }
+//    var diaryTitle by remember { mutableStateOf("") }
 
     var showDeleteDiaryDialog by remember { mutableStateOf(false) }
     var deleteDiaryId by remember { mutableLongStateOf(-1) }
     var deleteDate by remember { mutableStateOf("") }
 
-    var isLocked by remember { mutableStateOf(true) }
+//    var isLocked by rememberSaveable { mutableStateOf(true) }
     val isDiaryUsingPassword by rememberBooleanPreference("is_diary_using_password", true)
 
     LaunchedEffect(Unit) {
@@ -108,19 +108,19 @@ fun DiaryPreviewScreen(
                 context = context,
                 title = "解锁日记",
                 onSuccess = {
-                    isLocked = false
+                    viewModel.isLocked = false
                 },
                 onNoPasswordSet = {
-                    isLocked = false
+                    viewModel.isLocked = false
                 }
             )
         } else {
-            isLocked = false
+            viewModel.isLocked = false
         }
     }
 
     PageColumn(modifier = Modifier.verticalScroll(rememberScrollState()), sharedTiltState = sharedTiltState) {
-        if (!isLocked) {
+        if (!viewModel.isLocked) {
             diaries.forEach { (year, months) ->
                 ItemGroup(titleState = sharedTiltState) {
                     DiaryItem(title = "$year 年", onClick = {
@@ -212,12 +212,12 @@ fun DiaryPreviewScreen(
                         Spacer(modifier = Modifier.height(16.dp))
 
                         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            if (diaryTitle.isEmpty()) {
+                            if (viewModel.previewDiaryTitle.isEmpty()) {
                                 Text("标题", color = Color.Gray, style = MaterialTheme.typography.bodyLarge)
                             }
                             TextInputField(
-                                value = diaryTitle,
-                                onValueChange = { diaryTitle = it },
+                                value = viewModel.previewDiaryTitle,
+                                onValueChange = { viewModel.previewDiaryTitle = it },
                                 textStyle = LocalTextStyle.current.copy(
                                     textAlign = TextAlign.Center,
                                     color = colorResource(R.color.text),
@@ -245,7 +245,7 @@ fun DiaryPreviewScreen(
                                 colors = ButtonDefaults.textButtonColors(Color.Transparent),
                                 onClick = {
                                     mainViewModel.showAddDiaryDialog = false
-                                    diaryTitle = ""
+                                    viewModel.previewDiaryTitle = ""
                                     currentTime = System.currentTimeMillis()
                                 }
                             ) {
@@ -261,11 +261,11 @@ fun DiaryPreviewScreen(
                                 colors = ButtonDefaults.textButtonColors(colorResource(R.color.btn_confirm)),
                                 onClick = {
                                     viewModel.createDiary(
-                                        title = diaryTitle,
+                                        title = viewModel.previewDiaryTitle,
                                         date = currentTime
                                     ) {
                                         onNavigate(Diary)
-                                        diaryTitle = ""
+                                        viewModel.previewDiaryTitle = ""
                                         currentTime = System.currentTimeMillis()
                                         mainViewModel.showAddDiaryDialog = false
                                     }

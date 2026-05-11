@@ -1,21 +1,36 @@
 package com.hamster.toolbox.ai
 
 import android.content.Context
+import androidx.lifecycle.viewModelScope
+import androidx.navigation.NavController
 import com.google.gson.Gson
 import com.hamster.toolbox.SettingsRepository
+import com.hamster.toolbox.ai.tools.CreateNewDiaryTool
+import com.hamster.toolbox.ai.tools.GetColorPickerUsageTool
+import com.hamster.toolbox.ai.tools.GetDecibelMeterUsageTool
+import com.hamster.toolbox.ai.tools.GetDiaryContentTool
+import com.hamster.toolbox.ai.tools.GetDiaryUsageTool
+import com.hamster.toolbox.ai.tools.GetMeasureDecibelTool
+import com.hamster.toolbox.ai.tools.GetPickedColorTool
 import com.hamster.toolbox.ai.tools.GetWeather
+import com.hamster.toolbox.ai.tools.ProvideDiaryTitleSuggestionTool
 import com.hamster.toolbox.ai.tools.SetAlarmTool
 import com.hamster.toolbox.ai.tools.SetScopeTool
 import com.hamster.toolbox.ai.tools.ToolRegistry
 import com.hamster.toolbox.ai.tools.ToolScope
 import com.hamster.toolbox.main.MainViewModel
+import com.hamster.toolbox.screen.decibelMeter.DecibelMeterViewModel
+import com.hamster.toolbox.screen.diary.DiaryViewModel
 import com.hamster.toolbox.settingsStore
 import com.hamster.toolbox.utils.prompt.PromptLoader
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import retrofit2.HttpException
 import java.util.UUID
+import kotlin.math.max
 
 object AI {
     private val apiService = AiService.service
@@ -28,8 +43,16 @@ object AI {
             return
         }
 
+        val bracketRegex = Regex("""\\\[(.*?)\\]""", RegexOption.DOT_MATCHES_ALL)
+
         mainViewModel.apiHistory.add(Message("user", message))
-        mainViewModel.uiHistory.add(ChatUiModel.Text(role = "user", content = message))
+        mainViewModel.uiHistory.add(ChatUiModel.Text(
+            role = "user",
+            content = message.replace(bracketRegex) { matchResult ->
+                val mathContent = matchResult.groupValues[1].trim()
+                "```math\n$mathContent\n```"
+            }
+        ))
 
         withContext(Dispatchers.IO) {
             try {
@@ -78,9 +101,30 @@ object AI {
 
                     } else {
                         if (responseMessage.content != null) {
-                            withContext(Dispatchers.Main) {
-                                mainViewModel.apiHistory.add(responseMessage)
-                                mainViewModel.uiHistory.add(ChatUiModel.Text(role = "assistant", content = responseMessage.content!!))
+                            val paragraphs = responseMessage.content!!
+                                .split(Regex("\\n\\s*\\n")) // 空行分段
+                                .filter { it.isNotBlank() }
+                            mainViewModel.apiHistory.add(responseMessage)
+
+                            mainViewModel.viewModelScope.launch(Dispatchers.Main) {
+                                paragraphs.forEachIndexed { index, paragraph ->
+//                                    val bracketRegex = Regex("""\\\[(.*?)\\]""", RegexOption.DOT_MATCHES_ALL)
+                                    val processedText = paragraph.replace(bracketRegex) { matchResult ->
+                                        val mathContent = matchResult.groupValues[1].trim()
+                                        "```math\n$mathContent\n```"
+                                    }
+
+                                    mainViewModel.uiHistory.add(
+                                        ChatUiModel.Text(
+                                            role = "assistant",
+                                            content = processedText.trim()
+                                        )
+                                    )
+
+                                    if (index < paragraphs.size - 1) {
+                                        delay(max(400L, processedText.length * 20L))
+                                    }
+                                }
                             }
                         }
                         isConversationFinished = true
@@ -110,7 +154,7 @@ object AI {
 
     suspend fun sendWithPrompt(context: Context, message: String, promptId: String, apiKey: String?) : AiResponse? {
         val messageList = mutableListOf<Message>()
-        PromptLoader.getPromptById(context, promptId)?.let { messageList.add(Message("system", it)) }
+        messageList.add(Message("system", PromptLoader.getPromptById(context, promptId)))
         messageList.add(Message("user", message))
 
         val request = Request(messages = messageList)
@@ -156,17 +200,27 @@ object AI {
         toolRegistry.setCurrentScope(scope)
     }
 
-    fun init(context: Context, mainViewModel: MainViewModel) {
+    fun init(context: Context,navController: NavController, mainViewModel: MainViewModel, decibelMeterViewModel: DecibelMeterViewModel, diaryViewModel: DiaryViewModel) {
         toolRegistry.registerAll(
             SetScopeTool(toolRegistry),
             SetAlarmTool(context) { title, message ->
                 mainViewModel.requireUserConfirmation(title, message)
             },
-            GetWeather(context)
+            GetWeather(context),
+            GetColorPickerUsageTool(),
+            GetPickedColorTool(mainViewModel),
+            GetMeasureDecibelTool(decibelMeterViewModel),
+            GetDecibelMeterUsageTool(),
+            CreateNewDiaryTool(mainViewModel, diaryViewModel),
+            GetDiaryContentTool(navController, diaryViewModel) { title, message ->
+                mainViewModel.requireUserConfirmation(title, message)
+            },
+            ProvideDiaryTitleSuggestionTool(diaryViewModel),
+            GetDiaryUsageTool()
         )
         settingsRepository = SettingsRepository(context.settingsStore)
 
-        PromptLoader.getPromptById(context, "assistant")?.let { mainViewModel.apiHistory.add(Message("system", it)) }
+        mainViewModel.apiHistory.add(Message("system", PromptLoader.getPromptById(context, "system")))
     }
 
 //    private suspend fun settingsScrollTo(target: String, mainViewModel: MainViewModel, onNavigate: (Route) -> Unit) {
@@ -189,6 +243,7 @@ sealed class ChatUiModel {
         val title: String,
         val message: String,
         // 挂起凭证,UI层调用 .complete(true/false) 就能唤醒后台大模型
-        val deferred: CompletableDeferred<Boolean>
+        val deferred: CompletableDeferred<Boolean>,
+        var userChoice: Boolean? = null
     ) : ChatUiModel()
 }
