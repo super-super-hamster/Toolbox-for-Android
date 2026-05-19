@@ -219,7 +219,6 @@ class Receiver : BroadcastReceiver() {
         val classSlot = ArrayList<Int>()
 
         val isClassRemindEnabled = prefs.getBoolean("class_notification", false)
-        val isAlarmRemindEnabled = prefs.getBoolean("alarm_notification", false)
 
         for (course in coursesForTomorrow) {
             hasClass[course.startTime - 1] = true
@@ -259,27 +258,6 @@ class Receiver : BroadcastReceiver() {
                 isClassRemindEnabled,
                 arrayOf("上课提醒", "下一节课是 " + course.name + "\n" + "在 " + course.location, "知道了", "")
             )
-        }
-
-        if (!isAlarmRemindEnabled) return
-
-        for ((_, num) in classSlot.withIndex()) {
-            val hour = when (num) {
-                1 -> 8
-                2 -> 10
-                3 -> 14
-                4 -> 16
-                else -> -1
-            }
-            if (hour != -1) {
-                showNotification(
-                    context,
-                    "闹钟设置",
-                    "明天的$hour:00有课，是否设置闹钟？",
-                    "确认",
-                    arrayOf(CLASS_ALARM, hour.toString())
-                )
-            }
         }
     }
 }

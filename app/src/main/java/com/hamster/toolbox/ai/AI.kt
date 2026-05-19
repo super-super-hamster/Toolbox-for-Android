@@ -2,26 +2,12 @@ package com.hamster.toolbox.ai
 
 import android.content.Context
 import androidx.lifecycle.viewModelScope
-import androidx.navigation.NavController
 import com.google.gson.Gson
-import com.hamster.toolbox.SettingsRepository
-import com.hamster.toolbox.ai.tools.CreateNewDiaryTool
-import com.hamster.toolbox.ai.tools.GetColorPickerUsageTool
-import com.hamster.toolbox.ai.tools.GetDecibelMeterUsageTool
-import com.hamster.toolbox.ai.tools.GetDiaryContentTool
-import com.hamster.toolbox.ai.tools.GetDiaryUsageTool
-import com.hamster.toolbox.ai.tools.GetMeasureDecibelTool
-import com.hamster.toolbox.ai.tools.GetPickedColorTool
-import com.hamster.toolbox.ai.tools.GetWeather
-import com.hamster.toolbox.ai.tools.ProvideDiaryTitleSuggestionTool
-import com.hamster.toolbox.ai.tools.SetAlarmTool
-import com.hamster.toolbox.ai.tools.SetScopeTool
+import com.hamster.toolbox.repository.SettingsRepository
 import com.hamster.toolbox.ai.tools.ToolRegistry
 import com.hamster.toolbox.ai.tools.ToolScope
 import com.hamster.toolbox.main.MainViewModel
-import com.hamster.toolbox.screen.decibelMeter.DecibelMeterViewModel
-import com.hamster.toolbox.screen.diary.DiaryViewModel
-import com.hamster.toolbox.settingsStore
+import com.hamster.toolbox.repository.settingsStore
 import com.hamster.toolbox.utils.prompt.PromptLoader
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -65,7 +51,8 @@ object AI {
                     val request = Request(
                         messages = mainViewModel.apiHistory.toList(),
                         tools = toolRegistry.getActiveToolDefinitions().takeIf { it.isNotEmpty() },
-                        model = settingsRepository.getAiModelName()
+                        model = settingsRepository.getAiModelName(),
+                        temperature = settingsRepository.getAiTemperature()
                     )
 
                     val response = apiService.getChatCompletion("Bearer $apiKey", request)
@@ -200,24 +187,7 @@ object AI {
         toolRegistry.setCurrentScope(scope)
     }
 
-    fun init(context: Context,navController: NavController, mainViewModel: MainViewModel, decibelMeterViewModel: DecibelMeterViewModel, diaryViewModel: DiaryViewModel) {
-        toolRegistry.registerAll(
-            SetScopeTool(toolRegistry),
-            SetAlarmTool(context) { title, message ->
-                mainViewModel.requireUserConfirmation(title, message)
-            },
-            GetWeather(context),
-            GetColorPickerUsageTool(),
-            GetPickedColorTool(mainViewModel),
-            GetMeasureDecibelTool(decibelMeterViewModel),
-            GetDecibelMeterUsageTool(),
-            CreateNewDiaryTool(mainViewModel, diaryViewModel),
-            GetDiaryContentTool(navController, diaryViewModel) { title, message ->
-                mainViewModel.requireUserConfirmation(title, message)
-            },
-            ProvideDiaryTitleSuggestionTool(diaryViewModel),
-            GetDiaryUsageTool()
-        )
+    fun init(context: Context, mainViewModel: MainViewModel) {
         settingsRepository = SettingsRepository(context.settingsStore)
 
         mainViewModel.apiHistory.add(Message("system", PromptLoader.getPromptById(context, "system")))

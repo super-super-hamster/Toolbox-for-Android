@@ -60,10 +60,11 @@ import com.hamster.toolbox.compose.ItemGroup
 import com.hamster.toolbox.compose.PageColumn
 import com.hamster.toolbox.compose.StandardDialog
 import com.hamster.toolbox.compose.TextInputField
-import com.hamster.toolbox.compose.rememberBooleanPreference
 import com.hamster.toolbox.compose.rememberSharedTiltState
 import com.hamster.toolbox.compose.squircleShape
 import com.hamster.toolbox.main.MainViewModel
+import com.hamster.toolbox.repository.SettingsRepository
+import com.hamster.toolbox.repository.settingsStore
 import com.hamster.toolbox.utils.authenticate
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -77,6 +78,7 @@ fun DiaryPreviewScreen(
     onNavigate: (Route) -> Unit
 ) {
     val context = LocalContext.current
+    val settingsRepository = remember { SettingsRepository(context.settingsStore) }
     val sharedTiltState = rememberSharedTiltState()
 
     LaunchedEffect(Unit) {
@@ -93,14 +95,11 @@ fun DiaryPreviewScreen(
     val dateFormatter = remember { SimpleDateFormat("yyyy年MM月dd日", Locale.getDefault()) }
     var currentTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
 
-//    var diaryTitle by remember { mutableStateOf("") }
-
     var showDeleteDiaryDialog by remember { mutableStateOf(false) }
     var deleteDiaryId by remember { mutableLongStateOf(-1) }
     var deleteDate by remember { mutableStateOf("") }
 
-//    var isLocked by rememberSaveable { mutableStateOf(true) }
-    val isDiaryUsingPassword by rememberBooleanPreference("is_diary_using_password", true)
+    val isDiaryUsingPassword by settingsRepository.isDiaryUsingPassword.collectAsStateWithLifecycle(initialValue = true)
 
     LaunchedEffect(Unit) {
         if (isDiaryUsingPassword) {

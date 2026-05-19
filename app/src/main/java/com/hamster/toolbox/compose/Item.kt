@@ -169,6 +169,7 @@ fun EditTextItem(
     initialValue: String,
     hint: String = "",
     singleLine: Boolean = false,
+    maxLength: Int = -1,
     @DrawableRes icon: Int = 0,
     onCancel: () -> Unit = {},
     onConfirm: (String) -> Boolean // 返回true关闭窗口，返回false不关闭
@@ -185,9 +186,48 @@ fun EditTextItem(
             initialValue = initialValue,
             hint = hint,
             singleLine = singleLine,
+            maxLength = maxLength,
             onCancel = onCancel,
             onDismissRequest = { showDialog = false },
             onConfirm = onConfirm
+        )
+    }
+}
+
+@Composable
+fun SliderItem(
+    modifier: Modifier = Modifier,
+    title: String,
+    summary: String = "",
+    @DrawableRes icon: Int = 0,
+    dialogTitle: String,
+    dialogContent: String = "",
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    valueRange: ClosedFloatingPointRange<Float> = 0f..1f,
+    onCancel: () -> Unit = {},
+    onConfirm: () -> Boolean,
+    cancelText: String = "取消",
+    confirmText: String = "确认"
+) {
+    var showDialog by remember { mutableStateOf(false) }
+
+    ClickItem(title = title, summary = summary, modifier = modifier, icon = icon) {
+        showDialog = true
+    }
+
+    if (showDialog) {
+        SliderDialog(
+            title = dialogTitle,
+            content = dialogContent,
+            value = value,
+            onValueChange = { onValueChange(it) },
+            valueRange = valueRange,
+            onCancel = { onCancel() },
+            onConfirm = { onConfirm() },
+            onDismissRequest = { showDialog = false },
+            cancelText = cancelText,
+            confirmText = confirmText
         )
     }
 }

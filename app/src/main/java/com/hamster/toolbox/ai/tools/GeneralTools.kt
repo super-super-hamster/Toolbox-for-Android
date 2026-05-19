@@ -3,10 +3,12 @@ package com.hamster.toolbox.ai.tools
 import android.content.Context
 import com.google.gson.Gson
 import com.google.gson.JsonParser
-import com.hamster.toolbox.WeatherRepository
+import com.hamster.toolbox.repository.WeatherRepository
 import com.hamster.toolbox.system.Alarm
 import com.hamster.toolbox.system.AlarmData
-import com.hamster.toolbox.weatherStore
+import com.hamster.toolbox.repository.weatherStore
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 class SetAlarmTool(
@@ -14,7 +16,7 @@ class SetAlarmTool(
     private val onConfirm: suspend (String, String) -> Boolean
 ) : Tool {
     override val name = "set_alarm"
-    override val description = "设置一个闹钟。当用户需要设定起床、提醒等闹钟时调用此工具。"
+    override val description = "设置一个闹钟。当用户需要设定起床、提醒等闹钟时调用此工具。禁止在用户没有明确提出设置闹钟的需求时调用。"
     override val scope = ToolScope.GENERAL
 
     override val parameters: Map<String, Any> = mapOf(
@@ -84,9 +86,9 @@ class SetAlarmTool(
     }
 }
 
-class GetWeather(private val context: Context) : Tool {
+class GetWeatherTool(private val context: Context) : Tool {
     override val name = "get_weather"
-    override val description = "获取天气信息"
+    override val description = "获取天气信息。"
     override val scope = ToolScope.GENERAL
 
     override val parameters: Map<String, Any> = mapOf(
@@ -96,7 +98,7 @@ class GetWeather(private val context: Context) : Tool {
                 "type" to "string",
                 "description" to "查询天气的位置，若为空则默认查询本地天气。"
             )
-        ),
+        )
     )
 
     override suspend fun execute(arguments: String): String {
@@ -120,4 +122,30 @@ class GetWeather(private val context: Context) : Tool {
             "获取天气失败 ${e.message}"
         }
     }
+}
+
+class GetBasicInformationTool : Tool {
+    override val name = "get_basic_information"
+    override val description = "用于获取基础信息，包括当前的时间。仅当必须知道基础信息时调用，禁止除此以外的情况下调用。"
+    override val scope = ToolScope.GENERAL
+
+    override val parameters: Map<String, Any> = mapOf(
+        "type" to "object",
+    )
+
+    override suspend fun execute(arguments: String): String {
+        return try {
+            val current = LocalDate.now()
+            val formatter = DateTimeFormatter.ofPattern("yyyy年MM月dd日")
+            val formatted = current.format(formatter)
+
+            return formatted
+        } catch (e: Exception) {
+            "获取基础信息失败 ${e.message}"
+        }
+    }
+}
+
+class GetToolboxUsageTool {
+
 }

@@ -35,8 +35,8 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.gson.Gson
 import com.hamster.toolbox.R
-import com.hamster.toolbox.WeatherRepository
-import com.hamster.toolbox.weatherStore
+import com.hamster.toolbox.repository.WeatherRepository
+import com.hamster.toolbox.repository.weatherStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext

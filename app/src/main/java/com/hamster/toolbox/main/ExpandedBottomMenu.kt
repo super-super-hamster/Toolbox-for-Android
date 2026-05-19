@@ -69,6 +69,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.colorResource
@@ -80,6 +81,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import coil.compose.AsyncImage
 import com.hamster.toolbox.ColorPicker
@@ -100,14 +102,14 @@ import com.hamster.toolbox.ai.Message
 import com.hamster.toolbox.compose.TabItem
 import com.hamster.toolbox.compose.Tabs
 import com.hamster.toolbox.compose.assistantBubbleShape
-import com.hamster.toolbox.compose.rememberStringPreference
 import com.hamster.toolbox.compose.squircleShape
 import com.hamster.toolbox.compose.userBubbleShape
+import com.hamster.toolbox.repository.SettingsRepository
+import com.hamster.toolbox.repository.settingsStore
 import com.hrm.latex.renderer.Latex
 import com.mikepenz.markdown.m3.Markdown
 import com.mikepenz.markdown.compose.components.markdownComponents
 import com.mikepenz.markdown.m3.markdownTypography
-import com.mikepenz.markdown.model.MarkdownTypography
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import org.intellij.markdown.ast.getTextInNode
@@ -116,7 +118,6 @@ import kotlin.math.roundToInt
 
 @Composable
 fun ExpandedBottomMenu(
-    apiKey: String?,
     selectedIndex: Int,
     mainViewModel: MainViewModel,
     setSelectedIndex: (Int) -> Unit,
@@ -125,20 +126,28 @@ fun ExpandedBottomMenu(
     onNavigate: (route: Route) -> Unit,
     onDragDown: () -> Unit
 ) {
+    val context = LocalContext.current
+    val settingsRepository = remember { SettingsRepository(context.settingsStore) }
+
     var dragOffset by remember { mutableFloatStateOf(0f) }
 
+    val assistantName by settingsRepository.assistantNameFlow.collectAsStateWithLifecycle(initialValue = "助手")
+
     val tabsList = listOf(
-        TabItem(title = "助手") {
+        TabItem(title = assistantName) {
             Assistant(
+                settingsRepository = settingsRepository,
                 mainViewModel = mainViewModel,
                 inputText = inputText,
                 setInputText = { setInputText(it) },
                 onDragDown = onDragDown,
-                apiKey = apiKey,
             )
         },
         TabItem(title = "菜单") {
-            Menu(onNavigate = onNavigate)
+            Menu(
+                settingsRepository = settingsRepository,
+                onNavigate = onNavigate
+            )
         }
     )
 
@@ -175,9 +184,11 @@ fun ExpandedBottomMenu(
 
 @Composable
 private fun Menu(
+    settingsRepository: SettingsRepository,
     onNavigate: (route: Route) -> Unit
 ) {
-    val userName by rememberStringPreference("nickname", "")
+
+    val userName by settingsRepository.userNameFlow.collectAsStateWithLifecycle(initialValue = "无名氏")
 
     Column(
         modifier = Modifier.padding(16.dp).fillMaxSize(),
@@ -249,13 +260,15 @@ private fun Menu(
 
 @Composable
 fun Assistant(
+    settingsRepository: SettingsRepository,
     inputText: String,
     mainViewModel: MainViewModel,
     setInputText: (String) -> Unit,
     onDragDown: () -> Unit,
-    apiKey: String?
 ) {
     val coroutineScope = rememberCoroutineScope()
+
+    val apiKey by settingsRepository.aiApiKeyFlow.collectAsStateWithLifecycle(initialValue = "")
 
     val listState = rememberLazyListState()
     val chatSize = mainViewModel.uiHistory.size
@@ -263,7 +276,7 @@ fun Assistant(
 
     var isSending by remember { mutableStateOf(false) }
 
-    val userAvatarPath by rememberStringPreference("user_avatar_path", "")
+    val userAvatarPath by settingsRepository.userAvatarFlow.collectAsStateWithLifecycle(initialValue = "")
 
     var flyingText by remember { mutableStateOf("") }
     val flyOffsetX = remember { Animatable(0f) }

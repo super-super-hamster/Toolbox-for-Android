@@ -51,7 +51,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
-import androidx.preference.PreferenceManager
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hamster.toolbox.R
 import com.hamster.toolbox.ai.AI
 import com.hamster.toolbox.ai.tools.ToolScope
@@ -62,6 +62,8 @@ import com.hamster.toolbox.compose.TextInputField
 import com.hamster.toolbox.compose.applySharedTilt
 import com.hamster.toolbox.compose.rememberSharedTiltState
 import com.hamster.toolbox.compose.squircleShape
+import com.hamster.toolbox.repository.SettingsRepository
+import com.hamster.toolbox.repository.settingsStore
 import com.hamster.toolbox.utils.getSchedule
 import com.hamster.toolbox.utils.saveSchedule
 import java.time.LocalDate
@@ -72,6 +74,7 @@ import java.time.temporal.ChronoUnit
 @Composable
 fun ScheduleScreen() {
     val context = LocalContext.current
+    val settingsRepository = remember { SettingsRepository(context.settingsStore) }
 
     LaunchedEffect(Unit) {
         AI.setScope(ToolScope.SCHEDULE)
@@ -79,8 +82,7 @@ fun ScheduleScreen() {
 
     val totalWeeks = 20
 
-    val prefs = PreferenceManager.getDefaultSharedPreferences(context)
-    val semesterStartDateStr = prefs.getString("semester_start_date", null)
+    val semesterStartDateStr by settingsRepository.semesterStartDateFlow.collectAsStateWithLifecycle(initialValue = "")
 
     val initialWeekPage = remember(semesterStartDateStr) {
         calculateCurrentWeekIndex(semesterStartDateStr, totalWeeks)
@@ -636,7 +638,7 @@ fun CourseEditDialog(
                         .weight(1f)
                         .height(42.dp),
                     shape = squircleShape,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.LightGray)
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent)
                 ) {
                     Text(
                         text = if (toDelete) "取消" else "我知道了",

@@ -13,20 +13,26 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
+import androidx.core.content.edit
 import androidx.preference.PreferenceManager
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import com.hamster.toolbox.ai.AI
 import com.hamster.toolbox.compose.ClickItem
 import com.hamster.toolbox.compose.EditTextItem
 import com.hamster.toolbox.compose.ItemGroup
 import com.hamster.toolbox.compose.PageColumn
 import com.hamster.toolbox.compose.rememberSharedTiltState
-import com.hamster.toolbox.compose.rememberStringPreference
 import com.hamster.toolbox.utils.copyCurriculumJSONPrompt
 import com.hamster.toolbox.utils.validateAndSaveJson
 import kotlinx.coroutines.launch
 import com.hamster.toolbox.R
 import com.hamster.toolbox.Route
 import com.hamster.toolbox.ScheduleTips
+import com.hamster.toolbox.compose.rememberStringPreference
+import com.hamster.toolbox.repository.SettingsRepository
+import com.hamster.toolbox.repository.settingsStore
+import com.hamster.toolbox.screen.schedule.Course
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -37,11 +43,13 @@ fun ImportCurriculumScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val settingsRepository = remember { SettingsRepository(context.settingsStore) }
+    val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
 
     val sharedTiltState = rememberSharedTiltState()
     var naturalLanguage by remember { mutableStateOf("") }
 
-    var jsonString by rememberStringPreference("schedule_json")
+    val scheduleJson by rememberStringPreference("schedule_json", "")
 
     PageColumn(sharedTiltState = sharedTiltState) {
         ItemGroup(titleState = sharedTiltState) {
@@ -54,9 +62,8 @@ fun ImportCurriculumScreen(
                     scope.launch {
                         try {
                             onShowLoading(true)
-                            val prefs = PreferenceManager.getDefaultSharedPreferences(context)
-                            val apiKey = prefs?.getString("api_key", null)
-                            if (apiKey == null) {
+                            val apiKey = settingsRepository.getAiApiKey()
+                            if (apiKey.isNotEmpty()) {
                                 onNavigateToSettings("api_key")
                             } else {
                                 val response = AI.sendWithPrompt(context, input, "import_curriculum", apiKey)
@@ -76,10 +83,24 @@ fun ImportCurriculumScreen(
                 title = "通过JSON导入",
                 summary = "将JSON文本导入为课程表",
                 dialogTitle = "输入JSON",
-                initialValue = jsonString,
+                initialValue = scheduleJson,
                 hint = "请输入符合格式要求的JSON文本",
                 onConfirm = { input ->
-                    validateAndSaveJson(input, context)
+                    if (input.isNotBlank()) {
+                        try {
+                            val courseListType = object : TypeToken<List<Course>>() {}.type
+                            val gson = Gson()
+                            val courses: List<Course> = gson.fromJson(scheduleJson, courseListType)
+                            val validJsonString = gson.toJson(courses)
+
+                            prefs.edit { putString("schedule_json", validJsonString) }
+//                            scope.launch {
+//                                repositorySetString(context.settingsStore, validJsonString, SettingsRepository.SCHEDULE_JSON)
+//                            }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
                     true
                 }
             )

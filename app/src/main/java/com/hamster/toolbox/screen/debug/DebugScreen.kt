@@ -5,10 +5,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.edit
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.preference.PreferenceManager
 import com.hamster.toolbox.system.Alarm
 import com.hamster.toolbox.system.Receiver
@@ -16,19 +17,24 @@ import com.hamster.toolbox.compose.ClickItem
 import com.hamster.toolbox.compose.ItemGroup
 import com.hamster.toolbox.compose.PageColumn
 import com.hamster.toolbox.compose.SwitchItem
-import com.hamster.toolbox.compose.rememberBooleanPreference
 import com.hamster.toolbox.compose.rememberSharedTiltState
+import com.hamster.toolbox.repository.DebugRepository
+import com.hamster.toolbox.repository.debugStore
+import com.hamster.toolbox.repository.repositorySetBoolean
+import kotlinx.coroutines.launch
 
 @Composable
 fun DebugScreen(
     setLoading: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
+    val debugRepository = remember { DebugRepository(context.debugStore) }
+    val scope = rememberCoroutineScope()
     val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
 
     val sharedTiltState = rememberSharedTiltState()
 
-    var showPackageName by rememberBooleanPreference("super_hamster_show_package_name", false)
+    val showPackageName by debugRepository.showPackageNameFlow.collectAsStateWithLifecycle(initialValue = false)
 
     PageColumn(modifier = Modifier.verticalScroll(rememberScrollState()),sharedTiltState = sharedTiltState) {
         ItemGroup(titleState = sharedTiltState) {
@@ -49,7 +55,9 @@ fun DebugScreen(
 
         ItemGroup(titleState = sharedTiltState) {
             SwitchItem(title = "时间页面显示包名", checked = showPackageName) {
-                showPackageName = it
+                scope.launch {
+                    repositorySetBoolean(context.debugStore, it, DebugRepository.SHOW_PACKAGE_NAME)
+                }
             }
 
             ClickItem(title = "恢复时间页面初始化") {

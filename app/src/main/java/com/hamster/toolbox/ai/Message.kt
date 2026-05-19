@@ -10,7 +10,7 @@ data class Request(
     @SerializedName("stream") val stream: Boolean = false,
     @SerializedName("tools") val tools: List<ToolDefinition>? = null,
     @SerializedName("tool_choice") val toolChoice: String? = null,
-    @SerializedName("temperature") val temperature: Int = 1
+    @SerializedName("temperature") val temperature: Float = 1.0f
 )
 
 @Keep

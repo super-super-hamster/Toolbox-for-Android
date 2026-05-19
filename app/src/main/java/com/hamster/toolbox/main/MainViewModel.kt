@@ -53,6 +53,12 @@ class MainViewModel : ViewModel() {
     // 取色器提取的颜色
     var pickedColor by mutableStateOf("")
 
+    // 随机数
+    var randomNumberMax by mutableIntStateOf(0)
+    var randomNumberMin by mutableIntStateOf(0)
+    var generatedRandomNumber by mutableIntStateOf(0)
+    var tryGenerateRandomNumber by mutableStateOf(false)
+
     suspend fun requireUserConfirmation(title: String, message: String): Boolean {
         val deferred = CompletableDeferred<Boolean>()
 

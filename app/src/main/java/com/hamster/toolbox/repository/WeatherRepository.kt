@@ -1,4 +1,4 @@
-package com.hamster.toolbox
+package com.hamster.toolbox.repository
 
 import android.content.Context
 import androidx.datastore.core.DataStore
@@ -12,26 +12,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 val Context.weatherStore by preferencesDataStore(name = "weather")
-val Context.settingsStore by preferencesDataStore(name = "settings")
-
-class SettingsRepository(private val dataStore: DataStore<Preferences>) {
-    companion object {
-        val AI_MODEL_NAME = stringPreferencesKey("ai_model_name")
-        val AI_BALANCE = stringPreferencesKey("ai_balance")
-    }
-
-    val aiBalanceFlow: Flow<String> = dataStore.data.map { it[AI_BALANCE] ?: "无"}
-
-    suspend fun getAiModelName() = dataStore.data.first()[AI_MODEL_NAME] ?: "deepseek-v4-flash"
-
-    suspend fun setAiModelName(name: String) {
-        dataStore.edit { it[AI_MODEL_NAME] = name }
-    }
-
-    suspend fun setAiBalance(balance: String) {
-        dataStore.edit { it[AI_BALANCE] = balance }
-    }
-}
 
 class WeatherRepository(private val dataStore: DataStore<Preferences>) {
     companion object {

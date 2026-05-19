@@ -12,7 +12,7 @@ enum class ToolScope {
     DIARY,          // 日记
     SETTINGS,       // 设置
     SCHEDULE,       // 课程表
-    RULE,           // 尺子
+    RULER,           // 尺子
     RANDOM,         // 随机数
     COLOR_PICKER,   // 取色器
     TIME,           // 时间
@@ -29,7 +29,7 @@ class SetScopeTool(private val registry: ToolRegistry) : Tool {
         - "DIARY" (日记相关)
         - "SETTINGS" (设置相关)
         - "SCHEDULE" (课程表相关)
-        - "RULE" (尺子相关)
+        - "RULER" (尺子相关)
         - "RANDOM" (随机数相关)
         - "COLOR_PICKER" (取色器相关)
         - "TIME" (应用使用时长相关)
@@ -59,7 +59,7 @@ class SetScopeTool(private val registry: ToolRegistry) : Tool {
             "DIARY" -> ToolScope.DIARY
             "SETTINGS" -> ToolScope.SETTINGS
             "SCHEDULE" -> ToolScope.SCHEDULE
-            "RULE" -> ToolScope.RULE
+            "RULE" -> ToolScope.RULER
             "RANDOM" -> ToolScope.RANDOM
             "COLOR_PICKER" -> ToolScope.COLOR_PICKER
             "TIME" -> ToolScope.TIME
@@ -68,7 +68,7 @@ class SetScopeTool(private val registry: ToolRegistry) : Tool {
 
         registry.setCurrentScope(scope)
 
-        return "成功加载 $arguments 领域的工具！"
+        return "成功加载 $arguments 领域的工具，接下来调用 $arguments 领域的工具用于完成用户的需求。"
     }
 }
 

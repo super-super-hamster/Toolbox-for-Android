@@ -30,6 +30,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.dimensionResource
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.preference.PreferenceManager
 import com.hamster.toolbox.AssistantSettings
 import com.hamster.toolbox.ImportCurriculum
@@ -44,10 +45,13 @@ import com.hamster.toolbox.compose.InquiryDialog
 import com.hamster.toolbox.compose.ItemGroup
 import com.hamster.toolbox.compose.PageColumn
 import com.hamster.toolbox.compose.SwitchItem
-import com.hamster.toolbox.compose.rememberBooleanPreference
 import com.hamster.toolbox.compose.rememberSharedTiltState
 import com.hamster.toolbox.compose.rememberStringPreference
 import com.hamster.toolbox.main.MainViewModel
+import com.hamster.toolbox.repository.SettingsRepository
+import com.hamster.toolbox.repository.repositorySetBoolean
+import com.hamster.toolbox.repository.repositorySetString
+import com.hamster.toolbox.repository.settingsStore
 import com.hamster.toolbox.system.Receiver
 import com.hamster.toolbox.utils.ScrollTarget
 import com.hamster.toolbox.utils.authenticate
@@ -72,6 +76,8 @@ fun SettingsScreen(
     val scope = rememberCoroutineScope()
     val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
 
+    val settingsRepository = remember { SettingsRepository(context.settingsStore) }
+
     LaunchedEffect(Unit) {
         AI.setScope(ToolScope.SETTINGS)
     }
@@ -88,7 +94,9 @@ fun SettingsScreen(
             scope.launch {
                 val path = SettingsUtils.saveImageToInternalStorage(context, uri)
                 if (path != null) {
-                    prefs.edit { putString("user_avatar_path", path) }
+                    scope.launch {
+                        repositorySetString(context.settingsStore, path, SettingsRepository.USER_AVATAR_PATH)
+                    }
                     Toast.makeText(context, "头像已更新", Toast.LENGTH_SHORT).show()
                 } else {
                     Toast.makeText(context, "更新头像失败", Toast.LENGTH_SHORT).show()
@@ -114,13 +122,11 @@ fun SettingsScreen(
         scrollTo(mainViewModel.settingsScrollTarget)
     }
 
-    var nickname by rememberStringPreference("nickname", "无名氏")
-    var signature by rememberStringPreference("signature", "无")
-    var semesterStartDate by rememberStringPreference("semester_start_date", "")
-    var curriculumImportState by rememberStringPreference("schedule_json", "")
-    var isClassRemindEnabled by rememberBooleanPreference("class_notification")
-    var isAlarmRemindEnabled by rememberBooleanPreference("alarm_notification")
-    var isDiaryUsingPassword by rememberBooleanPreference("is_diary_using_password", true)
+    val userName by settingsRepository.userNameFlow.collectAsStateWithLifecycle(initialValue = "无名氏")
+    val semesterStartDate by settingsRepository.semesterStartDateFlow.collectAsStateWithLifecycle(initialValue = "")
+    val scheduleJson by rememberStringPreference("schedule_json", "")
+    val isClassRemindEnabled by settingsRepository.isClassRemindEnabledFlow.collectAsStateWithLifecycle(initialValue = false)
+    val isDiaryUsingPassword by settingsRepository.isDiaryUsingPassword.collectAsStateWithLifecycle(initialValue = true)
 
     var showUserAvatarOptionsDialog by remember { mutableStateOf(false) }
     var showDatePickerDialog by remember { mutableStateOf(false) }
@@ -129,20 +135,13 @@ fun SettingsScreen(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            isClassRemindEnabled = true
+            scope.launch {
+                repositorySetBoolean(context.settingsStore, true, SettingsRepository.IS_CLASS_REMIND_ENABLED)
+            }
         } else {
-            isClassRemindEnabled = false
-            Toast.makeText(context, "需要通知权限", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    val alarmRemindRequestPostNotificationPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            isAlarmRemindEnabled = true
-        } else {
-            isAlarmRemindEnabled = false
+            scope.launch {
+                repositorySetBoolean(context.settingsStore, false, SettingsRepository.IS_CLASS_REMIND_ENABLED)
+            }
             Toast.makeText(context, "需要通知权限", Toast.LENGTH_SHORT).show()
         }
     }
@@ -156,29 +155,15 @@ fun SettingsScreen(
                 modifier = getModifier("nickname"),
                 title = "昵称",
                 dialogTitle = "修改昵称",
-                initialValue = nickname,
+                initialValue = userName,
                 hint = "昵称",
                 singleLine = true,
                 icon = R.drawable.ic_user_name,
-                onCancel = { nickname = prefs.getString("nickname", "") ?: "" },
+                onCancel = { },
                 onConfirm = { input ->
-                    nickname = input
-                    prefs.edit { putString("nickname", nickname) }
-                    true
-                }
-            )
-            EditTextItem(
-                modifier = getModifier("signature"),
-                title = "个性签名",
-                dialogTitle = "修改签名",
-                initialValue = signature,
-                hint = "个性签名",
-                singleLine = true,
-                icon = R.drawable.ic_user_signature,
-                onCancel = { signature = prefs.getString("signature", "") ?: "" },
-                onConfirm = { input ->
-                    signature = input
-                    prefs.edit { putString("signature", signature) }
+                    scope.launch {
+                        repositorySetString(context.settingsStore, input, SettingsRepository.USER_NAME)
+                    }
                     true
                 }
             )
@@ -198,10 +183,10 @@ fun SettingsScreen(
             ClickItem(
                 modifier = getModifier("import_curriculum_options"),
                 title = "导入课程表",
-                summary = if (curriculumImportState.isBlank()) "未设置" else "已设置",
+                summary = if (scheduleJson.isBlank()) "未设置" else "已设置",
                 icon = R.drawable.ic_curriculum
             ) {
-                if (prefs.getString("semester_start_date", null)?.isEmpty() == true) {
+                if (semesterStartDate.isEmpty()) {
                     scrollTo("semester_start_date")
                     return@ClickItem
                 }
@@ -224,37 +209,12 @@ fun SettingsScreen(
                         }
                     }
 
-                    isClassRemindEnabled = isChecked
-                    prefs.edit { putBoolean("class_notification", isChecked) }
-
-                    Receiver.dailyNotification(
-                        context, 22, 0, Receiver.ACTION_CLASS_ALARM_CHECK, 101, isClassRemindEnabled || isAlarmRemindEnabled, emptyArray()
-                    )
-                }
-            )
-
-            SwitchItem(
-                modifier = getModifier("alarm_notification"),
-                title = "上课闹钟设置提醒",
-                summary = "发送设置闹钟通知",
-                checked = isAlarmRemindEnabled,
-                icon = R.drawable.ic_alarm,
-                onCheckedChange = { isChecked ->
-                    if (isChecked) {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            val permissionStatus = ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
-                            if (permissionStatus != PackageManager.PERMISSION_GRANTED) {
-                                alarmRemindRequestPostNotificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                return@SwitchItem
-                            }
-                        }
+                    scope.launch {
+                        repositorySetBoolean(context.settingsStore, isChecked, SettingsRepository.IS_CLASS_REMIND_ENABLED)
                     }
 
-                    isAlarmRemindEnabled = isChecked
-                    prefs.edit { putBoolean("alarm_notification", isChecked) }
-
                     Receiver.dailyNotification(
-                        context, 22, 0, Receiver.ACTION_CLASS_ALARM_CHECK, 101, isClassRemindEnabled || isAlarmRemindEnabled, emptyArray()
+                        context, 22, 0, Receiver.ACTION_CLASS_ALARM_CHECK, 101, isClassRemindEnabled, emptyArray()
                     )
                 }
             )
@@ -274,14 +234,20 @@ fun SettingsScreen(
                         context = context,
                         title = "取消密码确认",
                         onSuccess = {
-                            isDiaryUsingPassword = checked
+                            scope.launch {
+                                repositorySetBoolean(context.settingsStore, checked, SettingsRepository.IS_DIARY_USING_PASSWORD)
+                            }
                         },
                         onNoPasswordSet = {
-                            isDiaryUsingPassword = checked
+                            scope.launch {
+                                repositorySetBoolean(context.settingsStore, checked, SettingsRepository.IS_DIARY_USING_PASSWORD)
+                            }
                         }
                     )
                 } else {
-                    isDiaryUsingPassword = true
+                    scope.launch {
+                        repositorySetBoolean(context.settingsStore, true, SettingsRepository.IS_DIARY_USING_PASSWORD)
+                    }
                 }
             }
         }
@@ -323,7 +289,9 @@ fun SettingsScreen(
                     if (file.exists()) {
                         file.delete()
                     }
-                    prefs.edit { remove( "user_avatar_path") }
+                    scope.launch {
+                        repositorySetString(context.settingsStore, "", SettingsRepository.USER_AVATAR_PATH)
+                    }
                     Toast.makeText(context, "已恢复默认头像", Toast.LENGTH_SHORT).show()
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -350,8 +318,10 @@ fun SettingsScreen(
                     val dayOfWeek = selectedDateObj.dayOfWeek.value
                     val alignedDate = selectedDateObj.minusDays((dayOfWeek - 1).toLong())
                     val newDateString = alignedDate.toString()
-                    semesterStartDate = newDateString
-                    prefs.edit { putString("semester_start_date", newDateString) }
+                    scope.launch {
+                        repositorySetString(context.settingsStore, newDateString, SettingsRepository.SEMESTER_START_DATE)
+                    }
+                    prefs.edit{ putString("semester_start_date", newDateString)}
                 } },
             onDismiss = {
                 showDatePickerDialog = false

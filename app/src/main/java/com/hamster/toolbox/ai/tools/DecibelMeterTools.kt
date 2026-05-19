@@ -6,7 +6,7 @@ class GetMeasureDecibelTool(
     private val decibelMeterViewModel: DecibelMeterViewModel
 ) : Tool {
     override val name = "get_measure_decibel_tool"
-    override val description = "获取用户当前检测的分贝值"
+    override val description = "获取用户当前检测的分贝值。仅当需要知道用户当前检测的分贝值时才可调用，禁止除此以外的情况下调用。"
     override val scope = ToolScope.DECIBEL_METER
 
     override val parameters: Map<String, Any> = mapOf(
@@ -21,7 +21,7 @@ class GetMeasureDecibelTool(
 
 class GetDecibelMeterUsageTool : Tool {
     override val name = "get_decibel_meter_usage"
-    override val description = "获取分贝仪的使用方法，当用户对分贝仪功能有疑问时调用此工具。"
+    override val description = "获取分贝仪的使用方法。仅当用户对分贝仪功能有疑问时调用此工具，禁止除此以外的情况下调用。"
     override val scope = ToolScope.DECIBEL_METER
 
     override val parameters: Map<String, Any> = mapOf(

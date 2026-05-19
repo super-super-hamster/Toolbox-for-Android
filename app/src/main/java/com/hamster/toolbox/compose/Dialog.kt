@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.text.KeyboardActions
@@ -35,7 +36,6 @@ import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -70,12 +70,19 @@ fun EditTextDialog(
     initialValue: String,
     hint: String = "",
     singleLine: Boolean = false,
+    maxLength: Int = -1,
     type: String = "String",
     onCancel: () -> Unit = {},
     onDismissRequest: () -> Unit,
     onConfirm: (String) -> Boolean
 ) {
-    var tempText by remember {
+    val safeInitialValue = if (maxLength != -1 && initialValue.length > maxLength) {
+        initialValue.substring(0, maxLength)
+    } else {
+        initialValue
+    }
+
+    var tempText by remember(initialValue) {
         mutableStateOf(
             TextFieldValue(
                 text = initialValue,
@@ -95,7 +102,6 @@ fun EditTextDialog(
     LaunchedEffect(Unit) {
         delay(100)
         focusRequester.requestFocus()
-
         keyboardController?.show()
     }
 
@@ -106,16 +112,22 @@ fun EditTextDialog(
     }
 
     val cancelAction = {
+        tempText = TextFieldValue(
+            text = initialValue,
+            selection = TextRange(initialValue.length)
+        )
         onCancel()
         onDismissRequest()
     }
 
     StandardDialog(
-        onDismissRequest = onDismissRequest,
+        onDismissRequest = cancelAction,
         modifier = Modifier.heightIn(max = screenHeight * 0.6f) // 限制最大高度
     ) {
         Column(
-            modifier = Modifier.padding(24.dp).fillMaxWidth(0.85f),
+            modifier = Modifier
+                .padding(24.dp)
+                .fillMaxWidth(0.85f),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
@@ -132,21 +144,34 @@ fun EditTextDialog(
                 value = tempText,
                 onValueChange = { input ->
                     val inputText = input.text
-                    when (type) {
-                        "Int" -> {
-                            if (inputText.all { it.isDigit() }) {
-                                tempText = input
+                    if (maxLength == -1 || inputText.length <= maxLength) {
+                        when (type) {
+                            "Int" -> {
+                                if (inputText.all { it.isDigit() }) {
+                                    tempText = input
+                                }
                             }
-                        }
-                        "Float" -> {
-                            if (inputText.matches(Regex("^\\d*\\.?\\d*$"))) {
-                                tempText = input
+                            "Float" -> {
+                                if (inputText.matches(Regex("^\\d*\\.?\\d*$"))) {
+                                    tempText = input
+                                }
                             }
+                            else -> tempText = input
                         }
-                        else -> tempText = input
-                    } },
+                    }
+                },
                 placeholder = { Text(text = hint, color = Color.Gray) },
                 singleLine = singleLine,
+                supportingText = if (maxLength != -1) {
+                    {
+                        Text(
+                            text = "${tempText.text.length} / $maxLength",
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.End,
+                            color =Color.Gray
+                        )
+                    }
+                } else null,
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f, fill = false) // 弹性高度
@@ -236,24 +261,29 @@ fun SliderDialog(
     onCancel: () -> Unit = {},
     onDismissRequest: () -> Unit,
     onConfirm: () -> Boolean,
-    setValue: (Float) -> Unit,
     cancelText: String = "取消",
     confirmText: String = "确认",
 ) {
-    var valueTemp by remember { mutableFloatStateOf(value) }
+    val initialValue = remember { value }
+    var isConfirmed by remember { mutableStateOf(false) }
 
     ConfirmDialog(
         title = title,
         cancelText = cancelText,
         confirmText = confirmText,
-        onCancel = {
-            onCancel()
-            setValue(valueTemp) },
+        onCancel = onCancel,
         onDismissRequest = {
-            onDismissRequest() },
+            if (!isConfirmed) {
+                onValueChange(initialValue)
+            }
+            onDismissRequest()
+        },
         onConfirm = {
-            onConfirm()
-            true
+            val success = onConfirm()
+            if (success) {
+                isConfirmed = true
+            }
+            success
         }
     ) {
         if (content.isNotEmpty()) {
@@ -269,31 +299,31 @@ fun SliderDialog(
 
         Row(
             modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(text = String.format(Locale.getDefault(), "%+.1f dB", valueRange.start), fontSize = 12.sp, color = colorResource(R.color.text))
+            Text(text = String.format(Locale.getDefault(), "%+.1f", valueRange.start), fontSize = 12.sp, color = colorResource(R.color.text))
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.width(8.dp))
 
             Slider(
                 value = value,
                 onValueChange = { onValueChange(it) },
                 valueRange = valueRange,
                 colors = SliderDefaults.colors(
-                    thumbColor = colorResource(R.color.mikuGreen),                              // 滑块圆钮
-                    activeTrackColor = colorResource(R.color.mikuGreen),                        // 左侧已划过轨道
-                    inactiveTrackColor = colorResource(R.color.mikuGreen).copy(alpha = 0.25f)   // 右侧未划过轨道
+                    thumbColor = colorResource(R.color.mikuGreen),
+                    activeTrackColor = colorResource(R.color.mikuGreen),
+                    inactiveTrackColor = colorResource(R.color.mikuGreen).copy(alpha = 0.25f)
                 ),
                 modifier = Modifier.weight(1f)
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.width(8.dp))
 
-            Text(text = String.format(Locale.getDefault(), "%+.1f dB", valueRange.endInclusive), fontSize = 12.sp, color = colorResource(R.color.text))
+            Text(text = String.format(Locale.getDefault(), "%+.1f", valueRange.endInclusive), fontSize = 12.sp, color = colorResource(R.color.text))
         }
     }
 }
-
 @Composable
 fun OptionDialog(
     title: String,

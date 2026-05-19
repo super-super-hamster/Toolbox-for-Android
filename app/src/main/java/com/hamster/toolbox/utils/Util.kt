@@ -44,6 +44,8 @@ import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
 import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
 import androidx.biometric.BiometricPrompt
 import androidx.fragment.app.FragmentActivity
+import com.hamster.toolbox.repository.SettingsRepository
+import com.hamster.toolbox.repository.settingsStore
 
 class ScrollTarget {
     val requester = BringIntoViewRequester()
@@ -230,14 +232,12 @@ fun validateAndSaveJson(jsonString: String?, context: Context): Boolean {
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
         prefs?.edit { putString("schedule_json", validJsonString) }
 
-//            (requireActivity() as? MainActivity)?.showAssistantBubble("课程表导入成功！")
         Toast.makeText(context, "成功", Toast.LENGTH_SHORT).show()
 
         return true
 
     } catch (e: Exception) {
         e.printStackTrace()
-//            (requireActivity() as? MainActivity)?.showAssistantBubble("导入失败")
         Toast.makeText(context, "失败", Toast.LENGTH_SHORT).show()
         return false
     }

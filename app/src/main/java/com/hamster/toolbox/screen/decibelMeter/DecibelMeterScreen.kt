@@ -24,6 +24,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,7 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hamster.toolbox.compose.ItemGroup
 import com.hamster.toolbox.compose.PageColumn
 import com.hamster.toolbox.compose.RingProgress
@@ -45,9 +46,12 @@ import com.hamster.toolbox.R
 import com.hamster.toolbox.ai.AI
 import com.hamster.toolbox.ai.tools.ToolScope
 import com.hamster.toolbox.compose.SliderDialog
-import com.hamster.toolbox.compose.rememberFloatPreference
 import com.hamster.toolbox.main.MainViewModel
+import com.hamster.toolbox.repository.DecibelMeterRepository
+import com.hamster.toolbox.repository.decibelMeterStore
+import com.hamster.toolbox.repository.repositorySetFloat
 import com.hamster.toolbox.utils.color.ColorLine
+import kotlinx.coroutines.launch
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -58,14 +62,14 @@ fun DecibelMeterScreen(
 ) {
     val context = LocalContext.current
     val sharedTiltState = rememberSharedTiltState()
+    val scope = rememberCoroutineScope()
+    val decibelMeterRepository = remember { DecibelMeterRepository(context.decibelMeterStore) }
 
     LaunchedEffect(Unit) {
         AI.setScope(ToolScope.DECIBEL_METER)
     }
 
-//    val viewModel: DecibelMeterViewModel = viewModel()
-
-    var offset by rememberFloatPreference("decibel_meter_offset", 0f)
+    val offset by decibelMeterRepository.offsetFlow.collectAsStateWithLifecycle(initialValue = 0f)
 
     var isBegin by remember { mutableStateOf(false) }
 
@@ -151,12 +155,13 @@ fun DecibelMeterScreen(
                 value = offset,
                 valueRange = -30f..30f,
                 onValueChange = { newValue ->
-                    offset = (newValue * 10f).roundToInt() / 10f
+                    scope.launch {
+                        repositorySetFloat(context.decibelMeterStore, (newValue * 10f).roundToInt() / 10f, DecibelMeterRepository.OFFSET)
+                    }
                 },
                 onDismissRequest = { mainViewModel.showDecibelMeterOffsetDialog = false },
                 onCancel = {},
                 onConfirm = { true },
-                setValue = { offset = it }
             )
         }
     }

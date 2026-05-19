@@ -23,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,8 +38,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.edit
-import androidx.preference.PreferenceManager
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aigestudio.wheelpicker.WheelPicker
 import com.aigestudio.wheelpicker.compose.WheelPickerComposable
 import com.hamster.toolbox.R
@@ -48,23 +48,31 @@ import com.hamster.toolbox.compose.ItemGroup
 import com.hamster.toolbox.compose.PageColumn
 import com.hamster.toolbox.compose.rememberSharedTiltState
 import com.hamster.toolbox.compose.squircleShape
+import com.hamster.toolbox.main.MainViewModel
+import com.hamster.toolbox.repository.RandomRepository
+import com.hamster.toolbox.repository.randomStore
+import com.hamster.toolbox.repository.repositorySetInt
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlin.math.max
 import kotlin.math.min
 import android.graphics.Color as AndroidColor
 
 @Composable
-fun RandomNumberScreen() {
+fun RandomNumberScreen(
+    mainViewModel: MainViewModel
+) {
     val context = LocalContext.current
-    val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
+    val scope = rememberCoroutineScope()
+    val randomRepository = remember { RandomRepository(context.randomStore) }
 
     LaunchedEffect(Unit) {
         AI.setScope(ToolScope.RANDOM)
     }
 
     val data = (0..100).toList()
-    var selectedMin by remember { mutableIntStateOf(prefs.getInt("random_number_min", 0)) }
-    var selectedMax by remember { mutableIntStateOf(prefs.getInt("random_number_max", 9)) }
+    val selectedMin by randomRepository.minFlow.collectAsStateWithLifecycle(initialValue = 0)
+    val selectedMax by randomRepository.maxFlow.collectAsStateWithLifecycle(initialValue = 10)
 
     // 按钮
     val interactionSource = remember { MutableInteractionSource() }
@@ -102,6 +110,27 @@ fun RandomNumberScreen() {
         }
     }
 
+    LaunchedEffect(Unit) {
+        mainViewModel.randomNumberMax = selectedMax
+        mainViewModel.randomNumberMin = selectedMin
+    }
+
+    LaunchedEffect(mainViewModel.randomNumberMin, mainViewModel.randomNumberMax) {
+        scope.launch {
+            repositorySetInt(context.randomStore, mainViewModel.randomNumberMax, RandomRepository.MAX)
+            repositorySetInt(context.randomStore, mainViewModel.randomNumberMin, RandomRepository.MIN)
+        }
+    }
+
+    LaunchedEffect(mainViewModel.tryGenerateRandomNumber) {
+        if (mainViewModel.tryGenerateRandomNumber) {
+            if (canGenerate) {
+                isRolling = true
+            }
+            mainViewModel.tryGenerateRandomNumber = false
+        }
+    }
+
     val sharedTiltState = rememberSharedTiltState()
 
     PageColumn(sharedTiltState = sharedTiltState) {
@@ -115,7 +144,9 @@ fun RandomNumberScreen() {
                     data = data,
                     selectedItemPosition = selectedMin,
                     onItemSelected = { _, _, position ->
-                        selectedMin = position },
+                        scope.launch {
+                            repositorySetInt(context.randomStore, position, RandomRepository.MIN)
+                        } },
                     modifier = Modifier.fillMaxHeight().weight(1f),
                     factory = {
                         isCurved = true // 3D效果
@@ -138,10 +169,16 @@ fun RandomNumberScreen() {
                                 }
                             }
                             override fun onWheelSelected(position: Int) {
-                                selectedMax = max(selectedMax, selectedMin)
+                                scope.launch {
+                                    repositorySetInt(context.randomStore, max(selectedMax, selectedMin), RandomRepository.MAX)
+                                }
                             }
                             override fun onWheelScrollStateChanged(state: Int) {
                                 canGenerate = state != WheelPicker.SCROLL_STATE_IDLE
+                                if (canGenerate) {
+                                    mainViewModel.randomNumberMax = selectedMax
+                                    mainViewModel.randomNumberMin = selectedMin
+                                }
                             }
                         })
                     }
@@ -200,9 +237,11 @@ fun RandomNumberScreen() {
                         enabled = !isRolling,
                         onClick = {
                             if (canGenerate) {
-                                prefs.edit { putInt("random_number_min", selectedMin) }
-                                prefs.edit { putInt("random_number_max", selectedMax) }
-                                isRolling = true
+                                scope.launch {
+                                    repositorySetInt(context.randomStore, selectedMax, RandomRepository.MAX)
+                                    repositorySetInt(context.randomStore, selectedMin, RandomRepository.MIN)
+                                    isRolling = true
+                                }
                             } },) {
                         Text("生成", fontSize = 18.sp)
                     }
@@ -213,7 +252,9 @@ fun RandomNumberScreen() {
                     data = data,
                     selectedItemPosition = selectedMax,
                     onItemSelected = { _, _, position ->
-                        selectedMax = position },
+                        scope.launch {
+                            repositorySetInt(context.randomStore, position, RandomRepository.MAX)
+                        } },
                     modifier = Modifier.fillMaxHeight().weight(1f),
                     factory = {
                         isCurved = true
@@ -234,9 +275,17 @@ fun RandomNumberScreen() {
                                 }
                             }
                             override fun onWheelSelected(position: Int) {
-                                selectedMin = min(selectedMin, selectedMax)
+                                scope.launch {
+                                    repositorySetInt(context.randomStore, min(selectedMin, selectedMax), RandomRepository.MIN)
+                                }
                             }
-                            override fun onWheelScrollStateChanged(state: Int) {}
+                            override fun onWheelScrollStateChanged(state: Int) {
+                                canGenerate = state != WheelPicker.SCROLL_STATE_IDLE
+                                if (canGenerate) {
+                                    mainViewModel.randomNumberMax = selectedMax
+                                    mainViewModel.randomNumberMin = selectedMin
+                                }
+                            }
                         })
                     }
                 )

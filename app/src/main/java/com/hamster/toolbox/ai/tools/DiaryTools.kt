@@ -17,7 +17,7 @@ class CreateNewDiaryTool(
     private val diaryViewModel: DiaryViewModel
 ) : Tool {
     override val name = "create_new_diary"
-    override val description = "创建新日记。"
+    override val description = "创建新日记。禁止在用户没有明确提出创建日记的需求的情况下调用。"
     override val scope = ToolScope.DIARY
 
     override val parameters: Map<String, Any> = mapOf(
@@ -69,7 +69,7 @@ class GetDiaryContentTool(
     private val onConfirm: suspend (String, String) -> Boolean
 ) : Tool {
     override val name = "get_diary_content"
-    override val description = "仅在用户要求获取标题建议时调用此工具，其他时候禁止调用。"
+    override val description = "仅在用户要求获取标题建议时调用此工具，禁止除此以外的情况下调用。"
     override val scope = ToolScope.DIARY
 
     override val parameters: Map<String, Any> = mapOf(
@@ -99,7 +99,7 @@ class ProvideDiaryTitleSuggestionTool(
     private val diaryViewModel: DiaryViewModel
 ) : Tool {
     override val name = "provide_diary_title_suggestion"
-    override val description = "给出日记标题建议，在获取用户日记内容后调取此工具，调用结束后如果用户没有其他需求即可结束本次对话。"
+    override val description = "给出日记标题建议，在获取用户日记内容后调取此工具。禁止在用户没有明确提出提供标题建议的需求时调用。"
     override val scope = ToolScope.DIARY
 
     override val parameters: Map<String, Any> = mapOf(
@@ -134,7 +134,7 @@ class ProvideDiaryTitleSuggestionTool(
 
 class GetDiaryUsageTool : Tool {
     override val name = "get_diary_usage"
-    override val description = "获取日记的使用方法，仅当用户对日记功能有疑问时调用此工具。"
+    override val description = "获取日记的使用方法，仅当用户对日记功能有疑问时调用此工具。禁止除此以外的情况下调用。"
     override val scope = ToolScope.DIARY
 
     override val parameters: Map<String, Any> = mapOf(

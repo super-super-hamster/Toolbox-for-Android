@@ -1,8 +1,6 @@
 package com.hamster.toolbox.screen.ruler
 
 import android.content.Context
-import android.util.DisplayMetrics
-import android.view.WindowManager
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -19,6 +17,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,19 +28,28 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hamster.toolbox.ai.AI
 import com.hamster.toolbox.ai.tools.ToolScope
 import com.hamster.toolbox.compose.SliderDialog
-import com.hamster.toolbox.compose.rememberFloatPreference
+import com.hamster.toolbox.repository.RulerRepository
+import com.hamster.toolbox.repository.repositorySetFloat
+import com.hamster.toolbox.repository.rulerStore
+import kotlinx.coroutines.launch
+import androidx.compose.ui.platform.LocalConfiguration
 
 @Composable
 fun RulerScreen() {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val rulerRepository = remember { RulerRepository(context.rulerStore) }
+
     LaunchedEffect(Unit) {
-        AI.setScope(ToolScope.RULE)
+        AI.setScope(ToolScope.RULER)
     }
 
     var showCalibrationDialog by remember { mutableStateOf(false) }
-    var zoomFactor by rememberFloatPreference("ruler_zoom_factor", 1f)
+    val zoomFactor by rulerRepository.zoomFactorFlow.collectAsStateWithLifecycle(initialValue = 1f)
 
     // 获取每毫米对应的物理像素数
     val pxPerMm = rememberPxPerMm() * zoomFactor
@@ -86,11 +94,13 @@ fun RulerScreen() {
                 title = "校准",
                 content = "修改缩放倍数",
                 value = zoomFactor,
-                onValueChange = { zoomFactor = it },
+                onValueChange = {
+                    scope.launch {
+                        repositorySetFloat(context.rulerStore, it, RulerRepository.ZOOM_FACTOR)
+                    } },
                 onCancel = {},
                 onConfirm = { true },
                 onDismissRequest = { showCalibrationDialog = false },
-                setValue = { zoomFactor = it }
             )
         }
     }
@@ -167,10 +177,14 @@ fun RulerContent(
 @Composable
 fun rememberPxPerMm(): Float {
     val context = LocalContext.current
-    return remember(context) {
-        val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        val metrics = DisplayMetrics()
-        windowManager.defaultDisplay.getRealMetrics(metrics)
-        metrics.ydpi / 25.4f
+    val configuration = LocalConfiguration.current
+
+    return remember(context, configuration) {
+        val ydpi = getPhysicalYdpi(context)
+        ydpi / 25.4f
     }
+}
+
+private fun getPhysicalYdpi(context: Context): Float {
+    return context.resources.displayMetrics.ydpi
 }

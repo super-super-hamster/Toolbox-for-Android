@@ -75,10 +75,11 @@ import com.hamster.toolbox.compose.PageColumn
 import com.hamster.toolbox.compose.StandardDialog
 import com.hamster.toolbox.compose.TabItem
 import com.hamster.toolbox.compose.Tabs
-import com.hamster.toolbox.compose.rememberBooleanPreference
 import com.hamster.toolbox.compose.rememberSharedTiltState
 import com.hamster.toolbox.compose.squircleShape
 import com.hamster.toolbox.main.MainViewModel
+import com.hamster.toolbox.repository.DebugRepository
+import com.hamster.toolbox.repository.debugStore
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -94,6 +95,7 @@ fun TimeScreen(
 ) {
     val sharedTiltState = rememberSharedTiltState()
     val context = LocalContext.current
+    val debugRepository = remember { DebugRepository(context.debugStore) }
 
     LaunchedEffect(Unit) {
         AI.setScope(ToolScope.TIME)
@@ -102,7 +104,7 @@ fun TimeScreen(
     var selectedIndex by remember { mutableIntStateOf(2) }
     var hasPermission by remember { mutableStateOf(true) }
 
-    var showPackageName by rememberBooleanPreference("super_hamster_show_package_name", false)
+    val showPackageName by debugRepository.showPackageNameFlow.collectAsStateWithLifecycle(initialValue = false)
 
     val invisibleAppsSet by viewModel.invisibleApps.collectAsStateWithLifecycle()
 
