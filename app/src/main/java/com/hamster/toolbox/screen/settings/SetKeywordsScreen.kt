@@ -3,8 +3,6 @@ package com.hamster.toolbox.screen.settings
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
@@ -21,10 +19,10 @@ import com.hamster.toolbox.ai.KeywordsData
 import com.hamster.toolbox.compose.EditTextDialog
 import com.hamster.toolbox.compose.InquiryItem
 import com.hamster.toolbox.compose.ItemGroup
-import com.hamster.toolbox.compose.PageColumn
-import com.hamster.toolbox.utils.ScrollTarget
 import com.hamster.toolbox.compose.ClickItem
+import com.hamster.toolbox.compose.VerticalScrollPageColumn
 import com.hamster.toolbox.compose.rememberSharedTiltState
+import com.hamster.toolbox.compose.scrollTargetId
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -42,18 +40,17 @@ fun SetKeywordsScreen(
         mutableStateListOf<KeywordsData>().apply { addAll(initialList) }
     }
 
-    val targets = remember { mutableMapOf<String, ScrollTarget>() }
     val sharedTiltState = rememberSharedTiltState()
 
-    fun getModifier(id: String): Modifier {
-        return targets.getOrPut(id) { ScrollTarget() }.modifier
-    }
-
-    PageColumn(modifier = Modifier.verticalScroll(rememberScrollState()),sharedTiltState = sharedTiltState) {
+    VerticalScrollPageColumn(
+        sharedTiltState = sharedTiltState,
+        scrollTarget = mainViewModel.settingsScrollTarget,
+        scrollTrigger = mainViewModel.settingsScrollTrigger
+    ) {
         ItemGroup(titleState = sharedTiltState) {
             keywordsList.forEachIndexed { index, keyword ->
                 InquiryItem(
-                    modifier = getModifier(keyword.word),
+                    modifier = Modifier.scrollTargetId(keyword.word),
                     title = keyword.word,
                     summary = "",
                     dialogTitle = "\"" + keyword.word + "\"",

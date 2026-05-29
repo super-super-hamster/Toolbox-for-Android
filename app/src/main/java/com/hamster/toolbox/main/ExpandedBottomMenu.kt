@@ -141,6 +141,7 @@ fun ExpandedBottomMenu(
                 inputText = inputText,
                 setInputText = { setInputText(it) },
                 onDragDown = onDragDown,
+                onNavigate = { onNavigate(it) }
             )
         },
         TabItem(title = "菜单") {
@@ -265,6 +266,7 @@ fun Assistant(
     mainViewModel: MainViewModel,
     setInputText: (String) -> Unit,
     onDragDown: () -> Unit,
+    onNavigate: (route: Route) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
 
@@ -434,7 +436,7 @@ fun Assistant(
 
                             mainViewModel.viewModelScope.launch {
                                 try {
-                                    AI.chatWithAssistant(inputText, apiKey, mainViewModel)
+                                    AI.chatWithAssistant(inputText, apiKey, mainViewModel) { onNavigate(it) }
                                 } finally {
                                     isSending = false
                                 }
@@ -666,7 +668,7 @@ fun ChatConfirmCard(
                                 enabled = !isAnswered,
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = colorResource(R.color.btn_confirm),
-                                    disabledContainerColor = colorResource(R.color.mikuGreen).copy(alpha = 0.1f)
+                                    disabledContainerColor = colorResource(R.color.mikuGreen)
                                 ),
                                 onClick = {
                                     setIsAnswered(true)

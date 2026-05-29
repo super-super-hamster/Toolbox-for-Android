@@ -70,8 +70,16 @@ import com.airbnb.lottie.compose.rememberLottieDynamicProperty
 import com.hamster.toolbox.R
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.composed
 import androidx.compose.ui.draw.alpha
+import com.hamster.toolbox.utils.ScrollTarget
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlin.math.abs
 
 @Composable
@@ -121,6 +129,51 @@ fun PageColumn(
             Spacer(modifier = Modifier.height(dimensionResource(R.dimen.bottom_padding)))
         }
     }
+}
+
+@Composable
+fun VerticalScrollPageColumn(
+    modifier: Modifier = Modifier,
+    sharedTiltState: SharedTiltState,
+    scrollTrigger: Int,
+    scrollTarget: String?,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val targets = remember { mutableMapOf<String, ScrollTarget>() }
+
+    fun scrollTo(id: String?) {
+        if (!id.isNullOrEmpty()) {
+            coroutineScope.launch {
+                delay(400)
+                targets[id]?.scrollTo(context)
+            }
+        }
+    }
+
+    LaunchedEffect(scrollTrigger) {
+        scrollTo(scrollTarget)
+    }
+
+    CompositionLocalProvider(LocalScrollTargets provides targets) {
+        PageColumn(
+            modifier = modifier.verticalScroll(rememberScrollState()),
+            sharedTiltState = sharedTiltState
+        ) {
+            content()
+        }
+    }
+}
+// TODO:fuuuuuuuck
+val LocalScrollTargets = compositionLocalOf<MutableMap<String, ScrollTarget>> {
+    error("只能在 VerticalScrollPageColumn 内部使用此 Modifier")
+}
+
+fun Modifier.scrollTargetId(id: String): Modifier = composed {
+    val targets = LocalScrollTargets.current
+    val targetModifier = remember(id) { targets.getOrPut(id) { ScrollTarget() }.modifier }
+    this.then(targetModifier)
 }
 
 @Composable

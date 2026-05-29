@@ -3,6 +3,8 @@ package com.hamster.toolbox.ai
 import android.content.Context
 import androidx.lifecycle.viewModelScope
 import com.google.gson.Gson
+import com.hamster.toolbox.AssistantSettings
+import com.hamster.toolbox.Route
 import com.hamster.toolbox.repository.SettingsRepository
 import com.hamster.toolbox.ai.tools.ToolRegistry
 import com.hamster.toolbox.ai.tools.ToolScope
@@ -20,12 +22,13 @@ import kotlin.math.max
 
 object AI {
     private val apiService = AiService.service
-//    val chatHistory = mutableStateListOf<Message>()
     val toolRegistry = ToolRegistry()
     lateinit var settingsRepository: SettingsRepository
 
-    suspend fun chatWithAssistant(message: String, apiKey: String?, mainViewModel: MainViewModel) {
+    suspend fun chatWithAssistant(message: String, apiKey: String?, mainViewModel: MainViewModel, onNavigate: (Route) -> Unit) {
         if (apiKey.isNullOrBlank()) {
+            mainViewModel.setSettingsScrollTarget("api_key")
+            onNavigate(AssistantSettings)
             return
         }
 

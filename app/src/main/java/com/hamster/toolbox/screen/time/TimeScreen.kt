@@ -85,8 +85,6 @@ import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
 
-// TODO: 时间加载
-
 @Composable
 fun TimeScreen(
     viewModel: TimeViewModel,

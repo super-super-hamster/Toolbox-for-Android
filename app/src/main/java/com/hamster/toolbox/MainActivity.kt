@@ -82,10 +82,14 @@ import com.airbnb.lottie.compose.rememberLottieComposition
 import com.hamster.toolbox.ai.AI
 import com.hamster.toolbox.ai.AI.toolRegistry
 import com.hamster.toolbox.ai.SpeechRecognizerManager
+import com.hamster.toolbox.ai.tools.CreateNewCourseTool
 import com.hamster.toolbox.ai.tools.CreateNewDiaryTool
+import com.hamster.toolbox.ai.tools.DeleteCourseTool
 import com.hamster.toolbox.ai.tools.GenerateRandomNumberTool
+import com.hamster.toolbox.ai.tools.GetAllScheduleTool
 import com.hamster.toolbox.ai.tools.GetBasicInformationTool
 import com.hamster.toolbox.ai.tools.GetColorPickerUsageTool
+import com.hamster.toolbox.ai.tools.GetCurrentWeekScheduleTool
 import com.hamster.toolbox.ai.tools.GetDecibelMeterUsageTool
 import com.hamster.toolbox.ai.tools.GetDiaryContentTool
 import com.hamster.toolbox.ai.tools.GetDiaryUsageTool
@@ -95,10 +99,12 @@ import com.hamster.toolbox.ai.tools.GetPickedColorTool
 import com.hamster.toolbox.ai.tools.GetRandomNumberRangeTool
 import com.hamster.toolbox.ai.tools.GetRandomUsageTool
 import com.hamster.toolbox.ai.tools.GetRulerUsageTool
+import com.hamster.toolbox.ai.tools.GetScheduleUsageTool
 import com.hamster.toolbox.ai.tools.GetWeatherTool
 import com.hamster.toolbox.ai.tools.ProvideDiaryTitleSuggestionTool
 import com.hamster.toolbox.ai.tools.SetAlarmTool
 import com.hamster.toolbox.ai.tools.SetRandomNumberRangeTool
+import com.hamster.toolbox.ai.tools.SetScheduleSemesterStartDate
 import com.hamster.toolbox.ai.tools.SetScopeTool
 import com.hamster.toolbox.compose.AnimationButton
 import com.hamster.toolbox.compose.ButtonPro
@@ -148,12 +154,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 // TODO: 天气,向下滑动天气透明度逐渐降低
-// TODO: preferencesDataStore
 // TODO: 生辰
 // TODO: 菜谱
 // TODO: 书/影评
 // TODO: 中文加密（均匀词频？）
 // TODO: 文表图
+// TODO: 语音中结果为上一条
 
 class MainActivity : FragmentActivity() {
     // 跟随应用生命周期的协程作用域
@@ -247,7 +253,15 @@ class MainActivity : FragmentActivity() {
                     GetGeneratedRandomNumberTool(mainViewModel),
                     GenerateRandomNumberTool(mainViewModel),
                     GetRandomUsageTool(),
-                    GetRulerUsageTool()
+                    GetRulerUsageTool(),
+                    GetCurrentWeekScheduleTool(context),
+                    GetAllScheduleTool(context),
+                    CreateNewCourseTool(context),
+                    GetScheduleUsageTool(),
+                    SetScheduleSemesterStartDate(context),
+                    DeleteCourseTool(context) { title, message ->
+                        mainViewModel.requireUserConfirmation(title, message)
+                    }
                 )
             }
 

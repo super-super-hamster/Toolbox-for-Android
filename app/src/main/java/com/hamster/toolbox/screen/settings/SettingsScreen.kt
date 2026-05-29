@@ -15,8 +15,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -43,21 +41,20 @@ import com.hamster.toolbox.compose.DatePicker
 import com.hamster.toolbox.compose.EditTextItem
 import com.hamster.toolbox.compose.InquiryDialog
 import com.hamster.toolbox.compose.ItemGroup
-import com.hamster.toolbox.compose.PageColumn
 import com.hamster.toolbox.compose.SwitchItem
+import com.hamster.toolbox.compose.VerticalScrollPageColumn
 import com.hamster.toolbox.compose.rememberSharedTiltState
 import com.hamster.toolbox.compose.rememberStringPreference
+import com.hamster.toolbox.compose.scrollTargetId
 import com.hamster.toolbox.main.MainViewModel
 import com.hamster.toolbox.repository.SettingsRepository
 import com.hamster.toolbox.repository.repositorySetBoolean
 import com.hamster.toolbox.repository.repositorySetString
 import com.hamster.toolbox.repository.settingsStore
 import com.hamster.toolbox.system.Receiver
-import com.hamster.toolbox.utils.ScrollTarget
 import com.hamster.toolbox.utils.authenticate
 import com.hamster.toolbox.utils.convertDateToMillis
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -83,7 +80,6 @@ fun SettingsScreen(
     }
 
     val sharedTiltState = rememberSharedTiltState()
-    val targets = remember { mutableMapOf<String, ScrollTarget>() }
 
     val uriHandler = LocalUriHandler.current
 
@@ -92,6 +88,7 @@ fun SettingsScreen(
     ) { uri ->
         if (uri != null) {
             scope.launch {
+                setLoading(true)
                 val path = SettingsUtils.saveImageToInternalStorage(context, uri)
                 if (path != null) {
                     scope.launch {
@@ -101,27 +98,11 @@ fun SettingsScreen(
                 } else {
                     Toast.makeText(context, "更新头像失败", Toast.LENGTH_SHORT).show()
                 }
+                setLoading(false)
             }
         }
     }
-
-    fun getModifier(id: String): Modifier {
-        return targets.getOrPut(id) { ScrollTarget() }.modifier
-    }
-
-    fun scrollTo(id: String?) {
-        if (!id.isNullOrEmpty()) {
-            scope.launch {
-                delay(400)
-                targets[id]?.scrollTo(context)
-            }
-        }
-    }
-
-    LaunchedEffect(mainViewModel.settingsScrollTrigger) {
-        scrollTo(mainViewModel.settingsScrollTarget)
-    }
-
+    
     val userName by settingsRepository.userNameFlow.collectAsStateWithLifecycle(initialValue = "无名氏")
     val semesterStartDate by settingsRepository.semesterStartDateFlow.collectAsStateWithLifecycle(initialValue = "")
     val scheduleJson by rememberStringPreference("schedule_json", "")
@@ -146,13 +127,17 @@ fun SettingsScreen(
         }
     }
 
-    PageColumn(modifier = Modifier.verticalScroll(rememberScrollState()), sharedTiltState = sharedTiltState) {
+    VerticalScrollPageColumn(
+        sharedTiltState = sharedTiltState,
+        scrollTarget = mainViewModel.settingsScrollTarget,
+        scrollTrigger = mainViewModel.settingsScrollTrigger
+    ) {
         ItemGroup(titleState = sharedTiltState) {
             ClickItem(title = "用户头像", icon = R.drawable.ic_user_avatar) {
                 showUserAvatarOptionsDialog = true
             }
             EditTextItem(
-                modifier = getModifier("nickname"),
+                modifier = Modifier.scrollTargetId("nickname"),
                 title = "昵称",
                 dialogTitle = "修改昵称",
                 initialValue = userName,
@@ -173,7 +158,7 @@ fun SettingsScreen(
 
         ItemGroup(titleState = sharedTiltState) {
             ClickItem(
-                modifier = getModifier("semester_start_date"),
+                modifier = Modifier.scrollTargetId("semester_start_date"),
                 title = "学期开始日期",
                 summary = if (semesterStartDate == "") "未设置" else semesterStartDate,
                 icon = R.drawable.ic_calendar
@@ -181,19 +166,19 @@ fun SettingsScreen(
                 showDatePickerDialog = true
             }
             ClickItem(
-                modifier = getModifier("import_curriculum_options"),
+                modifier = Modifier.scrollTargetId("import_curriculum_options"),
                 title = "导入课程表",
                 summary = if (scheduleJson.isBlank()) "未设置" else "已设置",
                 icon = R.drawable.ic_curriculum
             ) {
                 if (semesterStartDate.isEmpty()) {
-                    scrollTo("semester_start_date")
+                    mainViewModel.setSettingsScrollTarget("semester_start_date")
                     return@ClickItem
                 }
                 onNavigate(ImportCurriculum)
             }
             SwitchItem(
-                modifier = getModifier("class_notification"),
+                modifier = Modifier.scrollTargetId("class_notification"),
                 title = "上课提醒",
                 summary = "上课前发送通知",
                 checked = isClassRemindEnabled,
@@ -224,7 +209,7 @@ fun SettingsScreen(
 
         ItemGroup(titleState = sharedTiltState) {
             SwitchItem(
-                modifier = getModifier("is_diary_using_password"),
+                modifier = Modifier.scrollTargetId("is_diary_using_password"),
                 title = "使用密码保护日记",
                 checked = isDiaryUsingPassword,
                 icon = R.drawable.ic_diary
@@ -256,7 +241,7 @@ fun SettingsScreen(
 
         ItemGroup(titleState = sharedTiltState) {
             ClickItem(
-                modifier = getModifier("assistant_settings"),
+                modifier = Modifier.scrollTargetId("assistant_settings"),
                 title = "助手设置",
                 icon = R.drawable.ic_assistant
             ) {
@@ -268,7 +253,7 @@ fun SettingsScreen(
 
         ItemGroup(titleState = sharedTiltState) {
             ClickItem(
-                modifier = getModifier("GitHub"),
+                modifier = Modifier.scrollTargetId("GitHub"),
                 title = "Github",
                 icon = R.drawable.ic_github
             ) {

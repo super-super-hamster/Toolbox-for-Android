@@ -2,8 +2,6 @@ package com.hamster.toolbox.screen.settings
 
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -28,9 +26,11 @@ import com.hamster.toolbox.compose.ClickItem
 import com.hamster.toolbox.compose.EditTextItem
 import com.hamster.toolbox.compose.ItemGroup
 import com.hamster.toolbox.compose.OptionDialog
-import com.hamster.toolbox.compose.PageColumn
 import com.hamster.toolbox.compose.SliderItem
+import com.hamster.toolbox.compose.VerticalScrollPageColumn
 import com.hamster.toolbox.compose.rememberSharedTiltState
+import com.hamster.toolbox.compose.scrollTargetId
+import com.hamster.toolbox.main.MainViewModel
 import com.hamster.toolbox.repository.repositorySetFloat
 import com.hamster.toolbox.repository.repositorySetString
 import com.hamster.toolbox.repository.settingsStore
@@ -40,6 +40,7 @@ import kotlin.math.roundToInt
 
 @Composable
 fun AssistantSettingsScreen(
+    mainViewModel: MainViewModel,
     setLoading: (Boolean) -> Unit,
     onNavigate: (Route) -> Unit
 ) {
@@ -74,9 +75,14 @@ fun AssistantSettingsScreen(
         }
     }
 
-    PageColumn(modifier = Modifier.verticalScroll(rememberScrollState()),sharedTiltState = sharedTiltState) {
+    VerticalScrollPageColumn(
+        sharedTiltState = sharedTiltState,
+        scrollTrigger = mainViewModel.settingsScrollTrigger,
+        scrollTarget = mainViewModel.settingsScrollTarget
+    ) {
         ItemGroup(titleState = sharedTiltState) {
             EditTextItem(
+                modifier = Modifier.scrollTargetId("assistant_name"),
                 title = "助手昵称",
                 summary = assistantName,
                 dialogTitle = "修改助手昵称",
@@ -99,6 +105,7 @@ fun AssistantSettingsScreen(
 
         ItemGroup(titleState = sharedTiltState) {
             EditTextItem(
+                modifier = Modifier.scrollTargetId("api_key"),
                 title = "大模型 API",
                 summary = if (aiApiKey.isEmpty()) "未设置" else "******",
                 dialogTitle = "API Key",
@@ -116,6 +123,7 @@ fun AssistantSettingsScreen(
             )
 
             ClickItem(
+                modifier = Modifier.scrollTargetId("model_name"),
                 title = "模型选择",
                 summary = currentModelName,
                 icon = R.drawable.ic_deepseek
@@ -124,6 +132,7 @@ fun AssistantSettingsScreen(
             }
 
             ClickItem(
+                modifier = Modifier.scrollTargetId("get_balance"),
                 title = "余额查询",
                 summary = aiBalance,
                 icon = R.drawable.ic_coin
@@ -136,6 +145,7 @@ fun AssistantSettingsScreen(
             }
 
             ClickItem(
+                modifier = Modifier.scrollTargetId("assistant_tips"),
                 title = "助手 Tips",
                 icon = R.drawable.ic_tips
             ) {
@@ -147,6 +157,7 @@ fun AssistantSettingsScreen(
 
         ItemGroup(titleState = sharedTiltState) {
             EditTextItem(
+                modifier = Modifier.scrollTargetId("weather_api_key"),
                 title = "天气 API",
                 summary = if (weatherApiKey.isEmpty()) "未设置" else "******",
                 dialogTitle = "API Key",
@@ -164,6 +175,7 @@ fun AssistantSettingsScreen(
             )
 
             EditTextItem(
+                modifier = Modifier.scrollTargetId("weather_api_host"),
                 title = "天气 Host",
                 summary = if (weatherApiHost.isEmpty()) "未设置" else "******",
                 dialogTitle = "API Host",
@@ -180,7 +192,7 @@ fun AssistantSettingsScreen(
                 }
             )
 
-            ClickItem(title = "天气 Tips", icon = R.drawable.ic_tips) {
+            ClickItem(title = "天气 Tips", icon = R.drawable.ic_tips, modifier = Modifier.scrollTargetId("weather_tips")) {
                 onNavigate(WeatherTips)
             }
         }
@@ -189,6 +201,7 @@ fun AssistantSettingsScreen(
 
         ItemGroup(titleState = sharedTiltState) {
             ClickItem(
+                modifier = Modifier.scrollTargetId("keywords"),
                 title = "热词",
                 summary = "热词更容易被语音识别",
                 icon = R.drawable.ic_characters
@@ -197,6 +210,7 @@ fun AssistantSettingsScreen(
             }
 
             SliderItem(
+                modifier = Modifier.scrollTargetId("ai_temperature"),
                 title = "温度",
                 icon = R.drawable.ic_thermometer,
                 dialogTitle = "修改温度",

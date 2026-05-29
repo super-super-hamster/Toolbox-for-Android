@@ -1,5 +1,6 @@
 package com.hamster.toolbox.ai.tools
 
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -41,7 +42,7 @@ class SetScopeTool(private val registry: ToolRegistry) : Tool {
         "properties" to mapOf(
             "domain" to mapOf(
                 "type" to "string",
-                "enum" to listOf("SETTINGS", "SCHEDULE", "DIARY"),
+                "enum" to listOf("DIARY", "SETTINGS", "SCHEDULE", "RULER", "RANDOM", "COLOR_PICKER", "TIME", "DECIBEL_METER"),
                 "description" to "需要的特定工具领域"
             )
         ),
@@ -54,8 +55,7 @@ class SetScopeTool(private val registry: ToolRegistry) : Tool {
         val domainStr = jsonObject.get("domain")?.asString
             ?: return "执行失败：缺少 domain 参数"
 
-        val scope: ToolScope = ToolScope.GENERAL
-        when (domainStr) {
+        val scope = when (domainStr) {
             "DIARY" -> ToolScope.DIARY
             "SETTINGS" -> ToolScope.SETTINGS
             "SCHEDULE" -> ToolScope.SCHEDULE
@@ -64,7 +64,10 @@ class SetScopeTool(private val registry: ToolRegistry) : Tool {
             "COLOR_PICKER" -> ToolScope.COLOR_PICKER
             "TIME" -> ToolScope.TIME
             "DECIBEL_METER" -> ToolScope.DECIBEL_METER
+            else -> ToolScope.GENERAL
         }
+
+        Log.d("fuck", "current scope ${scope.name}")
 
         registry.setCurrentScope(scope)
 
@@ -84,8 +87,11 @@ class ToolRegistry {
 
     // 设置作用域
     fun setCurrentScope(currentScope: ToolScope?) {
+//        currentScope?.name?.let { Log.d("fuck", it) }
         if (currentScope != null) {
+//            Log.d("fuck", "success")
             activeScopes = currentScope
+//            Log.d("fuck", "f**k $activeScopes")
         }
     }
 
@@ -94,6 +100,7 @@ class ToolRegistry {
         return allTools.values
             .filter { it.scope == ToolScope.GENERAL || it.scope == activeScopes }
             .map { tool ->
+//                Log.d("fuck", tool.name)
                 ToolDefinition(
                     function = FunctionDefinition(
                         name = tool.name,

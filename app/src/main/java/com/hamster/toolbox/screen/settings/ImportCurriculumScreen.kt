@@ -21,7 +21,6 @@ import com.hamster.toolbox.ai.AI
 import com.hamster.toolbox.compose.ClickItem
 import com.hamster.toolbox.compose.EditTextItem
 import com.hamster.toolbox.compose.ItemGroup
-import com.hamster.toolbox.compose.PageColumn
 import com.hamster.toolbox.compose.rememberSharedTiltState
 import com.hamster.toolbox.utils.copyCurriculumJSONPrompt
 import com.hamster.toolbox.utils.validateAndSaveJson
@@ -29,7 +28,10 @@ import kotlinx.coroutines.launch
 import com.hamster.toolbox.R
 import com.hamster.toolbox.Route
 import com.hamster.toolbox.ScheduleTips
+import com.hamster.toolbox.compose.VerticalScrollPageColumn
 import com.hamster.toolbox.compose.rememberStringPreference
+import com.hamster.toolbox.compose.scrollTargetId
+import com.hamster.toolbox.main.MainViewModel
 import com.hamster.toolbox.repository.SettingsRepository
 import com.hamster.toolbox.repository.settingsStore
 import com.hamster.toolbox.screen.schedule.Course
@@ -37,6 +39,7 @@ import com.hamster.toolbox.screen.schedule.Course
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ImportCurriculumScreen(
+    mainViewModel: MainViewModel,
     onShowLoading: (Boolean) -> Unit,
     onNavigate: (Route) -> Unit,
     onNavigateToSettings: (String) -> Unit,
@@ -51,9 +54,14 @@ fun ImportCurriculumScreen(
 
     val scheduleJson by rememberStringPreference("schedule_json", "")
 
-    PageColumn(sharedTiltState = sharedTiltState) {
+    VerticalScrollPageColumn(
+        sharedTiltState = sharedTiltState,
+        scrollTrigger = mainViewModel.settingsScrollTrigger,
+        scrollTarget = mainViewModel.settingsScrollTarget
+    ) {
         ItemGroup(titleState = sharedTiltState) {
             EditTextItem(
+                modifier = Modifier.scrollTargetId("import_from_natural_language"),
                 title = "通过自然语言导入",
                 dialogTitle = "输入自然语言",
                 initialValue = naturalLanguage,
@@ -80,6 +88,7 @@ fun ImportCurriculumScreen(
                 }
             )
             EditTextItem(
+                modifier = Modifier.scrollTargetId("import_from_json"),
                 title = "通过JSON导入",
                 summary = "将JSON文本导入为课程表",
                 dialogTitle = "输入JSON",
@@ -94,9 +103,6 @@ fun ImportCurriculumScreen(
                             val validJsonString = gson.toJson(courses)
 
                             prefs.edit { putString("schedule_json", validJsonString) }
-//                            scope.launch {
-//                                repositorySetString(context.settingsStore, validJsonString, SettingsRepository.SCHEDULE_JSON)
-//                            }
                         } catch (e: Exception) {
                             e.printStackTrace()
                         }
@@ -104,7 +110,7 @@ fun ImportCurriculumScreen(
                     true
                 }
             )
-            ClickItem(title = "复制提示词", summary = "通过外部AI生成符合要求的JSON文本") {
+            ClickItem(title = "复制提示词", summary = "通过外部AI生成符合要求的JSON文本", modifier = Modifier.scrollTargetId("copy_prompt")) {
                 copyCurriculumJSONPrompt(context)
             }
         }
@@ -112,7 +118,7 @@ fun ImportCurriculumScreen(
         Spacer(modifier = Modifier.height(dimensionResource(R.dimen.item_group_gap)))
 
         ItemGroup(titleState = sharedTiltState) {
-            ClickItem(title = "课程表 Tips", icon = R.drawable.ic_tips) {
+            ClickItem(title = "课程表 Tips", icon = R.drawable.ic_tips, modifier = Modifier.scrollTargetId("schedule_tips")) {
                 onNavigate(ScheduleTips)
             }
         }

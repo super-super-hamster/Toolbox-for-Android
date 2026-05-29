@@ -45,6 +45,7 @@ fun NavGraphBuilder.settingsGraph(
             popExitTransition = { slideOutWithScalePopExit() }
         ) {
             ImportCurriculumScreen(
+                mainViewModel = mainViewModel,
                 onShowLoading = { isShowLoading ->
                     setLoading(isShowLoading)
                 },
@@ -74,6 +75,7 @@ fun NavGraphBuilder.settingsGraph(
             popExitTransition = { slideOutWithScalePopExit() }
         ) {
             AssistantSettingsScreen(
+                mainViewModel = mainViewModel,
                 setLoading = { setLoading(it) },
                 onNavigate = {
                     navController.navigate(it)
