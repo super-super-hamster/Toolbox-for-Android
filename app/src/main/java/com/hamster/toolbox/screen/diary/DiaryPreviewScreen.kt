@@ -52,8 +52,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hamster.toolbox.Diary
 import com.hamster.toolbox.R
 import com.hamster.toolbox.Route
-import com.hamster.toolbox.ai.AI
-import com.hamster.toolbox.ai.tools.ToolScope
 import com.hamster.toolbox.compose.DatePicker
 import com.hamster.toolbox.compose.InquiryDialog
 import com.hamster.toolbox.compose.ItemGroup
@@ -81,10 +79,6 @@ fun DiaryPreviewScreen(
     val settingsRepository = remember { SettingsRepository(context.settingsStore) }
     val sharedTiltState = rememberSharedTiltState()
 
-    LaunchedEffect(Unit) {
-        AI.setScope(ToolScope.DIARY)
-    }
-
     val diaries by viewModel.diaries.collectAsStateWithLifecycle(initialValue = emptyMap())
 
     // rememberSaveable 在页面重组或跳转返回后保留状态
@@ -102,7 +96,7 @@ fun DiaryPreviewScreen(
     val isDiaryUsingPassword by settingsRepository.isDiaryUsingPassword.collectAsStateWithLifecycle(initialValue = true)
 
     LaunchedEffect(Unit) {
-        if (isDiaryUsingPassword) {
+        if (isDiaryUsingPassword && viewModel.isLocked) {
             authenticate(
                 context = context,
                 title = "解锁日记",

@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -26,7 +27,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
@@ -421,7 +421,6 @@ fun OptionDialog(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DatePicker(
     title: String? = null,
@@ -434,26 +433,31 @@ fun DatePicker(
     StandardDialog(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
-                .padding(bottom = 12.dp)
-                .fillMaxWidth(0.85f)
+                .padding(bottom = 4.dp)
                 .scale(0.85f)
+                .fillMaxWidth(0.85f)
         ) {
-            DatePicker(
-                state = datePickerState,
-                title = {
-                    Text(
-                        text = title ?: "选择日期",
-                        modifier = Modifier.padding(start = 24.dp, end = 12.dp, top = 16.dp),
-                        style = MaterialTheme.typography.labelMedium
+            Box(
+                modifier = Modifier.requiredWidth(360.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                DatePicker(
+                    state = datePickerState,
+                    title = {
+                        Text(
+                            text = title ?: "选择日期",
+                            modifier = Modifier.padding(start = 24.dp, end = 12.dp, top = 16.dp),
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                    },
+                    colors = DatePickerDefaults.colors(
+                        containerColor = colorResource(R.color.bg_dialog),
+                        selectedDayContainerColor = colorResource(R.color.mikuGreen),
+                        todayDateBorderColor = colorResource(R.color.mikuGreen),
+                        selectedYearContainerColor = colorResource(R.color.mikuGreen)
                     )
-                },
-                colors = DatePickerDefaults.colors(
-                    containerColor = colorResource(R.color.bg_dialog),
-                    selectedDayContainerColor = colorResource(R.color.mikuGreen),
-                    todayDateBorderColor = colorResource(R.color.mikuGreen),
-                    selectedYearContainerColor = colorResource(R.color.mikuGreen)
                 )
-            )
+            }
 
             Row(
                 modifier = Modifier

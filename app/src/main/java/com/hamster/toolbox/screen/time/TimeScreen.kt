@@ -65,7 +65,7 @@ import com.airbnb.lottie.compose.rememberLottieComposition
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
 import com.hamster.toolbox.R
 import com.hamster.toolbox.ai.AI
-import com.hamster.toolbox.ai.tools.ToolScope
+//import com.hamster.toolbox.ai.tools.ToolScope
 import com.hamster.toolbox.compose.ExplanationItem
 import com.hamster.toolbox.compose.Heatmap
 import com.hamster.toolbox.compose.HorizontalLine
@@ -96,7 +96,7 @@ fun TimeScreen(
     val debugRepository = remember { DebugRepository(context.debugStore) }
 
     LaunchedEffect(Unit) {
-        AI.setScope(ToolScope.TIME)
+//        AI.setScope(ToolScope.TIME)
     }
 
     var selectedIndex by remember { mutableIntStateOf(2) }

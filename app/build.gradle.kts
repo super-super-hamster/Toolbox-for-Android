@@ -12,7 +12,7 @@ android {
 
     defaultConfig {
         applicationId = "com.hamster.toolbox"
-        minSdk = 26
+        minSdk = 35
         targetSdk = 36
         versionCode = 10103
         versionName = "1.0.3"
@@ -132,6 +132,7 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences:1.0.0")
     implementation("com.mikepenz:multiplatform-markdown-renderer-android:0.40.2")
     implementation("com.mikepenz:multiplatform-markdown-renderer-m3:0.40.2")
+    implementation("ai.koog:koog-agents:1.0.0")
     implementation(files("libs/sherpa-onnx.aar"))
 //    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar", "*.aar"))))
 }

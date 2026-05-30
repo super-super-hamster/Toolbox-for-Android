@@ -54,7 +54,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hamster.toolbox.R
 import com.hamster.toolbox.ai.AI
-import com.hamster.toolbox.ai.tools.ToolScope
+//import com.hamster.toolbox.ai.tools.ToolScope
 import com.hamster.toolbox.compose.PageColumn
 import com.hamster.toolbox.compose.SharedTiltState
 import com.hamster.toolbox.compose.StandardDialog
@@ -77,7 +77,7 @@ fun ScheduleScreen() {
     val settingsRepository = remember { SettingsRepository(context.settingsStore) }
 
     LaunchedEffect(Unit) {
-        AI.setScope(ToolScope.SCHEDULE)
+//        AI.setScope(ToolScope.SCHEDULE)
     }
 
     val totalWeeks = 20

@@ -35,7 +35,7 @@ import com.hamster.toolbox.ImportCurriculum
 import com.hamster.toolbox.R
 import com.hamster.toolbox.Route
 import com.hamster.toolbox.ai.AI
-import com.hamster.toolbox.ai.tools.ToolScope
+//import com.hamster.toolbox.ai.tools.ToolScope
 import com.hamster.toolbox.compose.ClickItem
 import com.hamster.toolbox.compose.DatePicker
 import com.hamster.toolbox.compose.EditTextItem
@@ -76,7 +76,7 @@ fun SettingsScreen(
     val settingsRepository = remember { SettingsRepository(context.settingsStore) }
 
     LaunchedEffect(Unit) {
-        AI.setScope(ToolScope.SETTINGS)
+//        AI.setScope(ToolScope.SETTINGS)
     }
 
     val sharedTiltState = rememberSharedTiltState()

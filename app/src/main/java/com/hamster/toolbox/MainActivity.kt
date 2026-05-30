@@ -3,7 +3,6 @@ package com.hamster.toolbox
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.compose.BackHandler
@@ -11,7 +10,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
@@ -79,33 +77,7 @@ import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.animateLottieCompositionAsState
 import com.airbnb.lottie.compose.rememberLottieComposition
-import com.hamster.toolbox.ai.AI
-import com.hamster.toolbox.ai.AI.toolRegistry
 import com.hamster.toolbox.ai.SpeechRecognizerManager
-import com.hamster.toolbox.ai.tools.CreateNewCourseTool
-import com.hamster.toolbox.ai.tools.CreateNewDiaryTool
-import com.hamster.toolbox.ai.tools.DeleteCourseTool
-import com.hamster.toolbox.ai.tools.GenerateRandomNumberTool
-import com.hamster.toolbox.ai.tools.GetAllScheduleTool
-import com.hamster.toolbox.ai.tools.GetBasicInformationTool
-import com.hamster.toolbox.ai.tools.GetColorPickerUsageTool
-import com.hamster.toolbox.ai.tools.GetCurrentWeekScheduleTool
-import com.hamster.toolbox.ai.tools.GetDecibelMeterUsageTool
-import com.hamster.toolbox.ai.tools.GetDiaryContentTool
-import com.hamster.toolbox.ai.tools.GetDiaryUsageTool
-import com.hamster.toolbox.ai.tools.GetGeneratedRandomNumberTool
-import com.hamster.toolbox.ai.tools.GetMeasureDecibelTool
-import com.hamster.toolbox.ai.tools.GetPickedColorTool
-import com.hamster.toolbox.ai.tools.GetRandomNumberRangeTool
-import com.hamster.toolbox.ai.tools.GetRandomUsageTool
-import com.hamster.toolbox.ai.tools.GetRulerUsageTool
-import com.hamster.toolbox.ai.tools.GetScheduleUsageTool
-import com.hamster.toolbox.ai.tools.GetWeatherTool
-import com.hamster.toolbox.ai.tools.ProvideDiaryTitleSuggestionTool
-import com.hamster.toolbox.ai.tools.SetAlarmTool
-import com.hamster.toolbox.ai.tools.SetRandomNumberRangeTool
-import com.hamster.toolbox.ai.tools.SetScheduleSemesterStartDate
-import com.hamster.toolbox.ai.tools.SetScopeTool
 import com.hamster.toolbox.compose.AnimationButton
 import com.hamster.toolbox.compose.ButtonPro
 import com.hamster.toolbox.compose.squircleShape
@@ -176,7 +148,6 @@ class MainActivity : FragmentActivity() {
 
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     @OptIn(ExperimentalMaterial3Api::class, ExperimentalHazeMaterialsApi::class)
-    @RequiresApi(Build.VERSION_CODES.R)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -230,39 +201,39 @@ class MainActivity : FragmentActivity() {
             )
 
             LaunchedEffect(Unit) {
-                AI.init(this@MainActivity.applicationContext, mainViewModel)
-                toolRegistry.registerAll(
-                    SetScopeTool(toolRegistry),
-                    SetAlarmTool(context) { title, message ->
-                        mainViewModel.requireUserConfirmation(title, message)
-                    },
-                    GetWeatherTool(context),
-                    GetBasicInformationTool(),
-                    GetColorPickerUsageTool(),
-                    GetPickedColorTool(mainViewModel),
-                    GetMeasureDecibelTool(decibelMeterViewModel),
-                    GetDecibelMeterUsageTool(),
-                    CreateNewDiaryTool(mainViewModel, diaryViewModel),
-                    GetDiaryContentTool(navController, diaryViewModel) { title, message ->
-                        mainViewModel.requireUserConfirmation(title, message)
-                    },
-                    ProvideDiaryTitleSuggestionTool(diaryViewModel),
-                    GetDiaryUsageTool(),
-                    SetRandomNumberRangeTool(mainViewModel),
-                    GetRandomNumberRangeTool(mainViewModel),
-                    GetGeneratedRandomNumberTool(mainViewModel),
-                    GenerateRandomNumberTool(mainViewModel),
-                    GetRandomUsageTool(),
-                    GetRulerUsageTool(),
-                    GetCurrentWeekScheduleTool(context),
-                    GetAllScheduleTool(context),
-                    CreateNewCourseTool(context),
-                    GetScheduleUsageTool(),
-                    SetScheduleSemesterStartDate(context),
-                    DeleteCourseTool(context) { title, message ->
-                        mainViewModel.requireUserConfirmation(title, message)
-                    }
-                )
+//                AI.init(this@MainActivity.applicationContext, mainViewModel)
+//                toolRegistry.registerAll(
+//                    SetScopeTool(toolRegistry),
+//                    SetAlarmTool(context) { title, message ->
+//                        mainViewModel.requireUserConfirmation(title, message)
+//                    },
+//                    GetWeatherTool(context),
+//                    GetBasicInformationTool(),
+//                    GetColorPickerUsageTool(),
+//                    GetPickedColorTool(mainViewModel),
+//                    GetMeasureDecibelTool(decibelMeterViewModel),
+//                    GetDecibelMeterUsageTool(),
+//                    CreateNewDiaryTool(mainViewModel, diaryViewModel),
+//                    GetDiaryContentTool(navController, diaryViewModel) { title, message ->
+//                        mainViewModel.requireUserConfirmation(title, message)
+//                    },
+//                    ProvideDiaryTitleSuggestionTool(diaryViewModel),
+//                    GetDiaryUsageTool(),
+//                    SetRandomNumberRangeTool(mainViewModel),
+//                    GetRandomNumberRangeTool(mainViewModel),
+//                    GetGeneratedRandomNumberTool(mainViewModel),
+//                    GenerateRandomNumberTool(mainViewModel),
+//                    GetRandomUsageTool(),
+//                    GetRulerUsageTool(),
+//                    GetCurrentWeekScheduleTool(context),
+//                    GetAllScheduleTool(context),
+//                    CreateNewCourseTool(context),
+//                    GetScheduleUsageTool(),
+//                    SetScheduleSemesterStartDate(context),
+//                    DeleteCourseTool(context) { title, message ->
+//                        mainViewModel.requireUserConfirmation(title, message)
+//                    }
+//                )
             }
 
             var showWeatherDetail by remember { mutableStateOf(false) }
@@ -300,6 +271,7 @@ class MainActivity : FragmentActivity() {
                 currentDestination?.hasRoute<Time>() == true -> "应用使用时间"
                 currentDestination?.hasRoute<ColorPicker>() == true -> "取色器"
                 currentDestination?.hasRoute<DiaryPreview>() == true -> "日记"
+                currentDestination?.hasRoute<Diary>() == true -> "日记"
                 currentDestination?.hasRoute<DecibelMeter>() == true -> "分贝仪"
                 currentDestination?.hasRoute<Debug>() == true -> "Debug"
                 else -> "Toolbox"

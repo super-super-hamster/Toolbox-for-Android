@@ -29,8 +29,6 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.hamster.toolbox.ai.AI
-import com.hamster.toolbox.ai.tools.ToolScope
 import com.hamster.toolbox.compose.SliderDialog
 import com.hamster.toolbox.repository.RulerRepository
 import com.hamster.toolbox.repository.repositorySetFloat
@@ -45,7 +43,7 @@ fun RulerScreen() {
     val rulerRepository = remember { RulerRepository(context.rulerStore) }
 
     LaunchedEffect(Unit) {
-        AI.setScope(ToolScope.RULER)
+//        AI.setScope(ToolScope.RULER)
     }
 
     var showCalibrationDialog by remember { mutableStateOf(false) }

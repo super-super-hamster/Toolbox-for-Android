@@ -43,7 +43,7 @@ import com.aigestudio.wheelpicker.WheelPicker
 import com.aigestudio.wheelpicker.compose.WheelPickerComposable
 import com.hamster.toolbox.R
 import com.hamster.toolbox.ai.AI
-import com.hamster.toolbox.ai.tools.ToolScope
+//import com.hamster.toolbox.ai.tools.ToolScope
 import com.hamster.toolbox.compose.ItemGroup
 import com.hamster.toolbox.compose.PageColumn
 import com.hamster.toolbox.compose.rememberSharedTiltState
@@ -67,7 +67,7 @@ fun RandomNumberScreen(
     val randomRepository = remember { RandomRepository(context.randomStore) }
 
     LaunchedEffect(Unit) {
-        AI.setScope(ToolScope.RANDOM)
+//        AI.setScope(ToolScope.RANDOM)
     }
 
     val data = (0..100).toList()

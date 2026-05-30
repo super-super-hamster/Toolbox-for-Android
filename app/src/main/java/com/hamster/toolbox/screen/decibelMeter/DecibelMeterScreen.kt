@@ -44,7 +44,7 @@ import com.hamster.toolbox.compose.rememberSharedTiltState
 import com.hamster.toolbox.compose.squircleShape
 import com.hamster.toolbox.R
 import com.hamster.toolbox.ai.AI
-import com.hamster.toolbox.ai.tools.ToolScope
+//import com.hamster.toolbox.ai.tools.ToolScope
 import com.hamster.toolbox.compose.SliderDialog
 import com.hamster.toolbox.main.MainViewModel
 import com.hamster.toolbox.repository.DecibelMeterRepository
@@ -66,7 +66,7 @@ fun DecibelMeterScreen(
     val decibelMeterRepository = remember { DecibelMeterRepository(context.decibelMeterStore) }
 
     LaunchedEffect(Unit) {
-        AI.setScope(ToolScope.DECIBEL_METER)
+//        AI.setScope(ToolScope.DECIBEL_METER)
     }
 
     val offset by decibelMeterRepository.offsetFlow.collectAsStateWithLifecycle(initialValue = 0f)
