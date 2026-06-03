@@ -49,23 +49,18 @@ class DiaryViewModel(private val appContext: Context, private val dao: DiaryDao)
                 }
         }
 
-    fun getDiary(date: Long = selectedDiaryDate): Flow<DiaryWithImages?> {
+    fun getDiary(date: Long = selectedDiaryDate): Flow<DiaryWithSegments?> {
         return dao.getDiaryByDate(date)
     }
 
-    fun getDiaryById(id: Long): DiaryWithImages? {
+    fun getDiaryById(id: Long): DiaryWithSegments? {
         return dao.getDiaryById(id)
     }
 
-    fun saveDiary(diary: DiaryWithImages) {
+    fun saveDiary(diary: DiaryWithSegments) {
         viewModelScope.launch {
             val diaryEntity = diary.diary
-
-            val imagesData = diary.images.map { imageEntity ->
-                Pair(imageEntity.localPath, imageEntity.position)
-            }
-
-            dao.saveDiary(diaryEntity, imagesData)
+            dao.saveDiary(diaryEntity, diary.segments)
         }
     }
 
@@ -78,7 +73,6 @@ class DiaryViewModel(private val appContext: Context, private val dao: DiaryDao)
                 val diary = DiaryEntity(
                     title = title,
                     date = targetDate,
-                    content = "",
                     wordCount = 0
                 )
                 dao.insertDiary(diary)
@@ -114,10 +108,10 @@ class DiaryViewModel(private val appContext: Context, private val dao: DiaryDao)
 
     fun deleteDiary(diaryId: Long?) {
         viewModelScope.launch(Dispatchers.IO) {
-            val images = diaryId?.let { getDiaryById(it) }?.images ?: emptyList()
+            val segments = diaryId?.let { getDiaryById(it) }?.segments ?: emptyList()
 
-            images.forEach { image ->
-                val file = File(image.localPath)
+            segments.filter { it.type == SegmentType.IMAGE }.forEach { segment ->
+                val file = File(segment.content)
                 if (file.exists()) {
                     file.delete()
                 }

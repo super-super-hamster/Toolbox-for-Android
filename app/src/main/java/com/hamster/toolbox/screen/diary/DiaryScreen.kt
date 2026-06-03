@@ -111,7 +111,6 @@ fun DiaryScreen(
 
     val diary by viewModel.getDiary().collectAsState(initial = null)
 
-    // 焦点管理器，用于处理column的焦点事件
     val focusManager = LocalFocusManager.current
 
     var newlyAddedImagePath by remember { mutableStateOf<String?>(null) }
@@ -124,8 +123,7 @@ fun DiaryScreen(
         }
     }
 
-    var paragraphs by remember { mutableStateOf(listOf("")) }
-    var diaryImages by remember { mutableStateOf<List<DiaryImageEntity>>(emptyList()) }
+    var segments by remember { mutableStateOf<List<DiarySegmentEntity>>(emptyList()) }
     var titleText by remember { mutableStateOf("") }
 
     var isInitialLoaded by remember { mutableStateOf(false) }
@@ -133,14 +131,13 @@ fun DiaryScreen(
 
     LaunchedEffect(diary) {
         if (!isInitialLoaded && diary != null) {
-            val content = diary?.diary?.content ?: ""
             titleText = diary?.diary?.title ?: ""
-            paragraphs = if (content.isEmpty()) {
-                listOf("")
+            val initialSegments = diary?.segments?.sortedBy { it.position } ?: emptyList()
+            segments = if (initialSegments.isEmpty()) {
+                listOf(DiarySegmentEntity(diaryId = diary?.diary?.id ?: 0, type = SegmentType.TEXT, content = "", position = 0))
             } else {
-                content.split("\n")
+                initialSegments
             }
-            diaryImages = diary?.images?.sortedBy { it.imageId } ?: emptyList()
             isInitialLoaded = true
         }
     }
@@ -150,36 +147,38 @@ fun DiaryScreen(
     ) { uri ->
         if (uri != null) {
             viewModel.saveImageToLocal(uri) { finalLocalPath ->
-                val insertPosition = if (focusIndex != null) focusIndex!! + 1 else paragraphs.size
-
-                val newImage = DiaryImageEntity(
+                val insertIndex = if (focusIndex != null) focusIndex!! + 1 else segments.size
+                
+                val newImage = DiarySegmentEntity(
                     diaryId = diary?.diary?.id ?: 0,
-                    localPath = finalLocalPath,
-                    position = insertPosition
+                    type = SegmentType.IMAGE,
+                    content = finalLocalPath,
+                    position = 0 
                 )
-                diaryImages = diaryImages + newImage
-
-                 newlyAddedImagePath = finalLocalPath
+                
+                val newSegments = segments.toMutableList()
+                newSegments.add(insertIndex, newImage)
+                segments = newSegments.mapIndexed { index, seg -> seg.copy(position = index) }
+                
+                newlyAddedImagePath = finalLocalPath
             }
         }
     }
 
     val latestBaseDiary by rememberUpdatedState(newValue = diary)
-    val latestParagraphs by rememberUpdatedState(newValue = paragraphs)
+    val latestSegments by rememberUpdatedState(newValue = segments)
     val latestTitle by rememberUpdatedState(newValue = titleText)
-    val latestImages by rememberUpdatedState(newValue = diaryImages)
     val lifecycleOwner = LocalLifecycleOwner.current
 
     val performSave = {
         latestBaseDiary?.let { baseDiary ->
-            val updatedContent = latestParagraphs.joinToString("\n")
+            val textContent = latestSegments.filter { it.type == SegmentType.TEXT }.joinToString("\n") { it.content }
             val diaryToSave = baseDiary.copy(
                 diary = baseDiary.diary.copy(
-                    content = updatedContent,
-                    wordCount = updatedContent.length,
+                    wordCount = textContent.length,
                     title = latestTitle.ifBlank { null },
                 ),
-                images = latestImages
+                segments = latestSegments.mapIndexed { index, seg -> seg.copy(position = index) }
             )
             viewModel.saveDiary(diaryToSave)
         }
@@ -212,10 +211,10 @@ fun DiaryScreen(
     var containerTop by remember { mutableFloatStateOf(0f) }
     var containerBottom by remember { mutableFloatStateOf(0f) }
     var draggedItemCenterY by remember { mutableFloatStateOf(0f) }
-    var draggingImage by remember { mutableStateOf<DiaryImageEntity?>(null) }
+    var draggingSegment by remember { mutableStateOf<DiarySegmentEntity?>(null) }
 
-    LaunchedEffect(draggingImage) {
-        if (draggingImage != null) {
+    LaunchedEffect(draggingSegment) {
+        if (draggingSegment != null) {
             val edgeThreshold = with(density) { 100.dp.toPx() }
             val maxScrollSpeed = with(density) { 25.dp.toPx() }
 
@@ -272,8 +271,7 @@ fun DiaryScreen(
 
         Spacer(modifier = Modifier.height(dimensionResource(R.dimen.item_group_gap)))
 
-        val imageHeights = remember { mutableStateMapOf<Long, Float>() }
-        val textHeights = remember { mutableStateMapOf<Int, Float>() }
+        val itemHeights = remember { mutableStateMapOf<Int, Float>() }
 
         val gapHeight = dimensionResource(id = R.dimen.item_group_gap)
         val spacerHeightPx = remember(density, gapHeight) {
@@ -283,21 +281,21 @@ fun DiaryScreen(
         var currentDragOffsetY by remember { mutableFloatStateOf(0f) }
         var initialScrollPos by remember { mutableIntStateOf(0) }
 
-        val activeOriginPos = draggingImage?.position
+        val activeOriginPos = draggingSegment?.let { segments.indexOf(it) }
 
         val crossThreshold = with(density) { 50.dp.toPx() }
 
         val activeTargetPos by remember(activeOriginPos, spacerHeightPx) {
             derivedStateOf {
-                if (activeOriginPos == null) return@derivedStateOf null
+                if (activeOriginPos == null || activeOriginPos < 0) return@derivedStateOf null
 
                 val totalY = currentDragOffsetY + (scrollState.value - initialScrollPos).toFloat()
                 var target = activeOriginPos
                 var currentY = 0f
 
                 if (totalY > 0) {
-                    while (target < paragraphs.size) {
-                        val stepToCross = (textHeights[target] ?: 0f) + spacerHeightPx
+                    while (target < segments.size - 1) {
+                        val stepToCross = (itemHeights[target + 1] ?: 0f) + spacerHeightPx
                         val threshold = minOf(stepToCross / 2, crossThreshold)
 
                         if (totalY > currentY + threshold) {
@@ -307,7 +305,7 @@ fun DiaryScreen(
                     }
                 } else if (totalY < 0) {
                     while (target > 0) {
-                        val stepToCross = (textHeights[target - 1] ?: 0f) + spacerHeightPx
+                        val stepToCross = (itemHeights[target - 1] ?: 0f) + spacerHeightPx
                         val threshold = minOf(stepToCross / 2, crossThreshold)
 
                         if (-totalY > currentY + threshold) {
@@ -320,161 +318,103 @@ fun DiaryScreen(
             }
         }
 
-        val calculateShift = { itemPos: Int, isItemText: Boolean, itemImage: DiaryImageEntity? ->
+        val calculateShift = { index: Int ->
             var shift = 0f
-            if (draggingImage != null && activeOriginPos != null && activeTargetPos != null) {
-                val draggedImageHeight = imageHeights[draggingImage!!.imageId] ?: with(density) { 150.dp.toPx() }
-                val exactGapPx = draggedImageHeight + spacerHeightPx
+            if (draggingSegment != null && activeOriginPos != null && activeTargetPos != null && activeOriginPos >= 0) {
+                val draggedHeight = itemHeights[activeOriginPos] ?: with(density) { 150.dp.toPx() }
+                val exactGapPx = draggedHeight + spacerHeightPx
 
                 val dPos = activeOriginPos
                 val targetDPos = activeTargetPos!!
 
-                val dIndexInImages = diaryImages.indexOfFirst { it.imageId == draggingImage!!.imageId }
-                val itemIndexInImages = if (!isItemText && itemImage != null) {
-                    diaryImages.indexOfFirst { it.imageId == itemImage.imageId }
-                } else -1
-
-                val isOriginallyBefore = when {
-                    itemPos < dPos -> true
-                    itemPos > dPos -> false
-                    else -> if (isItemText) false else itemIndexInImages < dIndexInImages
-                }
-
-                val isTargetBefore = when {
-                    itemPos < targetDPos -> true
-                    itemPos > targetDPos -> false
-                    else -> if (isItemText) false else itemIndexInImages < dIndexInImages
-                }
-
-                if (isOriginallyBefore && !isTargetBefore) {
-                    shift = exactGapPx
-                }
-                else if (!isOriginallyBefore && isTargetBefore) {
-                    shift = -exactGapPx
+                if (targetDPos > dPos) {
+                    if (index > dPos && index <= targetDPos) {
+                        shift = -exactGapPx
+                    }
+                } else if (targetDPos < dPos) {
+                    if (index >= targetDPos && index < dPos) {
+                        shift = exactGapPx
+                    }
                 }
             }
             shift
         }
 
-        paragraphs.forEachIndexed { index, text ->
-            val imagesAtThisPosition = diaryImages.filter { it.position == index }
-
-            imagesAtThisPosition.forEach { image ->
-                val shiftAmount = calculateShift(index, false, image)
-                key(image.imageId, image.localPath) {
+        segments.forEachIndexed { index, segment ->
+            val shiftAmount = calculateShift(index)
+            val segmentKey = "${segment.segmentId}_${segment.type}_${segment.content}"
+            
+            key(segmentKey) {
+                if (segment.type == SegmentType.IMAGE) {
                     DiaryImageItem(
-                        imagePath = image.localPath,
+                        imagePath = segment.content,
                         dragScrollDeltaProvider = {
-                            if (draggingImage == image) (scrollState.value - initialScrollPos).toFloat() else 0f
+                            if (draggingSegment == segment) (scrollState.value - initialScrollPos).toFloat() else 0f
                         },
-                        onDelete = { diaryImages = diaryImages.filter { it != image } },
+                        onDelete = { segments = segments.filter { it != segment } },
                         titleState = sharedTiltState,
                         onDrag = { dragY -> currentDragOffsetY = dragY },
                         onDragStart = {
-                            draggingImage = image
+                            draggingSegment = segment
                             initialScrollPos = scrollState.value
                         },
                         onDragEnd = {
                             activeTargetPos?.let { finalTarget ->
-                                if (finalTarget != image.position) {
-                                    diaryImages = diaryImages.map { img ->
-                                        if (img === image) {
-                                            img.copy(position = finalTarget)
-                                        } else {
-                                            img
-                                        }
-                                    }
+                                if (finalTarget != activeOriginPos && activeOriginPos != null && activeOriginPos >= 0) {
+                                    val newList = segments.toMutableList()
+                                    val item = newList.removeAt(activeOriginPos)
+                                    newList.add(finalTarget, item)
+                                    segments = newList.mapIndexed { i, seg -> seg.copy(position = i) }
                                 }
                             }
-                            draggingImage = null
+                            draggingSegment = null
                             currentDragOffsetY = 0f
                         },
                         onHeightMeasured = { measuredHeight ->
-                            imageHeights[image.imageId] = measuredHeight
+                            itemHeights[index] = measuredHeight
                         },
                         visualShiftY = shiftAmount,
                         onPositionInRoot = { y -> draggedItemCenterY = y },
-                        isNewlyAdded = (newlyAddedImagePath == image.localPath),
+                        isNewlyAdded = (newlyAddedImagePath == segment.content),
                     )
-                    Spacer(modifier = Modifier.height(dimensionResource(R.dimen.item_group_gap)))
-                }
-            }
-
-            val shiftAmountText = calculateShift(index, true, null)
-            DiaryTextItem(
-                text = text,
-                visualShiftY = shiftAmountText,
-                isFocused = focusIndex == index,
-                onFocusClear = { focusIndex = null },
-                onTextChange = { newText ->
-                    if (newText.contains("\n")) {
-                        val parts = newText.split("\n")
-                        val newList = paragraphs.toMutableList()
-                        newList.removeAt(index)
-                        newList.addAll(index, parts)
-                        paragraphs = newList
-                        focusIndex = index + parts.size - 1
-                    } else {
-                        val newList = paragraphs.toMutableList()
-                        newList[index] = newText
-                        paragraphs = newList
-                    }
-                },
-                onDeleteEmpty = {
-                    if (index > 0) {
-                        val newList = paragraphs.toMutableList()
-                        newList.removeAt(index)
-                        paragraphs = newList
-                        focusIndex = index - 1
-                    }
-                },
-                onHeightMeasured = { measuredHeight ->
-                    textHeights[index] = measuredHeight
-                },
-                titleState = sharedTiltState,
-                mainViewModel = mainViewModel,
-            )
-            Spacer(modifier = Modifier.height(dimensionResource(R.dimen.item_group_gap)))
-        }
-
-        val lastImages = diaryImages.filter { it.position == paragraphs.size }
-        lastImages.forEach { image ->
-            val shiftAmount = calculateShift(paragraphs.size, false, image)
-            key(image.imageId, image.localPath) {
-                DiaryImageItem(
-                    imagePath = image.localPath,
-                    dragScrollDeltaProvider = {
-                        if (draggingImage == image) (scrollState.value - initialScrollPos).toFloat() else 0f
-                    },
-                    onDelete = { diaryImages = diaryImages.filter { it != image } },
-                    titleState = sharedTiltState,
-                    onDragStart = {
-                        draggingImage = image
-                        initialScrollPos = scrollState.value
-                    },
-                    onDragEnd = {
-                        activeTargetPos?.let { finalTarget ->
-                            if (finalTarget != image.position) {
-                                diaryImages = diaryImages.map { img ->
-                                    if (img === image) {
-                                        img.copy(position = finalTarget)
-                                    } else {
-                                        img
-                                    }
+                } else {
+                    DiaryTextItem(
+                        text = segment.content,
+                        visualShiftY = shiftAmount,
+                        isFocused = focusIndex == index,
+                        onFocusClear = { focusIndex = null },
+                        onTextChange = { newText ->
+                            if (newText.contains("\n")) {
+                                val parts = newText.split("\n")
+                                val newList = segments.toMutableList()
+                                newList.removeAt(index)
+                                val newSegments = parts.map { part ->
+                                    DiarySegmentEntity(diaryId = segment.diaryId, type = SegmentType.TEXT, content = part, position = 0)
                                 }
+                                newList.addAll(index, newSegments)
+                                segments = newList.mapIndexed { i, seg -> seg.copy(position = i) }
+                                focusIndex = index + parts.size - 1
+                            } else {
+                                val newList = segments.toMutableList()
+                                newList[index] = segment.copy(content = newText)
+                                segments = newList
                             }
-                        }
-                        draggingImage = null
-                        currentDragOffsetY = 0f
-                    },
-                    onDrag = { dragY -> currentDragOffsetY = dragY },
-                    onHeightMeasured = { measuredHeight ->
-                        imageHeights[image.imageId] = measuredHeight
-                    },
-                    visualShiftY = shiftAmount,
-                    onPositionInRoot = { y -> draggedItemCenterY = y },
-                    isNewlyAdded = (newlyAddedImagePath == image.localPath),
-                )
+                        },
+                        onDeleteEmpty = {
+                            if (index > 0) {
+                                val newList = segments.toMutableList()
+                                newList.removeAt(index)
+                                segments = newList.mapIndexed { i, seg -> seg.copy(position = i) }
+                                focusIndex = index - 1
+                            }
+                        },
+                        onHeightMeasured = { measuredHeight ->
+                            itemHeights[index] = measuredHeight
+                        },
+                        titleState = sharedTiltState,
+                        mainViewModel = mainViewModel,
+                    )
+                }
                 Spacer(modifier = Modifier.height(dimensionResource(R.dimen.item_group_gap)))
             }
         }
@@ -540,9 +480,6 @@ fun DiaryTextItem(
             ),
             modifier = Modifier
                 .fillMaxWidth()
-//                .onFocusChanged {
-//                    mainViewModel.showBottomMenu = !it.isFocused
-//                }
                 .focusRequester(focusRequester)
                 .onPreviewKeyEvent { event ->
                     if (event.key == Key.Backspace && event.type == KeyEventType.KeyDown && text.isEmpty()) {

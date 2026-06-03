@@ -10,7 +10,22 @@ import androidx.room.PrimaryKey
 import androidx.room.Relation
 import androidx.room.RoomDatabase
 import androidx.room.*
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.flow.Flow
+
+enum class SegmentType(val value: Int) {
+    TEXT(0),
+    IMAGE(1)
+}
+
+class DiaryConverters {
+    @TypeConverter
+    fun fromSegmentType(value: SegmentType): Int = value.value
+
+    @TypeConverter
+    fun toSegmentType(value: Int): SegmentType = enumValues<SegmentType>().first { it.value == value }
+}
 
 @Entity(
     tableName = "diary_table",
@@ -19,36 +34,37 @@ import kotlinx.coroutines.flow.Flow
 data class DiaryEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val title: String?,
-    val content: String,
     val date: Long,
     val wordCount: Int
 )
 
 @Entity(
-    tableName = "diary_image_table",
+    tableName = "diary_segment_table",
     foreignKeys = [
         ForeignKey(
             entity = DiaryEntity::class,
             parentColumns = ["id"],
             childColumns = ["diaryId"],
-            onDelete = ForeignKey.CASCADE // 级联删除，日记删了，图片记录自动删
+            onDelete = ForeignKey.CASCADE // 级联删除
         )
-    ]
+    ],
+    indices = [Index(value = ["diaryId"])]
 )
-data class DiaryImageEntity(
-    @PrimaryKey(autoGenerate = true) val imageId: Long = 0,
-    @ColumnInfo(index = true) val diaryId: Long, // 外键，指向日记ID
-    val localPath: String, // 本地图片路径
+data class DiarySegmentEntity(
+    @PrimaryKey(autoGenerate = true) val segmentId: Long = 0,
+    val diaryId: Long,
+    val type: SegmentType,
+    val content: String,
     val position: Int
 )
 
-data class DiaryWithImages(
+data class DiaryWithSegments(
     @Embedded val diary: DiaryEntity,
     @Relation(
         parentColumn = "id",
         entityColumn = "diaryId",
     )
-    val images: List<DiaryImageEntity>
+    val segments: List<DiarySegmentEntity>
 )
 
 @Dao
@@ -56,35 +72,31 @@ interface DiaryDao {
     @Query("SELECT id, title, date, wordCount FROM diary_table ORDER BY date DESC")
     fun getAllDiaryPreviews(): Flow<List<DiaryPreviewData>>
 
-    // 根据ID查询单条日记
     @Transaction
     @Query("SELECT * FROM diary_table WHERE id = :diaryId")
-    fun getDiaryById(diaryId: Long): DiaryWithImages?
+    fun getDiaryById(diaryId: Long): DiaryWithSegments?
 
-    // 插入日记主表（返回生成的ID）
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertDiary(diary: DiaryEntity): Long
 
-    // 批量插入图片
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertImages(images: List<DiaryImageEntity>)
+    suspend fun insertSegments(segments: List<DiarySegmentEntity>)
 
     @Transaction
     @Query("SELECT * FROM diary_table WHERE date = :targetDate")
-    fun getDiaryByDate(targetDate: Long): Flow<DiaryWithImages?>
+    fun getDiaryByDate(targetDate: Long): Flow<DiaryWithSegments?>
 
     @Update
     suspend fun updateDiary(diary: DiaryEntity)
 
-    @Query("DELETE FROM diary_image_table WHERE diaryId = :diaryId")
-    suspend fun deleteImagesByDiaryId(diaryId: Long)
+    @Query("DELETE FROM diary_segment_table WHERE diaryId = :diaryId")
+    suspend fun deleteSegmentsByDiaryId(diaryId: Long)
 
     @Query("SELECT * FROM diary_table WHERE date = :targetDate")
     suspend fun getDiaryEntityByDate(targetDate: Long): DiaryEntity?
 
     @Transaction
-    suspend fun saveDiary(diary: DiaryEntity, imagesData: List<Pair<String, Int>>) {
-        // 先去数据库查一下，这天是不是已经有日记了
+    suspend fun saveDiary(diary: DiaryEntity, segments: List<DiarySegmentEntity>) {
         val existingRecord = getDiaryEntityByDate(diary.date)
         val finalDiaryId: Long
 
@@ -92,23 +104,14 @@ interface DiaryDao {
             finalDiaryId = existingRecord.id
             val diaryToUpdate = diary.copy(id = finalDiaryId)
             updateDiary(diaryToUpdate)
-
-            // 因为图文混排可能增删了图片，最简单的做法是先清空这篇日记关联的旧图片表
-            deleteImagesByDiaryId(finalDiaryId)
+            deleteSegmentsByDiaryId(finalDiaryId)
         } else {
             finalDiaryId = insertDiary(diary)
         }
 
-        // 插入最新的图片位置信息
-        if (imagesData.isNotEmpty()) {
-            val newImages = imagesData.map { (path, position) ->
-                DiaryImageEntity(
-                    diaryId = finalDiaryId,
-                    localPath = path,
-                    position = position
-                )
-            }
-            insertImages(newImages)
+        if (segments.isNotEmpty()) {
+            val newSegments = segments.map { it.copy(diaryId = finalDiaryId) }
+            insertSegments(newSegments)
         }
     }
 
@@ -116,11 +119,14 @@ interface DiaryDao {
     suspend fun deleteDiaryById(id: Long)
 }
 
+
+
 @Database(
-    entities = [DiaryEntity::class, DiaryImageEntity::class],
-    version = 2,
+    entities = [DiaryEntity::class, DiarySegmentEntity::class],
+    version = 3,
     exportSchema = false
 )
+@TypeConverters(DiaryConverters::class)
 abstract class DiaryDatabase : RoomDatabase() {
     abstract fun diaryDao(): DiaryDao
 
