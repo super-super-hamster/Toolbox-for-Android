@@ -12,6 +12,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 class MainViewModel : ViewModel() {
+    // 显示底部菜单栏
+    var showBottomMenu by mutableStateOf(true)
+
     // 显示添加热词弹窗
     var isShowAddKeywordDialog by mutableStateOf(false)
 

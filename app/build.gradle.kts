@@ -132,7 +132,10 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences:1.0.0")
     implementation("com.mikepenz:multiplatform-markdown-renderer-android:0.40.2")
     implementation("com.mikepenz:multiplatform-markdown-renderer-m3:0.40.2")
+    // koog
     implementation("ai.koog:koog-agents:1.0.0")
+    implementation("ai.koog:prompt-executor-openai-client:1.0.0")
+    implementation("ai.koog:koog-agents-additions:1.0.0-beta")
     implementation(files("libs/sherpa-onnx.aar"))
 //    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar", "*.aar"))))
 }

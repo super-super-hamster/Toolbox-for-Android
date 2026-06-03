@@ -77,6 +77,7 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.alpha
+import com.hamster.toolbox.main.MainViewModel
 import com.hamster.toolbox.utils.ScrollTarget
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch

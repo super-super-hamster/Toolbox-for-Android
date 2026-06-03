@@ -13,6 +13,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,15 +36,22 @@ import com.hamster.toolbox.repository.repositorySetFloat
 import com.hamster.toolbox.repository.rulerStore
 import kotlinx.coroutines.launch
 import androidx.compose.ui.platform.LocalConfiguration
+import com.hamster.toolbox.main.MainViewModel
 
 @Composable
-fun RulerScreen() {
+fun RulerScreen(
+    mainViewModel: MainViewModel
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val rulerRepository = remember { RulerRepository(context.rulerStore) }
 
-    LaunchedEffect(Unit) {
-//        AI.setScope(ToolScope.RULER)
+    DisposableEffect(Unit) {
+        mainViewModel.showBottomMenu = false
+
+        onDispose {
+            mainViewModel.showBottomMenu = true
+        }
     }
 
     var showCalibrationDialog by remember { mutableStateOf(false) }

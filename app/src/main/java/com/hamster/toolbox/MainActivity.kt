@@ -283,16 +283,15 @@ class MainActivity : FragmentActivity() {
                 else -> true
             }
 
-            val showBottomMenu = when {
-                currentDestination?.hasRoute<Schedule>() == true -> true
-                currentDestination?.hasRoute<RandomNumber>() == true -> true
-                currentDestination?.hasRoute<Ruler>() == true -> false
-                currentDestination?.hasRoute<Settings>() == true -> true
-                currentDestination?.hasRoute<SetKeywords>() == true -> true
-                currentDestination?.hasRoute<ImportCurriculum>() == true -> true
-                currentDestination?.hasRoute<GameConsole>() == true -> false
-                else -> true
-            }
+//            val showBottomMenu = when {
+//                currentDestination?.hasRoute<Schedule>() == true -> true
+//                currentDestination?.hasRoute<RandomNumber>() == true -> true
+//                currentDestination?.hasRoute<Ruler>() == true -> false
+//                currentDestination?.hasRoute<Settings>() == true -> true
+//                currentDestination?.hasRoute<SetKeywords>() == true -> true
+//                currentDestination?.hasRoute<ImportCurriculum>() == true -> true
+//                else -> true
+//            }
 
             val backdrop = rememberLayerBackdrop {
                 drawContent()
@@ -364,7 +363,9 @@ class MainActivity : FragmentActivity() {
                                         popEnterTransition = { scaleInPopEnter() },
                                         popExitTransition = { slideOutWithScalePopExit() }
                                     ) {
-                                        RulerScreen()
+                                        RulerScreen(
+                                            mainViewModel = mainViewModel,
+                                        )
                                     }
 
                                     // 时间
@@ -467,7 +468,7 @@ class MainActivity : FragmentActivity() {
                                 }
 
                                 // 底部菜单栏
-                                if (showBottomMenu) {
+                                if (mainViewModel.showBottomMenu) {
                                     Box(modifier = Modifier
                                         .align(Alignment.BottomCenter)
                                         .systemBarsPadding()) {

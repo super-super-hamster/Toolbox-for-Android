@@ -1,5 +1,6 @@
 package com.hamster.toolbox.screen.diary
 
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -12,12 +13,16 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -49,7 +54,6 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -60,8 +64,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -69,7 +73,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextIndent
 import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -92,18 +95,34 @@ import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DiaryScreen(
     mainViewModel: MainViewModel,
     viewModel: DiaryViewModel,
 ) {
     val sharedTiltState = rememberSharedTiltState()
-    val dateFormatter = remember { SimpleDateFormat("yyyy年MM月dd日", Locale.getDefault()) }
+    val dateFormatter = remember { SimpleDateFormat("yyyy年M月d日", Locale.getDefault()) }
+
+    val isKeyboardVisible = WindowInsets.isImeVisible
+    LaunchedEffect(isKeyboardVisible) {
+        mainViewModel.showBottomMenu = !isKeyboardVisible
+    }
 
     val diary by viewModel.getDiary().collectAsState(initial = null)
 
+    // 焦点管理器，用于处理column的焦点事件
+    val focusManager = LocalFocusManager.current
+
     var newlyAddedImagePath by remember { mutableStateOf<String?>(null) }
 
+    DisposableEffect(Unit) {
+        mainViewModel.showBottomMenu = false
+
+        onDispose {
+            mainViewModel.showBottomMenu = true
+        }
+    }
 
     var paragraphs by remember { mutableStateOf(listOf("")) }
     var diaryImages by remember { mutableStateOf<List<DiaryImageEntity>>(emptyList()) }
@@ -230,8 +249,15 @@ fun DiaryScreen(
                 containerTop = bounds.top
                 containerBottom = bounds.bottom
             }
-            .verticalScroll(scrollState)
-            .imePadding(),
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) {
+                focusManager.clearFocus()
+            }
+            .padding()
+            .imePadding()
+            .verticalScroll(scrollState),
         sharedTiltState = sharedTiltState
     ) {
         DiaryTitleItem(
@@ -294,30 +320,47 @@ fun DiaryScreen(
             }
         }
 
-        val calculateShift = { itemPosition: Int ->
+        val calculateShift = { itemPos: Int, isItemText: Boolean, itemImage: DiaryImageEntity? ->
             var shift = 0f
             if (draggingImage != null && activeOriginPos != null && activeTargetPos != null) {
                 val draggedImageHeight = imageHeights[draggingImage!!.imageId] ?: with(density) { 150.dp.toPx() }
                 val exactGapPx = draggedImageHeight + spacerHeightPx
 
-                if (activeOriginPos < activeTargetPos!!) {
-                    if (itemPosition in activeOriginPos until activeTargetPos!!) {
-                        shift = -exactGapPx
-                    }
-                } else if (activeOriginPos > activeTargetPos!!) {
-                    if (itemPosition in activeTargetPos!! until activeOriginPos) {
-                        shift = exactGapPx
-                    }
+                val dPos = activeOriginPos
+                val targetDPos = activeTargetPos!!
+
+                val dIndexInImages = diaryImages.indexOfFirst { it.imageId == draggingImage!!.imageId }
+                val itemIndexInImages = if (!isItemText && itemImage != null) {
+                    diaryImages.indexOfFirst { it.imageId == itemImage.imageId }
+                } else -1
+
+                val isOriginallyBefore = when {
+                    itemPos < dPos -> true
+                    itemPos > dPos -> false
+                    else -> if (isItemText) false else itemIndexInImages < dIndexInImages
+                }
+
+                val isTargetBefore = when {
+                    itemPos < targetDPos -> true
+                    itemPos > targetDPos -> false
+                    else -> if (isItemText) false else itemIndexInImages < dIndexInImages
+                }
+
+                if (isOriginallyBefore && !isTargetBefore) {
+                    shift = exactGapPx
+                }
+                else if (!isOriginallyBefore && isTargetBefore) {
+                    shift = -exactGapPx
                 }
             }
             shift
         }
 
         paragraphs.forEachIndexed { index, text ->
-            val shiftAmount = calculateShift(index)
             val imagesAtThisPosition = diaryImages.filter { it.position == index }
 
             imagesAtThisPosition.forEach { image ->
+                val shiftAmount = calculateShift(index, false, image)
                 key(image.imageId, image.localPath) {
                     DiaryImageItem(
                         imagePath = image.localPath,
@@ -357,9 +400,10 @@ fun DiaryScreen(
                 }
             }
 
+            val shiftAmountText = calculateShift(index, true, null)
             DiaryTextItem(
                 text = text,
-                visualShiftY = shiftAmount,
+                visualShiftY = shiftAmountText,
                 isFocused = focusIndex == index,
                 onFocusClear = { focusIndex = null },
                 onTextChange = { newText ->
@@ -388,13 +432,14 @@ fun DiaryScreen(
                     textHeights[index] = measuredHeight
                 },
                 titleState = sharedTiltState,
+                mainViewModel = mainViewModel,
             )
             Spacer(modifier = Modifier.height(dimensionResource(R.dimen.item_group_gap)))
         }
 
-        val shiftAmountLast = calculateShift(paragraphs.size)
         val lastImages = diaryImages.filter { it.position == paragraphs.size }
         lastImages.forEach { image ->
+            val shiftAmount = calculateShift(paragraphs.size, false, image)
             key(image.imageId, image.localPath) {
                 DiaryImageItem(
                     imagePath = image.localPath,
@@ -413,7 +458,9 @@ fun DiaryScreen(
                                 diaryImages = diaryImages.map { img ->
                                     if (img === image) {
                                         img.copy(position = finalTarget)
-                                    } else img
+                                    } else {
+                                        img
+                                    }
                                 }
                             }
                         }
@@ -424,7 +471,7 @@ fun DiaryScreen(
                     onHeightMeasured = { measuredHeight ->
                         imageHeights[image.imageId] = measuredHeight
                     },
-                    visualShiftY = shiftAmountLast,
+                    visualShiftY = shiftAmount,
                     onPositionInRoot = { y -> draggedItemCenterY = y },
                     isNewlyAdded = (newlyAddedImagePath == image.localPath),
                 )
@@ -453,6 +500,7 @@ fun DiaryTextItem(
     text: String,
     isFocused: Boolean,
     onFocusClear: () -> Unit,
+    mainViewModel: MainViewModel,
     onTextChange: (String) -> Unit,
     onDeleteEmpty: () -> Unit,
     modifier: Modifier = Modifier,
@@ -461,34 +509,11 @@ fun DiaryTextItem(
     onHeightMeasured: (Float) -> Unit = {}
 ) {
     val focusRequester = remember { FocusRequester() }
-    val bringIntoViewRequester = remember { BringIntoViewRequester() }
-
-    val density = LocalDensity.current
-    val floatingBarHeightPx = remember(density) {
-        with(density) { 80.dp.toPx() }
-    }
-    var componentSize by remember { mutableStateOf(IntSize.Zero) }
-
-    var hasFocus by remember { mutableStateOf(false) }
 
     LaunchedEffect(isFocused) {
         if (isFocused) {
             focusRequester.requestFocus()
-            hasFocus = true
             onFocusClear()
-        }
-    }
-
-    LaunchedEffect(text, hasFocus) {
-        if (hasFocus && componentSize != IntSize.Zero) {
-            delay(50)
-            val requestRect = Rect(
-                left = 0f,
-                top = 0f,
-                right = componentSize.width.toFloat(),
-                bottom = componentSize.height.toFloat() + floatingBarHeightPx
-            )
-            bringIntoViewRequester.bringIntoView(requestRect)
         }
     }
 
@@ -501,12 +526,10 @@ fun DiaryTextItem(
     ItemGroup(
         titleState = titleState,
         modifier = modifier
-            .onSizeChanged { componentSize = it }
             .onGloballyPositioned { coordinates ->
                 onHeightMeasured(coordinates.size.height.toFloat())
             }
             .offset { IntOffset(0, animatedShiftY.roundToInt()) }
-            .bringIntoViewRequester(bringIntoViewRequester)
     ) {
         TextInputField(
             value = text,
@@ -516,10 +539,10 @@ fun DiaryTextItem(
                 textIndent = TextIndent(firstLine = 2.em)
             ),
             modifier = Modifier
-                .onFocusChanged { focusState ->
-                    hasFocus = focusState.isFocused
-                }
                 .fillMaxWidth()
+//                .onFocusChanged {
+//                    mainViewModel.showBottomMenu = !it.isFocused
+//                }
                 .focusRequester(focusRequester)
                 .onPreviewKeyEvent { event ->
                     if (event.key == Key.Backspace && event.type == KeyEventType.KeyDown && text.isEmpty()) {
