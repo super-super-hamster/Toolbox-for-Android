@@ -1,5 +1,8 @@
 package com.hamster.toolbox.screen.diary
 
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -53,8 +56,10 @@ import com.hamster.toolbox.Diary
 import com.hamster.toolbox.R
 import com.hamster.toolbox.Route
 import com.hamster.toolbox.compose.DatePicker
+import com.hamster.toolbox.compose.ClickItem
 import com.hamster.toolbox.compose.InquiryDialog
 import com.hamster.toolbox.compose.ItemGroup
+import com.hamster.toolbox.compose.OptionDialog
 import com.hamster.toolbox.compose.PageColumn
 import com.hamster.toolbox.compose.StandardDialog
 import com.hamster.toolbox.compose.TextInputField
@@ -92,6 +97,8 @@ fun DiaryPreviewScreen(
     var showDeleteDiaryDialog by remember { mutableStateOf(false) }
     var deleteDiaryId by remember { mutableLongStateOf(-1) }
     var deleteDate by remember { mutableStateOf("") }
+    var showExportDialog by remember { mutableStateOf(false) }
+    var isExporting by remember { mutableStateOf(false) }
 
     val isDiaryUsingPassword by settingsRepository.isDiaryUsingPassword.collectAsStateWithLifecycle(initialValue = true)
 
@@ -109,6 +116,50 @@ fun DiaryPreviewScreen(
             )
         } else {
             viewModel.isLocked = false
+        }
+    }
+
+    val onExportResult: (Boolean, String) -> Unit = { _, message ->
+        isExporting = false
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+    }
+
+    val txtExportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument(DiaryExportFormat.TXT.mimeType)
+    ) { uri ->
+        if (uri == null) {
+            isExporting = false
+        } else {
+            viewModel.exportAllDiaries(uri, DiaryExportFormat.TXT, onExportResult)
+        }
+    }
+
+    val epubExportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument(DiaryExportFormat.EPUB.mimeType)
+    ) { uri ->
+        if (uri == null) {
+            isExporting = false
+        } else {
+            viewModel.exportAllDiaries(uri, DiaryExportFormat.EPUB, onExportResult)
+        }
+    }
+
+    val markdownExportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument(DiaryExportFormat.MARKDOWN_ZIP.mimeType)
+    ) { uri ->
+        if (uri == null) {
+            isExporting = false
+        } else {
+            viewModel.exportAllDiaries(uri, DiaryExportFormat.MARKDOWN_ZIP, onExportResult)
+        }
+    }
+
+    val launchExport: (DiaryExportFormat) -> Unit = { format ->
+        isExporting = true
+        when (format) {
+            DiaryExportFormat.TXT -> txtExportLauncher.launch("日记.txt")
+            DiaryExportFormat.EPUB -> epubExportLauncher.launch("日记.epub")
+            DiaryExportFormat.MARKDOWN_ZIP -> markdownExportLauncher.launch("日记.zip")
         }
     }
 
@@ -161,6 +212,45 @@ fun DiaryPreviewScreen(
                 }
 
                 Spacer(modifier = Modifier.height(dimensionResource(R.dimen.item_group_gap)))
+            }
+
+            ItemGroup(titleState = sharedTiltState) {
+                ClickItem(
+                    title = "导出日记",
+                    icon = R.drawable.ic_export_line,
+                    onClick = {
+                        if (!isExporting) {
+                            showExportDialog = true
+                        }
+                    }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(dimensionResource(R.dimen.item_group_gap)))
+
+            if (showExportDialog) {
+                OptionDialog(
+                    title = "导出日记",
+                    options = listOf("导出为TXT文件", "导出为EPUB文件", "导出为MARKDOWN压缩包"),
+                    initialSelections = setOf(0),
+                    singleSelect = true,
+                    onDismissRequest = { showExportDialog = false },
+                    onConfirm = { selections ->
+                        val selectedFormat = when (selections.firstOrNull()) {
+                            0 -> DiaryExportFormat.TXT
+                            1 -> DiaryExportFormat.EPUB
+                            2 -> DiaryExportFormat.MARKDOWN_ZIP
+                            else -> null
+                        }
+                        if (selectedFormat == null) {
+                            Toast.makeText(context, "请选择导出格式", Toast.LENGTH_SHORT).show()
+                        } else if (diaries.isEmpty()) {
+                            Toast.makeText(context, "暂无日记可导出", Toast.LENGTH_SHORT).show()
+                        } else {
+                            launchExport(selectedFormat)
+                        }
+                    }
+                )
             }
 
             if (mainViewModel.showAddDiaryDialog) {

@@ -73,6 +73,10 @@ interface DiaryDao {
     fun getAllDiaryPreviews(): Flow<List<DiaryPreviewData>>
 
     @Transaction
+    @Query("SELECT * FROM diary_table ORDER BY date ASC")
+    suspend fun getAllDiaries(): List<DiaryWithSegments>
+
+    @Transaction
     @Query("SELECT * FROM diary_table WHERE id = :diaryId")
     fun getDiaryById(diaryId: Long): DiaryWithSegments?
 

@@ -18,6 +18,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
+import java.io.IOException
 import java.time.Instant
 import java.time.ZoneId
 
@@ -122,6 +123,48 @@ class DiaryViewModel(private val appContext: Context, private val dao: DiaryDao)
             }
         }
     }
+
+    fun exportAllDiaries(
+        uri: Uri,
+        format: DiaryExportFormat,
+        onResult: (success: Boolean, message: String) -> Unit
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            var tempFile: File? = null
+            try {
+                val exportFile = File.createTempFile("diary_export_", ".${format.extension}", appContext.cacheDir)
+                tempFile = exportFile
+                val diaries = dao.getAllDiaries().sortedBy { it.diary.date }
+                if (diaries.isEmpty()) {
+                    withContext(Dispatchers.Main) {
+                        onResult(false, "暂无日记可导出")
+                    }
+                    return@launch
+                }
+
+                FileOutputStream(exportFile).use { output ->
+                    DiaryExporter.write(diaries, format, output)
+                }
+
+                val output = appContext.contentResolver.openOutputStream(uri)
+                    ?: throw IOException("无法打开目标文件")
+                output.use { target ->
+                    exportFile.inputStream().use { source -> source.copyTo(target) }
+                }
+
+                withContext(Dispatchers.Main) {
+                    onResult(true, "导出成功")
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    onResult(false, "导出失败：${e.message ?: "未知错误"}")
+                }
+            } finally {
+                tempFile?.delete()
+            }
+        }
+    }
+
 }
 
 fun diaryViewModelFactory(context: Context, dao: DiaryDao) = viewModelFactory {
