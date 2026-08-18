@@ -1,6 +1,5 @@
 package com.hamster.toolbox.screen.diary
 
-import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -53,7 +52,6 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -95,6 +93,11 @@ import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
+data class SegmentUiModel(
+    val entity: DiarySegmentEntity,
+    val localId: String = java.util.UUID.randomUUID().toString()
+)
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DiaryScreen(
@@ -123,7 +126,7 @@ fun DiaryScreen(
         }
     }
 
-    var segments by remember { mutableStateOf<List<DiarySegmentEntity>>(emptyList()) }
+    var segments by remember { mutableStateOf<List<SegmentUiModel>>(emptyList()) }
     var titleText by remember { mutableStateOf("") }
 
     var isInitialLoaded by remember { mutableStateOf(false) }
@@ -134,9 +137,9 @@ fun DiaryScreen(
             titleText = diary?.diary?.title ?: ""
             val initialSegments = diary?.segments?.sortedBy { it.position } ?: emptyList()
             segments = if (initialSegments.isEmpty()) {
-                listOf(DiarySegmentEntity(diaryId = diary?.diary?.id ?: 0, type = SegmentType.TEXT, content = "", position = 0))
+                listOf(SegmentUiModel(DiarySegmentEntity(diaryId = diary?.diary?.id ?: 0, type = SegmentType.TEXT, content = "", position = 0)))
             } else {
-                initialSegments
+                initialSegments.map { SegmentUiModel(it) }
             }
             isInitialLoaded = true
         }
@@ -157,8 +160,8 @@ fun DiaryScreen(
                 )
                 
                 val newSegments = segments.toMutableList()
-                newSegments.add(insertIndex, newImage)
-                segments = newSegments.mapIndexed { index, seg -> seg.copy(position = index) }
+                newSegments.add(insertIndex, SegmentUiModel(newImage))
+                segments = newSegments.mapIndexed { index, seg -> seg.copy(entity = seg.entity.copy(position = index)) }
                 
                 newlyAddedImagePath = finalLocalPath
             }
@@ -172,13 +175,13 @@ fun DiaryScreen(
 
     val performSave = {
         latestBaseDiary?.let { baseDiary ->
-            val textContent = latestSegments.filter { it.type == SegmentType.TEXT }.joinToString("\n") { it.content }
+            val textContent = latestSegments.filter { it.entity.type == SegmentType.TEXT }.joinToString("\n") { it.entity.content }
             val diaryToSave = baseDiary.copy(
                 diary = baseDiary.diary.copy(
                     wordCount = textContent.length,
                     title = latestTitle.ifBlank { null },
                 ),
-                segments = latestSegments.mapIndexed { index, seg -> seg.copy(position = index) }
+                segments = latestSegments.mapIndexed { index, seg -> seg.entity.copy(position = index) }
             )
             viewModel.saveDiary(diaryToSave)
         }
@@ -211,7 +214,7 @@ fun DiaryScreen(
     var containerTop by remember { mutableFloatStateOf(0f) }
     var containerBottom by remember { mutableFloatStateOf(0f) }
     var draggedItemCenterY by remember { mutableFloatStateOf(0f) }
-    var draggingSegment by remember { mutableStateOf<DiarySegmentEntity?>(null) }
+    var draggingSegment by remember { mutableStateOf<SegmentUiModel?>(null) }
 
     LaunchedEffect(draggingSegment) {
         if (draggingSegment != null) {
@@ -340,22 +343,22 @@ fun DiaryScreen(
             shift
         }
 
-        segments.forEachIndexed { index, segment ->
+        segments.forEachIndexed { index, segmentUi ->
+            val segment = segmentUi.entity
             val shiftAmount = calculateShift(index)
-            val segmentKey = "${segment.segmentId}_${segment.type}_${segment.content}"
             
-            key(segmentKey) {
+            key(segmentUi.localId) {
                 if (segment.type == SegmentType.IMAGE) {
                     DiaryImageItem(
                         imagePath = segment.content,
                         dragScrollDeltaProvider = {
-                            if (draggingSegment == segment) (scrollState.value - initialScrollPos).toFloat() else 0f
+                            if (draggingSegment == segmentUi) (scrollState.value - initialScrollPos).toFloat() else 0f
                         },
-                        onDelete = { segments = segments.filter { it != segment } },
+                        onDelete = { segments = segments.filter { it != segmentUi } },
                         titleState = sharedTiltState,
                         onDrag = { dragY -> currentDragOffsetY = dragY },
                         onDragStart = {
-                            draggingSegment = segment
+                            draggingSegment = segmentUi
                             initialScrollPos = scrollState.value
                         },
                         onDragEnd = {
@@ -364,7 +367,7 @@ fun DiaryScreen(
                                     val newList = segments.toMutableList()
                                     val item = newList.removeAt(activeOriginPos)
                                     newList.add(finalTarget, item)
-                                    segments = newList.mapIndexed { i, seg -> seg.copy(position = i) }
+                                    segments = newList.mapIndexed { i, seg -> seg.copy(entity = seg.entity.copy(position = i)) }
                                 }
                             }
                             draggingSegment = null
@@ -389,14 +392,14 @@ fun DiaryScreen(
                                 val newList = segments.toMutableList()
                                 newList.removeAt(index)
                                 val newSegments = parts.map { part ->
-                                    DiarySegmentEntity(diaryId = segment.diaryId, type = SegmentType.TEXT, content = part, position = 0)
+                                    SegmentUiModel(DiarySegmentEntity(diaryId = segment.diaryId, type = SegmentType.TEXT, content = part, position = 0))
                                 }
                                 newList.addAll(index, newSegments)
-                                segments = newList.mapIndexed { i, seg -> seg.copy(position = i) }
+                                segments = newList.mapIndexed { i, seg -> seg.copy(entity = seg.entity.copy(position = i)) }
                                 focusIndex = index + parts.size - 1
                             } else {
                                 val newList = segments.toMutableList()
-                                newList[index] = segment.copy(content = newText)
+                                newList[index] = segmentUi.copy(entity = segment.copy(content = newText))
                                 segments = newList
                             }
                         },
@@ -404,7 +407,7 @@ fun DiaryScreen(
                             if (index > 0) {
                                 val newList = segments.toMutableList()
                                 newList.removeAt(index)
-                                segments = newList.mapIndexed { i, seg -> seg.copy(position = i) }
+                                segments = newList.mapIndexed { i, seg -> seg.copy(entity = seg.entity.copy(position = i)) }
                                 focusIndex = index - 1
                             }
                         },

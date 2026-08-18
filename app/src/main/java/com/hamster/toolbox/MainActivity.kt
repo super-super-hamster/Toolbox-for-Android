@@ -167,6 +167,20 @@ class MainActivity : FragmentActivity() {
 
             var inputText by remember { mutableStateOf("") }
 
+//            val aiViewModel : AIViewModel = viewModel(
+//                factory = aiViewModelFactory(context)
+//            )
+//            LaunchedEffect(Unit) {
+//                aiViewModel.toolActions.collect { action ->
+//                    when(action) {
+//                        is AIToolAction.GetPickedColorTool -> {
+//                            action.result.complete("提取的主要色调降序排列依次是 ${mainViewModel.pickedColor}")
+//                        }
+//                        else -> {}
+//                    }
+//                }
+//            }
+
             // 加载
             var showLoading by remember { mutableStateOf(false) }
             val loadingComposition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.loading_anim))

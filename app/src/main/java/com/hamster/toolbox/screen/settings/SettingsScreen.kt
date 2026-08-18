@@ -34,8 +34,6 @@ import com.hamster.toolbox.AssistantSettings
 import com.hamster.toolbox.ImportCurriculum
 import com.hamster.toolbox.R
 import com.hamster.toolbox.Route
-import com.hamster.toolbox.ai.AI
-//import com.hamster.toolbox.ai.tools.ToolScope
 import com.hamster.toolbox.compose.ClickItem
 import com.hamster.toolbox.compose.DatePicker
 import com.hamster.toolbox.compose.EditTextItem

@@ -51,19 +51,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hamster.toolbox.R
-import com.hamster.toolbox.ai.AI
-//import com.hamster.toolbox.ai.tools.ToolScope
 import com.hamster.toolbox.compose.PageColumn
 import com.hamster.toolbox.compose.SharedTiltState
 import com.hamster.toolbox.compose.StandardDialog
 import com.hamster.toolbox.compose.TextInputField
 import com.hamster.toolbox.compose.applySharedTilt
 import com.hamster.toolbox.compose.rememberSharedTiltState
+import com.hamster.toolbox.compose.rememberStringPreference
 import com.hamster.toolbox.compose.squircleShape
-import com.hamster.toolbox.repository.SettingsRepository
-import com.hamster.toolbox.repository.settingsStore
 import com.hamster.toolbox.utils.getSchedule
 import com.hamster.toolbox.utils.saveSchedule
 import java.time.LocalDate
@@ -74,7 +70,6 @@ import java.time.temporal.ChronoUnit
 @Composable
 fun ScheduleScreen() {
     val context = LocalContext.current
-    val settingsRepository = remember { SettingsRepository(context.settingsStore) }
 
     LaunchedEffect(Unit) {
 //        AI.setScope(ToolScope.SCHEDULE)
@@ -82,7 +77,7 @@ fun ScheduleScreen() {
 
     val totalWeeks = 20
 
-    val semesterStartDateStr by settingsRepository.semesterStartDateFlow.collectAsStateWithLifecycle(initialValue = "")
+    val semesterStartDateStr by rememberStringPreference("semester_start_date", "")
 
     val initialWeekPage = remember(semesterStartDateStr) {
         calculateCurrentWeekIndex(semesterStartDateStr, totalWeeks)
@@ -823,7 +818,6 @@ fun generateColor(string: String): Color {
 
 fun calculateCurrentWeekIndex(startDateStr: String?, totalWeeks: Int): Int {
     if (startDateStr == null || startDateStr == "") return 0
-
     return try {
         val startDate = LocalDate.parse(startDateStr)
         val currentDate = LocalDate.now()

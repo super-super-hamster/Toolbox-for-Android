@@ -25,3 +25,6 @@
 -keep interface kotlin.coroutines.Continuation
 
 -keep class com.k2fsa.sherpa.onnx.** { *; }
+
+# 忽略 Ktor 引用的 java.lang.management 缺失类警告
+-dontwarn java.lang.management.**

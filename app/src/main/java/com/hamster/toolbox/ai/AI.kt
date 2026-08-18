@@ -1,142 +1,48 @@
 package com.hamster.toolbox.ai
 
 import android.content.Context
+import android.util.Log
+import androidx.compose.runtime.mutableStateListOf
 import com.google.gson.Gson
-import com.hamster.toolbox.AssistantSettings
+import com.hamster.toolbox.RandomNumber
 import com.hamster.toolbox.Route
-import com.hamster.toolbox.repository.SettingsRepository
+import com.hamster.toolbox.Ruler
+import com.hamster.toolbox.Schedule
+import com.hamster.toolbox.SettingsGraph
 import com.hamster.toolbox.main.MainViewModel
-import com.hamster.toolbox.repository.settingsStore
+import com.hamster.toolbox.system.Alarm
 import com.hamster.toolbox.utils.prompt.PromptLoader
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.util.UUID
 
 object AI {
     private val apiService = AiService.service
-//    val toolRegistry = ToolRegistry()
-    lateinit var settingsRepository: SettingsRepository
+    val chatHistory = mutableStateListOf<Message>()
 
-    suspend fun chatWithAssistant(message: String, apiKey: String?, mainViewModel: MainViewModel, onNavigate: (Route) -> Unit) {
-        if (apiKey.isNullOrBlank()) {
-            mainViewModel.setSettingsScrollTarget("api_key")
-            onNavigate(AssistantSettings)
-            return
-        }
+    suspend fun chatWithAssistant(context: Context, mainViewModel: MainViewModel, message: String, apiKey: String?, onNavigate: (Route) -> Unit) {
+        chatHistory.add(Message("user", message))
+        val request = Request(messages = chatHistory.toList())
 
-        val bracketRegex = Regex("""\\\[(.*?)\\]""", RegexOption.DOT_MATCHES_ALL)
+        return withContext(Dispatchers.IO) {
+            try {
+                val response = apiService.getChatCompletion("Bearer $apiKey", request)
+                val responseJson = response.choices.firstOrNull()?.message?.content
 
-        mainViewModel.apiHistory.add(Message("user", message))
-        mainViewModel.uiHistory.add(ChatUiModel.Text(
-            role = "user",
-            content = message.replace(bracketRegex) { matchResult ->
-                val mathContent = matchResult.groupValues[1].trim()
-                "```math\n$mathContent\n```"
+                val aiResponse: AiResponse = Gson().fromJson(responseJson, AiResponse::class.java)
+                if (aiResponse.type == "chat" || aiResponse.type == "qa") {
+                    chatHistory.add(Message("assistant", aiResponse.content))
+                } else {
+                    assistantQuery(context, mainViewModel, apiKey, aiResponse) { onNavigate(it) }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
-        ))
-
-//        withContext(Dispatchers.IO) {
-//            try {
-//                var isConversationFinished = false
-//                var stepCount = 0
-//
-//                // 最大请求次数 5
-//                while (!isConversationFinished && stepCount < 5) {
-//                    ++stepCount
-//                    val request = Request(
-//                        messages = mainViewModel.apiHistory.toList(),
-//                        tools = toolRegistry.getActiveToolDefinitions().takeIf { it.isNotEmpty() },
-//                        model = settingsRepository.getAiModelName(),
-//                        temperature = settingsRepository.getAiTemperature()
-//                    )
-//
-//                    val response = apiService.getChatCompletion("Bearer $apiKey", request)
-//                    val choice = response.choices.firstOrNull() ?: break
-//                    val responseMessage = choice.message
-//                    val finishReason = choice.finishReason
-//
-//                    if (responseMessage.content == null) {
-//                        responseMessage.content = ""
-//                    }
-//
-//                    if (finishReason == "tool_calls" && !responseMessage.toolCalls.isNullOrEmpty()) {
-//                        withContext(Dispatchers.Main) {
-//                            mainViewModel.apiHistory.add(responseMessage)
-//                        }
-//
-//                        for (toolCall in responseMessage.toolCalls) {
-//                            val toolResult = toolRegistry.dispatchCall(
-//                                name = toolCall.function.name,
-//                                arguments = toolCall.function.arguments
-//                            )
-//
-//                            withContext(Dispatchers.Main) {
-//                                mainViewModel.apiHistory.add(
-//                                    Message(
-//                                        role = "tool",
-//                                        content = toolResult,
-//                                        toolCallId = toolCall.id
-//                                    )
-//                                )
-//                            }
-//                        }
-//
-//                    } else {
-//                        if (responseMessage.content != null) {
-//                            val paragraphs = responseMessage.content!!
-//                                .split(Regex("\\n\\s*\\n")) // 空行分段
-//                                .filter { it.isNotBlank() }
-//                            mainViewModel.apiHistory.add(responseMessage)
-//
-//                            mainViewModel.viewModelScope.launch(Dispatchers.Main) {
-//                                paragraphs.forEachIndexed { index, paragraph ->
-//                                    val processedText = paragraph.replace(bracketRegex) { matchResult ->
-//                                        val mathContent = matchResult.groupValues[1].trim()
-//                                        "```math\n$mathContent\n```"
-//                                    }
-//
-//                                    mainViewModel.uiHistory.add(
-//                                        ChatUiModel.Text(
-//                                            role = "assistant",
-//                                            content = processedText.trim()
-//                                        )
-//                                    )
-//
-//                                    if (index < paragraphs.size - 1) {
-//                                        delay(max(400L, processedText.length * 20L))
-//                                    }
-//                                }
-//                            }
-//                        }
-//                        isConversationFinished = true
-//                    }
-//                }
-//
-//                if (!isConversationFinished) {
-//                    mainViewModel.apiHistory.add(Message(role = "assistant", content = "我是笨蛋"))
-//                    mainViewModel.uiHistory.add(ChatUiModel.Text(role = "assistant", content = "我是笨蛋"))
-//                }
-//            } catch (e: Exception) {
-//                e.printStackTrace()
-//                val errorMessage = if (e is HttpException) {
-//                    val errorBody = e.response()?.errorBody()?.string()
-//                    "API请求错误 (HTTP ${e.code()}): $errorBody"
-//                } else {
-//                    "网络请求异常：${e.message}"
-//                }
-//
-//                withContext(Dispatchers.Main) {
-//                    mainViewModel.apiHistory.add(Message(role = "assistant", content = "请求失败，请检查网络或配置：$errorMessage"))
-//                    mainViewModel.uiHistory.add(ChatUiModel.Text(role = "user", content = "请求失败，请检查网络或配置：$errorMessage"))
-//                }
-//            }
-//        }
+        }
     }
 
     suspend fun sendWithPrompt(context: Context, message: String, promptId: String, apiKey: String?) : AiResponse? {
         val messageList = mutableListOf<Message>()
-        messageList.add(Message("system", PromptLoader.getPromptById(context, promptId)))
+        PromptLoader.getPromptById(context, promptId)?.let { messageList.add(Message("system", it)) }
         messageList.add(Message("user", message))
 
         val request = Request(messages = messageList)
@@ -145,6 +51,7 @@ object AI {
             try {
                 val response = apiService.getChatCompletion("Bearer $apiKey", request)
                 val responseJson = response.choices.firstOrNull()?.message?.content
+                responseJson?.let { Log.d("fuck", it) }
                 val aiResponse: AiResponse = Gson().fromJson(responseJson, AiResponse::class.java)
                 aiResponse
             } catch (e: Exception) {
@@ -154,61 +61,35 @@ object AI {
         }
     }
 
-    suspend fun getBalance(apiKey: String): String {
-        if (apiKey.isBlank()) return "无"
-
-        return withContext(Dispatchers.IO) {
-            try {
-                val response = apiService.getBalance("Bearer $apiKey")
-
-                if (response.balanceInfos.isEmpty()) {
-                    return@withContext "无"
+    private suspend fun assistantQuery(context: Context, mainViewModel: MainViewModel, apiKey: String?, response: AiResponse, onNavigate: (Route) -> Unit) {
+        when(response.type) {
+            "avatar", "nickname", "signature", "semester_start_date", "import_curriculum_options",
+            "curriculum_notification", "class_notification", "alarm_notification", "assistant_avatar",
+            "assistant_nickname", "api_key" -> {
+                settingsScrollTo(response.type, mainViewModel) { onNavigate(it) }
+            }
+            "nav_curriculum" -> { withContext(Dispatchers.Main) { onNavigate(Schedule) } } // UI更新必须在主线程
+            "nav_ruler" -> { withContext(Dispatchers.Main) { onNavigate(Ruler) } }
+            "nav_settings" -> { withContext(Dispatchers.Main) { onNavigate(SettingsGraph) } }
+            "nav_random" -> { withContext(Dispatchers.Main) { onNavigate(RandomNumber) } }
+            "set_alarm" -> {
+                if (apiKey.isNullOrBlank()) {
+                    return
                 }
-
-                val balanceStr = response.balanceInfos.joinToString("，") { info ->
-                    "${info.totalBalance} ${info.currency}"
-                }
-
-                balanceStr
-
-            } catch (e: Exception) {
-                e.printStackTrace()
-                "无"
+                val alarmResponse = sendWithPrompt(context, response.content, "set_alarm", apiKey)
+                val alarm = Alarm()
+                // TODO:setAlarmFromJSON
+//                alarm.setAlarmFromJSON(context, alarmResponse?.content)
             }
         }
+
+        chatHistory.add(Message("assistant", "好的"))
     }
 
-//    fun setScope(scope: ToolScope) {
-//        toolRegistry.setCurrentScope(scope)
-//    }
-
-    fun init(context: Context, mainViewModel: MainViewModel) {
-        settingsRepository = SettingsRepository(context.settingsStore)
-
-        mainViewModel.apiHistory.add(Message("system", PromptLoader.getPromptById(context, "system")))
+    private suspend fun settingsScrollTo(target: String, mainViewModel: MainViewModel, onNavigate: (Route) -> Unit) {
+        mainViewModel.setSettingsScrollTarget(target)
+        withContext(Dispatchers.Main) {
+            onNavigate(SettingsGraph)
+        }
     }
-
-//    private suspend fun settingsScrollTo(target: String, mainViewModel: MainViewModel, onNavigate: (Route) -> Unit) {
-//        mainViewModel.setSettingsScrollTarget(target)
-//        withContext(Dispatchers.Main) {
-//            onNavigate(SettingsGraph)
-//        }
-//    }
-}
-
-sealed class ChatUiModel {
-    val id: String = UUID.randomUUID().toString()
-
-    data class Text(
-        val role: String,
-        val content: String
-    ) : ChatUiModel()
-
-    data class ConfirmCard(
-        val title: String,
-        val message: String,
-        // 挂起凭证,UI层调用 .complete(true/false) 就能唤醒后台大模型
-        val deferred: CompletableDeferred<Boolean>,
-        var userChoice: Boolean? = null
-    ) : ChatUiModel()
 }

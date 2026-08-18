@@ -73,6 +73,11 @@ android {
                 output.outputFileName = "Toolbox.apk"
             }
     }
+    packaging {
+        resources {
+            excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
+        }
+    }
 }
 
 dependencies {
@@ -136,6 +141,8 @@ dependencies {
     implementation("ai.koog:koog-agents:1.0.0")
     implementation("ai.koog:prompt-executor-openai-client:1.0.0")
     implementation("ai.koog:koog-agents-additions:1.0.0-beta")
+    implementation("ai.koog:http-client-ktor:1.0.0")
+    implementation("io.ktor:ktor-client-okhttp:3.0.0")
     implementation(files("libs/sherpa-onnx.aar"))
 //    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar", "*.aar"))))
 }
