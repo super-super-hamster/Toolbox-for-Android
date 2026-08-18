@@ -77,7 +77,11 @@ import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.animateLottieCompositionAsState
 import com.airbnb.lottie.compose.rememberLottieComposition
+import com.hamster.toolbox.ai.AI
+import com.hamster.toolbox.ai.AI.toolRegistry
 import com.hamster.toolbox.ai.SpeechRecognizerManager
+//import com.hamster.toolbox.ai.tools.SetAlarmTool
+//import com.hamster.toolbox.ai.tools.SetScopeTool
 import com.hamster.toolbox.compose.AnimationButton
 import com.hamster.toolbox.compose.ButtonPro
 import com.hamster.toolbox.compose.squircleShape
@@ -124,6 +128,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.hamster.toolbox.ai.tools.*
 
 // TODO: 天气,向下滑动天气透明度逐渐降低
 // TODO: 生辰
@@ -201,30 +206,30 @@ class MainActivity : FragmentActivity() {
             )
 
             LaunchedEffect(Unit) {
-//                AI.init(this@MainActivity.applicationContext, mainViewModel)
-//                toolRegistry.registerAll(
-//                    SetScopeTool(toolRegistry),
-//                    SetAlarmTool(context) { title, message ->
-//                        mainViewModel.requireUserConfirmation(title, message)
-//                    },
-//                    GetWeatherTool(context),
-//                    GetBasicInformationTool(),
-//                    GetColorPickerUsageTool(),
-//                    GetPickedColorTool(mainViewModel),
-//                    GetMeasureDecibelTool(decibelMeterViewModel),
-//                    GetDecibelMeterUsageTool(),
-//                    CreateNewDiaryTool(mainViewModel, diaryViewModel),
-//                    GetDiaryContentTool(navController, diaryViewModel) { title, message ->
-//                        mainViewModel.requireUserConfirmation(title, message)
-//                    },
-//                    ProvideDiaryTitleSuggestionTool(diaryViewModel),
-//                    GetDiaryUsageTool(),
-//                    SetRandomNumberRangeTool(mainViewModel),
-//                    GetRandomNumberRangeTool(mainViewModel),
-//                    GetGeneratedRandomNumberTool(mainViewModel),
-//                    GenerateRandomNumberTool(mainViewModel),
-//                    GetRandomUsageTool(),
-//                    GetRulerUsageTool(),
+                AI.init(this@MainActivity.applicationContext, mainViewModel)
+                toolRegistry.registerAll(
+                    SetScopeTool(toolRegistry),
+                    SetAlarmTool(context) { title, message ->
+                        mainViewModel.requireUserConfirmation(title, message)
+                    },
+                    GetWeatherTool(context),
+                    GetBasicInformationTool(),
+                    GetColorPickerUsageTool(),
+                    GetPickedColorTool(mainViewModel),
+                    GetMeasureDecibelTool(decibelMeterViewModel),
+                    GetDecibelMeterUsageTool(),
+                    CreateNewDiaryTool(mainViewModel, diaryViewModel),
+                    GetDiaryContentTool(navController, diaryViewModel) { title, message ->
+                        mainViewModel.requireUserConfirmation(title, message)
+                    },
+                    ProvideDiaryTitleSuggestionTool(diaryViewModel),
+                    GetDiaryUsageTool(),
+                    SetRandomNumberRangeTool(mainViewModel),
+                    GetRandomNumberRangeTool(mainViewModel),
+                    GetGeneratedRandomNumberTool(mainViewModel),
+                    GenerateRandomNumberTool(mainViewModel),
+                    GetRandomUsageTool(),
+                    GetRulerUsageTool(),
 //                    GetCurrentWeekScheduleTool(context),
 //                    GetAllScheduleTool(context),
 //                    CreateNewCourseTool(context),
@@ -233,7 +238,7 @@ class MainActivity : FragmentActivity() {
 //                    DeleteCourseTool(context) { title, message ->
 //                        mainViewModel.requireUserConfirmation(title, message)
 //                    }
-//                )
+                )
             }
 
             var showWeatherDetail by remember { mutableStateOf(false) }

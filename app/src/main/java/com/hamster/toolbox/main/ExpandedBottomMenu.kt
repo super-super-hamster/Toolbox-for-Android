@@ -436,7 +436,7 @@ fun Assistant(
 
                             mainViewModel.viewModelScope.launch {
                                 try {
-                                    AI.chatWithAssistant(inputText, apiKey, mainViewModel) { onNavigate(it) }
+                                    AI.chatWithAssistant(inputText, apiKey, mainViewModel)
                                 } finally {
                                     isSending = false
                                 }

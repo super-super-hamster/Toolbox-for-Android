@@ -1,27 +1,31 @@
 package com.hamster.toolbox.ai
 
 import android.content.Context
+import androidx.lifecycle.viewModelScope
 import com.google.gson.Gson
-import com.hamster.toolbox.AssistantSettings
-import com.hamster.toolbox.Route
 import com.hamster.toolbox.repository.SettingsRepository
+import com.hamster.toolbox.ai.tools.ToolRegistry
+import com.hamster.toolbox.ai.tools.ToolScope
 import com.hamster.toolbox.main.MainViewModel
 import com.hamster.toolbox.repository.settingsStore
 import com.hamster.toolbox.utils.prompt.PromptLoader
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import retrofit2.HttpException
 import java.util.UUID
+import kotlin.math.max
 
 object AI {
     private val apiService = AiService.service
-//    val toolRegistry = ToolRegistry()
+//    val chatHistory = mutableStateListOf<Message>()
+    val toolRegistry = ToolRegistry()
     lateinit var settingsRepository: SettingsRepository
 
-    suspend fun chatWithAssistant(message: String, apiKey: String?, mainViewModel: MainViewModel, onNavigate: (Route) -> Unit) {
+    suspend fun chatWithAssistant(message: String, apiKey: String?, mainViewModel: MainViewModel) {
         if (apiKey.isNullOrBlank()) {
-            mainViewModel.setSettingsScrollTarget("api_key")
-            onNavigate(AssistantSettings)
             return
         }
 
@@ -36,102 +40,103 @@ object AI {
             }
         ))
 
-//        withContext(Dispatchers.IO) {
-//            try {
-//                var isConversationFinished = false
-//                var stepCount = 0
-//
-//                // 最大请求次数 5
-//                while (!isConversationFinished && stepCount < 5) {
-//                    ++stepCount
-//                    val request = Request(
-//                        messages = mainViewModel.apiHistory.toList(),
-//                        tools = toolRegistry.getActiveToolDefinitions().takeIf { it.isNotEmpty() },
-//                        model = settingsRepository.getAiModelName(),
-//                        temperature = settingsRepository.getAiTemperature()
-//                    )
-//
-//                    val response = apiService.getChatCompletion("Bearer $apiKey", request)
-//                    val choice = response.choices.firstOrNull() ?: break
-//                    val responseMessage = choice.message
-//                    val finishReason = choice.finishReason
-//
-//                    if (responseMessage.content == null) {
-//                        responseMessage.content = ""
-//                    }
-//
-//                    if (finishReason == "tool_calls" && !responseMessage.toolCalls.isNullOrEmpty()) {
-//                        withContext(Dispatchers.Main) {
-//                            mainViewModel.apiHistory.add(responseMessage)
-//                        }
-//
-//                        for (toolCall in responseMessage.toolCalls) {
-//                            val toolResult = toolRegistry.dispatchCall(
-//                                name = toolCall.function.name,
-//                                arguments = toolCall.function.arguments
-//                            )
-//
-//                            withContext(Dispatchers.Main) {
-//                                mainViewModel.apiHistory.add(
-//                                    Message(
-//                                        role = "tool",
-//                                        content = toolResult,
-//                                        toolCallId = toolCall.id
-//                                    )
-//                                )
-//                            }
-//                        }
-//
-//                    } else {
-//                        if (responseMessage.content != null) {
-//                            val paragraphs = responseMessage.content!!
-//                                .split(Regex("\\n\\s*\\n")) // 空行分段
-//                                .filter { it.isNotBlank() }
-//                            mainViewModel.apiHistory.add(responseMessage)
-//
-//                            mainViewModel.viewModelScope.launch(Dispatchers.Main) {
-//                                paragraphs.forEachIndexed { index, paragraph ->
-//                                    val processedText = paragraph.replace(bracketRegex) { matchResult ->
-//                                        val mathContent = matchResult.groupValues[1].trim()
-//                                        "```math\n$mathContent\n```"
-//                                    }
-//
-//                                    mainViewModel.uiHistory.add(
-//                                        ChatUiModel.Text(
-//                                            role = "assistant",
-//                                            content = processedText.trim()
-//                                        )
-//                                    )
-//
-//                                    if (index < paragraphs.size - 1) {
-//                                        delay(max(400L, processedText.length * 20L))
-//                                    }
-//                                }
-//                            }
-//                        }
-//                        isConversationFinished = true
-//                    }
-//                }
-//
-//                if (!isConversationFinished) {
-//                    mainViewModel.apiHistory.add(Message(role = "assistant", content = "我是笨蛋"))
-//                    mainViewModel.uiHistory.add(ChatUiModel.Text(role = "assistant", content = "我是笨蛋"))
-//                }
-//            } catch (e: Exception) {
-//                e.printStackTrace()
-//                val errorMessage = if (e is HttpException) {
-//                    val errorBody = e.response()?.errorBody()?.string()
-//                    "API请求错误 (HTTP ${e.code()}): $errorBody"
-//                } else {
-//                    "网络请求异常：${e.message}"
-//                }
-//
-//                withContext(Dispatchers.Main) {
-//                    mainViewModel.apiHistory.add(Message(role = "assistant", content = "请求失败，请检查网络或配置：$errorMessage"))
-//                    mainViewModel.uiHistory.add(ChatUiModel.Text(role = "user", content = "请求失败，请检查网络或配置：$errorMessage"))
-//                }
-//            }
-//        }
+        withContext(Dispatchers.IO) {
+            try {
+                var isConversationFinished = false
+                var stepCount = 0
+
+                // 最大请求次数 5
+                while (!isConversationFinished && stepCount < 5) {
+                    ++stepCount
+                    val request = Request(
+                        messages = mainViewModel.apiHistory.toList(),
+                        tools = toolRegistry.getActiveToolDefinitions().takeIf { it.isNotEmpty() },
+                        model = settingsRepository.getAiModelName(),
+                        temperature = settingsRepository.getAiTemperature()
+                    )
+
+                    val response = apiService.getChatCompletion("Bearer $apiKey", request)
+                    val choice = response.choices.firstOrNull() ?: break
+                    val responseMessage = choice.message
+                    val finishReason = choice.finishReason
+
+                    if (responseMessage.content == null) {
+                        responseMessage.content = ""
+                    }
+
+                    if (finishReason == "tool_calls" && !responseMessage.toolCalls.isNullOrEmpty()) {
+                        withContext(Dispatchers.Main) {
+                            mainViewModel.apiHistory.add(responseMessage)
+                        }
+
+                        for (toolCall in responseMessage.toolCalls) {
+                            val toolResult = toolRegistry.dispatchCall(
+                                name = toolCall.function.name,
+                                arguments = toolCall.function.arguments
+                            )
+
+                            withContext(Dispatchers.Main) {
+                                mainViewModel.apiHistory.add(
+                                    Message(
+                                        role = "tool",
+                                        content = toolResult,
+                                        toolCallId = toolCall.id
+                                    )
+                                )
+                            }
+                        }
+
+                    } else {
+                        if (responseMessage.content != null) {
+                            val paragraphs = responseMessage.content!!
+                                .split(Regex("\\n\\s*\\n")) // 空行分段
+                                .filter { it.isNotBlank() }
+                            mainViewModel.apiHistory.add(responseMessage)
+
+                            mainViewModel.viewModelScope.launch(Dispatchers.Main) {
+                                paragraphs.forEachIndexed { index, paragraph ->
+//                                    val bracketRegex = Regex("""\\\[(.*?)\\]""", RegexOption.DOT_MATCHES_ALL)
+                                    val processedText = paragraph.replace(bracketRegex) { matchResult ->
+                                        val mathContent = matchResult.groupValues[1].trim()
+                                        "```math\n$mathContent\n```"
+                                    }
+
+                                    mainViewModel.uiHistory.add(
+                                        ChatUiModel.Text(
+                                            role = "assistant",
+                                            content = processedText.trim()
+                                        )
+                                    )
+
+                                    if (index < paragraphs.size - 1) {
+                                        delay(max(400L, processedText.length * 20L))
+                                    }
+                                }
+                            }
+                        }
+                        isConversationFinished = true
+                    }
+                }
+
+                if (!isConversationFinished) {
+                    mainViewModel.apiHistory.add(Message(role = "assistant", content = "我是笨蛋"))
+                    mainViewModel.uiHistory.add(ChatUiModel.Text(role = "assistant", content = "我是笨蛋"))
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                val errorMessage = if (e is HttpException) {
+                    val errorBody = e.response()?.errorBody()?.string()
+                    "API请求错误 (HTTP ${e.code()}): $errorBody"
+                } else {
+                    "网络请求异常：${e.message}"
+                }
+
+                withContext(Dispatchers.Main) {
+                    mainViewModel.apiHistory.add(Message(role = "assistant", content = "请求失败，请检查网络或配置：$errorMessage"))
+                    mainViewModel.uiHistory.add(ChatUiModel.Text(role = "user", content = "请求失败，请检查网络或配置：$errorMessage"))
+                }
+            }
+        }
     }
 
     suspend fun sendWithPrompt(context: Context, message: String, promptId: String, apiKey: String?) : AiResponse? {
@@ -178,9 +183,9 @@ object AI {
         }
     }
 
-//    fun setScope(scope: ToolScope) {
-//        toolRegistry.setCurrentScope(scope)
-//    }
+    fun setScope(scope: ToolScope) {
+        toolRegistry.setCurrentScope(scope)
+    }
 
     fun init(context: Context, mainViewModel: MainViewModel) {
         settingsRepository = SettingsRepository(context.settingsStore)
