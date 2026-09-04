@@ -1,5 +1,7 @@
 package com.hamster.toolbox.screen.diary
 
+import android.app.Activity
+import android.view.WindowManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -52,6 +54,7 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -64,6 +67,7 @@ import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -123,6 +127,19 @@ fun DiaryScreen(
 
         onDispose {
             mainViewModel.showBottomMenu = true
+        }
+    }
+
+    // 编辑文本时让软键盘以 insets(adjustResize)方式处理,避免系统整窗平移导致顶栏被顶走/底部出现空白
+    val rootView = LocalView.current
+    DisposableEffect(rootView) {
+        val window = (rootView.context as? Activity)?.window
+        val previousSoftInputMode = window?.attributes?.softInputMode
+        window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+        onDispose {
+            if (window != null && previousSoftInputMode != null) {
+                window.setSoftInputMode(previousSoftInputMode)
+            }
         }
     }
 
@@ -327,15 +344,14 @@ fun DiaryScreen(
                 val draggedHeight = itemHeights[activeOriginPos] ?: with(density) { 150.dp.toPx() }
                 val exactGapPx = draggedHeight + spacerHeightPx
 
-                val dPos = activeOriginPos
                 val targetDPos = activeTargetPos!!
 
-                if (targetDPos > dPos) {
-                    if (index > dPos && index <= targetDPos) {
+                if (targetDPos > activeOriginPos) {
+                    if (index in (activeOriginPos + 1)..targetDPos) {
                         shift = -exactGapPx
                     }
-                } else if (targetDPos < dPos) {
-                    if (index >= targetDPos && index < dPos) {
+                } else if (targetDPos < activeOriginPos) {
+                    if (index in targetDPos..<activeOriginPos) {
                         shift = exactGapPx
                     }
                 }
@@ -438,6 +454,7 @@ fun DiaryScreen(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DiaryTextItem(
     text: String,
@@ -452,11 +469,25 @@ fun DiaryTextItem(
     onHeightMeasured: (Float) -> Unit = {}
 ) {
     val focusRequester = remember { FocusRequester() }
+    val bringIntoViewRequester = remember { BringIntoViewRequester() }
+    var isFieldFocused by remember { mutableStateOf(false) }
 
     LaunchedEffect(isFocused) {
         if (isFocused) {
             focusRequester.requestFocus()
             onFocusClear()
+        }
+    }
+
+    // 键盘弹出时只滚动本页内容,把当前编辑块带到键盘上方可视区(避免整窗上移)
+    val isKeyboardVisible = WindowInsets.isImeVisible
+    LaunchedEffect(isFieldFocused, isKeyboardVisible) {
+        if (isFieldFocused && isKeyboardVisible) {
+            // 键盘/imePadding 动画期间持续对齐;无需滚动时 bringIntoView 为空操作
+            repeat(4) {
+                delay(100)
+                bringIntoViewRequester.bringIntoView()
+            }
         }
     }
 
@@ -473,6 +504,14 @@ fun DiaryTextItem(
                 onHeightMeasured(coordinates.size.height.toFloat())
             }
             .offset { IntOffset(0, animatedShiftY.roundToInt()) }
+            .bringIntoViewRequester(bringIntoViewRequester)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) {
+                // 点击文本块(含无文字的空白区域)时聚焦该块
+                focusRequester.requestFocus()
+            }
     ) {
         TextInputField(
             value = text,
@@ -484,6 +523,7 @@ fun DiaryTextItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .focusRequester(focusRequester)
+                .onFocusChanged { isFieldFocused = it.isFocused }
                 .onPreviewKeyEvent { event ->
                     if (event.key == Key.Backspace && event.type == KeyEventType.KeyDown && text.isEmpty()) {
                         onDeleteEmpty()

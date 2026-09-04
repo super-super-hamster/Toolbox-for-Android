@@ -410,6 +410,8 @@ fun DiaryItem(
         modifier = Modifier
             .fillMaxWidth()
             .combinedClickable(
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() },
                 onClick = {
                     isRotated = !isRotated
                     onClick()

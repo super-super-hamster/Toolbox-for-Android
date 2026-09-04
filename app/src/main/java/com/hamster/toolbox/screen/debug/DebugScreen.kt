@@ -36,7 +36,7 @@ fun DebugScreen(
 
     val showPackageName by debugRepository.showPackageNameFlow.collectAsStateWithLifecycle(initialValue = false)
 
-    PageColumn(modifier = Modifier.verticalScroll(rememberScrollState()),sharedTiltState = sharedTiltState) {
+    PageColumn(modifier = Modifier.verticalScroll(rememberScrollState()), sharedTiltState = sharedTiltState) {
         ItemGroup(titleState = sharedTiltState) {
             ClickItem(title = "通知测试") {
                 val receiver = Receiver()
